@@ -6,8 +6,8 @@ services:
 variables:
   REPO_NAME: gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service
   POSTGRES_DB:  $DB_NAME
-  POSTGRES_USER: $DB_PASSWORD
-  POSTGRES_PASSWORD: $DB_USERNAME
+  POSTGRES_USER: $DB_USERNAME
+  POSTGRES_PASSWORD: $DB_PASSWORD
   POSTGRES_HOST_AUTH_METHOD: trust
 
 before_script:
