@@ -1,7 +1,13 @@
-image: golang:latest
+image: 
+  - golang:latest
+  - postgres:12.2-alpine
 
 variables:
   REPO_NAME: gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service
+  POSTGRES_DB:  ${DB_NAME:-majapahitdb}
+  POSTGRES_USER: ${DB_PASSWORD:-root}
+  POSTGRES_PASSWORD: ${DB_USERNAME:-postgres}
+  POSTGRES_HOST_AUTH_METHOD: trust
 
 before_script:
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
