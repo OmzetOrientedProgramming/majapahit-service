@@ -1,7 +1,6 @@
 image: golang:latest
 
 variables:
-  # Please edit to your GitLab project
   REPO_NAME: gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service
 
 before_script:
@@ -17,5 +16,5 @@ stages:
 Test:
   stage: test
   script:
-    - go test -v $$(go list ./... | grep -v ./main.go) 
-    - go test $$(go list ./... | grep -v ./main.go) -coverprofile coverage.cov && go tool cover -func coverage.cov
+    - go test -v $(go list ./... | grep -v ./main.go) 
+    - go test $(go list ./... | grep -v ./main.go) -coverprofile coverage.cov && go tool cover -func coverage.cov
