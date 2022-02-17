@@ -11,12 +11,11 @@ variables:
   POSTGRES_HOST_AUTH_METHOD: trust
 
 before_script:
+  - echo "Starting..."
+  - echo `pwd`
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
-  - echo $POSTGRES_DB
-  - echo $POSTGRES_USER
-  - echo $POSTGRES_PASSWORD
 
 stages:
   - test
@@ -28,3 +27,6 @@ Test:
   script:
     - go test -v $(go list ./... | grep -v ./main.go) 
     - go test $(go list ./... | grep -v ./main.go) -coverprofile coverage.cov && go tool cover -func coverage.cov
+
+after_script:
+  - echo "Success!"
