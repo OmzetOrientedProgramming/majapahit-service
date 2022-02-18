@@ -26,23 +26,7 @@ Test:
   stage: test
   script:
     - go test -v $(go list ./... | grep -v ./main.go) 
-    - go test $(go list ./... | grep -v ./main.go) -coverprofile coverage.cov && go tool cover -func coverage.cov
-
-SonarScanner Dev:
-  image:
-    name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [""]
-  stage: test
-  script:
-    - sonar-scanner
-      -Dproject.settings=./sonar-project.properties
-      -Dsonar.host.url=$SONARQUBE_HOST_URL
-      -Dsonar.login=$SONARQUBE_TOKEN
-      -Dsonar.branch.name=$CI_COMMIT_REF_NAME
-      -Dsonar.branch.target=staging
-  except:
-    - master
-    - staging
+    - go test $(go list ./... | grep -v ./main.go) -coverprofile=coverage.out && go tool cover -func coverage.out
 
 SonarScanner:
   image:
@@ -54,9 +38,7 @@ SonarScanner:
       -Dproject.settings=./sonar-project.properties
       -Dsonar.host.url=$SONARQUBE_HOST_URL
       -Dsonar.login=$SONARQUBE_TOKEN
-      -Dsonar.branch.name=$CI_COMMIT_REF_NAME
   only:
-    - master
     - staging
 
 after_script:

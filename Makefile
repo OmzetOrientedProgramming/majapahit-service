@@ -8,4 +8,4 @@ migrate-down :
 test :
 	go test -v $$(go list ./... | grep -v ./main.go) 
 coverage :
-	go test $$(go list ./... | grep -v ./main.go) -coverprofile coverage.cov && go tool cover -func coverage.cov
+	go test $$(go list ./... | grep -v ./main.go) -coverprofile=coverage.out && go tool cover -func coverage.out
