@@ -18,3 +18,8 @@ func TestInitFailed(t *testing.T) {
 	db := Init()
 	assert.Nil(t, db)
 }
+
+func TestInitProduction(t *testing.T) {
+	t.Setenv("ENV", "production")
+	_ = Init()
+}
