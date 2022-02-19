@@ -42,5 +42,44 @@ SonarScanner:
   only:
     - staging
 
+Build:
+  stage: build
+  image: golang:latest
+  script:
+    - go mod tidy 
+    - go mod vendor
+    - go get -d -v
+    - go build -o bin/majapahit-service -v .
+
+Deployment:
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+  image: ruby:2.7
+  stage: deploy
+  before_script:
+    - gem install dpl
+    - wget -qO- https://cli-assets.heroku.com/install-ubuntu.sh | sh
+  script:
+    - dpl --provider=heroku --app=$HEROKU_APP_NAME --api-key=$HEROKU_API_KEY
+    - heroku run --app $HEROKU_APP_NAME migrate
+  environment:
+    name: production
+    url: https://$HEROKU_APP_NAME.herokuapp.com
+
+Deployment Staging:
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "staging"'
+  image: ruby:2.7
+  stage: deploy
+  before_script:
+    - gem install dpl
+    - wget -qO- https://cli-assets.heroku.com/install-ubuntu.sh | sh
+  script:
+    - dpl --provider=heroku --app=$HEROKU_APP_NAME_STAGING --api-key=$HEROKU_API_KEY
+    - heroku run --app $HEROKU_APP_NAME_STAGING migrate
+  environment:
+    name: staging
+    url: https://$HEROKU_APP_NAME_STAGING.herokuapp.com
+
 after_script:
   - echo "Success!"
