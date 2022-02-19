@@ -16,7 +16,7 @@ func main() {
 	// Load env var
 	err := godotenv.Load()
 	if err != nil {
-		logrus.Fatal(".env not found, will use default env")
+		logrus.Error(".env not found, will use default env")
 	}
 
 	// Creating router
