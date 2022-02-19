@@ -12,8 +12,6 @@ variables:
   POSTGRES_HOST_AUTH_METHOD: trust
 
 before_script:
-  - echo "Starting..."
-  - echo `pwd`
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
@@ -76,6 +74,3 @@ Deployment Staging:
   environment:
     name: staging
     url: https://$HEROKU_APP_NAME_STAGING.herokuapp.com
-
-after_script:
-  - echo "Success!"

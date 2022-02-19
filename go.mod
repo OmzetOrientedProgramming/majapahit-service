@@ -1,6 +1,6 @@
 // +heroku goVersion go1.17
 
-module gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service.git
+module gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service
 
 go 1.17
 
