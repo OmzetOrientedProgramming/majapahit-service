@@ -46,9 +46,9 @@ Build:
   stage: build
   image: golang:latest
   script:
+    - go get -d -v
     - go mod tidy 
     - go mod vendor
-    - go get -d -v
     - go build -o bin/majapahit-service -v .
 
 Deployment:
