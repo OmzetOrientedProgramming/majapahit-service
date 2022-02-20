@@ -12,7 +12,7 @@ import (
 
 func Init() *sqlx.DB {
 	connStr := fmt.Sprintf("user=%s dbname=%s password=%s host=%s port=%s sslmode=disable", os.Getenv("DB_USERNAME"), os.Getenv("DB_NAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"))
-	if os.Getenv("ENV") != "local" {
+	if os.Getenv("ENV") == "production" {
 		connStr = fmt.Sprintf("user=%s dbname=%s password=%s host=%s port=%s", os.Getenv("DB_USERNAME"), os.Getenv("DB_NAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"))
 	}
 
