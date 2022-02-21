@@ -29,7 +29,7 @@ Test:
 
 SonarScanner Dev:
   image:
-    name: sonarsource/sonar-scanner-cli:4.6
+    name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [“”]
   stage: test
   script:
@@ -46,7 +46,7 @@ SonarScanner Dev:
 
 SonarScanner:
   image:
-    name: sonarsource/sonar-scanner-cli:4.6
+    name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [“”]
   stage: test
   script:
