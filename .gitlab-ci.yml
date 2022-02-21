@@ -30,7 +30,7 @@ Test:
 SonarScanner Dev:
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [“”]
+    entrypoint: [""]
   stage: test
   script:
     - sonar-scanner
@@ -47,7 +47,7 @@ SonarScanner Dev:
 SonarScanner:
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [“”]
+    entrypoint: [""] 
   stage: test
   script:
     - sonar-scanner
