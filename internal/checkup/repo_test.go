@@ -61,5 +61,5 @@ func TestRepo_GetApplicationCheckUpDBNotConnected(t *testing.T) {
 	up, err := repoMock.GetApplicationCheckUp()
 
 	assert.Equal(t, false, up)
-	assert.Equal(t, ErrDBNotConnected, errors.Cause(err))
+	assert.Equal(t, ErrPostgreSQLNotConnected, errors.Cause(err))
 }

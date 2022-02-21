@@ -22,7 +22,7 @@ type Repo interface {
 
 func (r repo) GetApplicationCheckUp() (bool, error) {
 	if r.db == nil {
-		return false, errors.Wrap(ErrDBNotConnected, "postgreSQL not connected")
+		return false, errors.Wrap(ErrPostgreSQLNotConnected, "postgreSQL not connected")
 	}
 
 	err := r.db.Ping()
