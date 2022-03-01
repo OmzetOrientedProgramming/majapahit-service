@@ -15,7 +15,5 @@ type service struct {
 }
 
 func (s service) GetListItem() (*Item, error) {
-	var item, error = s.repo.GetItem()
-	// Do something
-	return item, error
+	panic("implement me")
 }
