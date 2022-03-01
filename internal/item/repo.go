@@ -2,6 +2,7 @@ package item
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 func NewRepo(db *sqlx.DB) Repo {
@@ -15,13 +16,20 @@ type repo struct {
 }
 
 type Repo interface {
-	GetListItem() (*ListItem, error)
+	GetListItem(place_id int) (*ListItem, error)
 	GetItem() (*Item, error)
 }
 
-func (r repo) GetListItem() (*ListItem, error) {
+func (r repo) GetListItem(place_id int) (*ListItem, error) {
 	var listItem ListItem
-	// Do something here
+	listItem.Items = make([]Item, 0)
+
+	query := "SELECT id, name, price, description FROM items WHERE place_id = $1"
+	err := r.db.Select(&listItem.Items, query, place_id)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+	
 	return &listItem, nil
 }
 
