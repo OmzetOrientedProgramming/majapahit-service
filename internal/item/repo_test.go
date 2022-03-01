@@ -1,11 +1,13 @@
 package item
 
 import (
+	"database/sql"
 	"regexp"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,4 +58,53 @@ func TestRepo_GetListItem(t *testing.T) {
 	assert.Equal(t, listItemExpected, listItemResult)
 	assert.NotNil(t, listItemResult)
 	assert.NoError(t, err)
+}
+
+func TestRepo_GetListItemError(t *testing.T) {
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+
+	// Expectation
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, price, description FROM items WHERE place_id = $1")).
+		WithArgs(1).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	listItemResult, err := repoMock.GetListItem(1)
+	assert.Nil(t, listItemResult)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+
+}
+
+func TestRepo_GetListItemEmpty(t *testing.T) {
+	listItemExpected := &ListItem{
+		Items : make([]Item, 0),
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, price, description FROM items WHERE place_id = $1 ")).
+		WithArgs(1).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	listItemResult, err := repoMock.GetListItem(1)
+	assert.Equal(t, listItemExpected, listItemResult)
+	assert.NotNil(t, listItemResult)
+	assert.NoError(t, err)
+	
 }
