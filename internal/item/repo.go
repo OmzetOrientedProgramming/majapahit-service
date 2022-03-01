@@ -1,6 +1,8 @@
 package item
 
 import (
+	"database/sql"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -26,7 +28,12 @@ func (r repo) GetListItem(place_id int) (*ListItem, error) {
 
 	query := "SELECT id, name, price, description FROM items WHERE place_id = $1"
 	err := r.db.Select(&listItem.Items, query, place_id)
+	
 	if err != nil {
+		if err == sql.ErrNoRows {
+			listItem.Items = make([]Item, 0)
+			return &listItem, nil
+		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 	
