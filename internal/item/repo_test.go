@@ -38,7 +38,7 @@ func TestRepo_GetListItem(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "name", "description", "price"}).
+		NewRows([]string{"id", "name", "price", "description"}).
 		AddRow(listItemExpected.Items[0].ID,
 			listItemExpected.Items[0].Name,
 			listItemExpected.Items[0].Price,
