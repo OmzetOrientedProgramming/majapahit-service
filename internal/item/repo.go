@@ -19,7 +19,7 @@ type repo struct {
 
 type Repo interface {
 	GetListItem(place_id int) (*ListItem, error)
-	GetItem() (*Item, error)
+	GetItemById(item_id int) (*Item, error)
 }
 
 func (r repo) GetListItem(place_id int) (*ListItem, error) {
@@ -40,8 +40,16 @@ func (r repo) GetListItem(place_id int) (*ListItem, error) {
 	return &listItem, nil
 }
 
-func (r repo) GetItem() (*Item, error) {
+func (r repo) GetItemById(item_id int) (*Item, error) {
 	var item Item
-	// Do something here
+	item = Item{}
+
+	query := "SELECT id, name, image, price, description FROM items WHERE item_id = $1"
+	err := r.db.Get(&item, query, item_id)
+
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
 	return &item, nil
 }
