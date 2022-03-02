@@ -48,6 +48,10 @@ func (r repo) GetItemById(item_id int) (*Item, error) {
 	err := r.db.Get(&item, query, item_id)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			item = Item{}
+			return &item, nil
+		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
