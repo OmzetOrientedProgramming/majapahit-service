@@ -166,3 +166,27 @@ func TestRepo_GetItemByIDError(t *testing.T) {
 	assert.Nil(t, itemResult)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 }
+
+func TestRepo_GetItemByIDEmpty(t *testing.T) {
+	itemExpected := &Item{}
+	
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE item_id = $1 ")).
+		WithArgs(1).
+		WillReturnError(sql.ErrNoRows)
+	
+	// Test
+	itemResult, err := repoMock.GetItemById(1)
+	assert.Equal(t, itemExpected, itemResult)
+	assert.NotNil(t, itemResult)
+	assert.NoError(t, err)
+}
