@@ -17,12 +17,14 @@ func TestRepo_GetListItem(t *testing.T) {
 			{
 				ID:         	1,
 				Name:        	"test",
+				Image: 			"test",
 				Price:			10000,
 				Description: 	"test",
 			},
 			{
 				ID:          	2,
 				Name:        	"test",
+				Image: 			"test",
 				Price:			10000,
 				Description: 	"test",
 			},
@@ -40,21 +42,23 @@ func TestRepo_GetListItem(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "name", "price", "description"}).
+		NewRows([]string{"id", "name", "image", "price", "description"}).
 		AddRow(listItemExpected.Items[0].ID,
 			listItemExpected.Items[0].Name,
+			listItemExpected.Items[0].Image,
 			listItemExpected.Items[0].Price,
 			listItemExpected.Items[0].Description).
 		AddRow(listItemExpected.Items[1].ID,
 			listItemExpected.Items[1].Name,
+			listItemExpected.Items[1].Image,
 			listItemExpected.Items[1].Price,
 			listItemExpected.Items[1].Description)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, price, description FROM items WHERE place_id = $1 ")).
-		WithArgs(1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $2")).
+		WithArgs("",1).
 		WillReturnRows(rows)
 
 	// Test
-	listItemResult, err := repoMock.GetListItem(1)
+	listItemResult, err := repoMock.GetListItem(1, "")
 	assert.Equal(t, listItemExpected, listItemResult)
 	assert.NotNil(t, listItemResult)
 	assert.NoError(t, err)
@@ -71,12 +75,12 @@ func TestRepo_GetListItemError(t *testing.T) {
 	// Expectation
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, price, description FROM items WHERE place_id = $1")).
-		WithArgs(1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $2")).
+		WithArgs("",1).
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
-	listItemResult, err := repoMock.GetListItem(1)
+	listItemResult, err := repoMock.GetListItem(1, "")
 	assert.Nil(t, listItemResult)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 
@@ -97,12 +101,12 @@ func TestRepo_GetListItemEmpty(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, price, description FROM items WHERE place_id = $1 ")).
-		WithArgs(1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image,  price, description FROM items WHERE place_id = $2 ")).
+		WithArgs("",1).
 		WillReturnError(sql.ErrNoRows)
 
 	// Test
-	listItemResult, err := repoMock.GetListItem(1)
+	listItemResult, err := repoMock.GetListItem(1, "")
 	assert.Equal(t, listItemExpected, listItemResult)
 	assert.NotNil(t, listItemResult)
 	assert.NoError(t, err)
