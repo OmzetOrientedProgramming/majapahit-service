@@ -18,16 +18,22 @@ type repo struct {
 }
 
 type Repo interface {
-	GetListItem(place_id int) (*ListItem, error)
+	GetListItem(place_id int, name string) (*ListItem, error)
 	GetItemById(item_id int) (*Item, error)
 }
 
-func (r repo) GetListItem(place_id int) (*ListItem, error) {
+func (r repo) GetListItem(place_id int, name string) (*ListItem, error) {
 	var listItem ListItem
 	listItem.Items = make([]Item, 0)
 
-	query := "SELECT id, name, price, description FROM items WHERE place_id = $1"
-	err := r.db.Select(&listItem.Items, query, place_id)
+	query := "SELECT id, name, image, price, description FROM items WHERE "
+	
+	if name != "" {
+		query = query + "name LIKE '%$1% AND "
+	}
+
+	query = query + "place_id = $2"
+	err := r.db.Select(&listItem.Items, query, name, place_id)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -39,7 +45,6 @@ func (r repo) GetListItem(place_id int) (*ListItem, error) {
 	
 	return &listItem, nil
 }
-
 func (r repo) GetItemById(item_id int) (*Item, error) {
 	var item Item
 	item = Item{}
