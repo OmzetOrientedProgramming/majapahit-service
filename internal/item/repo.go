@@ -29,7 +29,7 @@ func (r repo) GetListItem(place_id int, name string) (*ListItem, error) {
 	query := "SELECT id, name, image, price, description FROM items WHERE "
 	
 	if name != "" {
-		query = query + "name LIKE '%$1% AND "
+		query = query + "name LIKE '%$1%' AND "
 	}
 
 	query = query + "place_id = $2"
@@ -45,6 +45,7 @@ func (r repo) GetListItem(place_id int, name string) (*ListItem, error) {
 	
 	return &listItem, nil
 }
+
 func (r repo) GetItemById(item_id int) (*Item, error) {
 	var item Item
 	item = Item{}
