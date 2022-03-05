@@ -17,5 +17,9 @@ type service struct {
 func (s service) GetListItem(placeID int, name string) (*ListItem, error) {
 	listItem, err := s.repo.GetListItem(placeID, name)
 
+	if err != nil {
+		return nil, err
+	}
+
 	return listItem, err
 }
