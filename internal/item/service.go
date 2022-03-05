@@ -28,5 +28,9 @@ func (s service) GetListItem(placeID int, name string) (*ListItem, error) {
 func (s service) GetItemByID(itemID int) (*Item, error) {
 	item, err := s.repo.GetItemById(itemID)
 
+	if err != nil {
+		return nil, err
+	}
+
 	return item, err
 }
