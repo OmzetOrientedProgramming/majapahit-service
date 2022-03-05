@@ -100,3 +100,19 @@ func TestService_GetItemByIDSuccess(t *testing.T) {
 	assert.NotNil(t, itemResult)
 	assert.NoError(t, err)
 }
+
+func TestService_GetItemByIDError(t *testing.T) {
+	item := Item {}
+	// Mock DB
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetItemById", 1).Return(item, ErrInternalServerError)
+
+	// Test
+	itemResult, err := mockService.GetItemByID(1)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, itemResult)
+}
