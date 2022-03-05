@@ -7,13 +7,15 @@ func NewService(repo Repo) Service {
 }
 
 type Service interface {
-	GetListItem() (*Item, error)
+	GetListItem(placeID int, name string) (*ListItem, error)
 }
 
 type service struct {
 	repo Repo
 }
 
-func (s service) GetListItem() (*Item, error) {
-	panic("implement me")
+func (s service) GetListItem(placeID int, name string) (*ListItem, error) {
+	listItem, err := s.repo.GetListItem(placeID, name)
+
+	return listItem, err
 }
