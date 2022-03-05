@@ -3,6 +3,7 @@ package item
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -59,4 +60,20 @@ func TestService_GetListItemByIDSuccess(t *testing.T) {
 	assert.Equal(t, &listItemExpected, listItemResult)
 	assert.NotNil(t, listItemResult)
 	assert.NoError(t, err)
+}
+
+func TestService_GetListItemByIDError(t *testing.T) {
+	listItem := ListItem {}
+	// Mock DB
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetListItem", 1, "").Return(listItem, ErrInternalServerError)
+
+	// Test
+	listItemResult, err := mockService.GetListItem(1, "")
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, listItemResult)
 }
