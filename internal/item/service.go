@@ -8,6 +8,7 @@ func NewService(repo Repo) Service {
 
 type Service interface {
 	GetListItem(placeID int, name string) (*ListItem, error)
+	GetItemByID(itemID int) (*Item, error)
 }
 
 type service struct {
@@ -22,4 +23,10 @@ func (s service) GetListItem(placeID int, name string) (*ListItem, error) {
 	}
 
 	return listItem, err
+}
+
+func (s service) GetItemByID(itemID int) (*Item, error) {
+	item, err := s.repo.GetItemById(itemID)
+
+	return item, err
 }
