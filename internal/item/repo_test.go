@@ -192,12 +192,12 @@ func TestRepo_GetItemByID(t *testing.T) {
 			itemExpected.Image,
 			itemExpected.Price,
 			itemExpected.Description)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE item_id = $1 ")).
-		WithArgs(1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 AND id = $2")).
+		WithArgs(10,1).
 		WillReturnRows(rows)
 	
 	// Test
-	itemResult, err := repoMock.GetItemById(1)
+	itemResult, err := repoMock.GetItemById(10,1)
 	assert.Equal(t, itemExpected, itemResult)
 	assert.NotNil(t, itemResult)
 	assert.NoError(t, err)
@@ -214,12 +214,12 @@ func TestRepo_GetItemByIDError(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE item_id = $1 ")).
-		WithArgs(1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 AND id = $2")).
+		WithArgs(10, 1).
 		WillReturnError(sql.ErrTxDone)
 	
 	// Test
-	itemResult, err := repoMock.GetItemById(1)
+	itemResult, err := repoMock.GetItemById(10, 1)
 	assert.Nil(t, itemResult)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 }
@@ -237,12 +237,12 @@ func TestRepo_GetItemByIDEmpty(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE item_id = $1 ")).
-		WithArgs(1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 AND id = $2")).
+		WithArgs(10, 1).
 		WillReturnError(sql.ErrNoRows)
 	
 	// Test
-	itemResult, err := repoMock.GetItemById(1)
+	itemResult, err := repoMock.GetItemById(10, 1)
 	assert.Equal(t, itemExpected, itemResult)
 	assert.NotNil(t, itemResult)
 	assert.NoError(t, err)
