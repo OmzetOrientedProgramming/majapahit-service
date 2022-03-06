@@ -1,9 +1,5 @@
 package place
 
-import (
-	"time"
-)
-
 type PlaceDetail struct {
 	ID            int          `json:"id"`
 	Name          string       `json:"name"`
@@ -11,8 +7,8 @@ type PlaceDetail struct {
 	Distance      float64      `json:"distance"`
 	Address       string       `json:"address"`
 	Description   string       `json:"description"`
-	OpenHour      time.Time    `json:"open_hour"`
-	CloseHour     time.Time    `json:"close_hour"`
+	OpenHour      string       `json:"open_hour"`
+	CloseHour     string       `json:"close_hour"`
 	AverageRating float64      `json:"average_rating"`
 	ReviewCount   int          `json:"review_count"`
 	Reviews       []UserReview `json:"reviews"`
