@@ -292,3 +292,43 @@ func TestHandler_GetItemByIDItemIDError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
+
+func TestHandler_GetItemByIDInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("name", "")
+	req := httptest.NewRequest(http.MethodGet, "/catalog?"+q.Encode()+"/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/catalog/:itemID")
+	ctx.SetParamNames("placeID", "itemID")
+	ctx.SetParamValues("10", "1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+	placeID := 10
+	itemID := 1
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	internalServerError := errors.Wrap(ErrInternalServerError, "test")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJson, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var item Item
+	mockService.On("GetItemByID", placeID, itemID).Return(&item, internalServerError)
+	
+	// Tes
+	assert.NoError(t, h.GetItemByID(ctx))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
