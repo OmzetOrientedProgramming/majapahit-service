@@ -80,7 +80,14 @@ func (h *Handler) GetItemByID(c echo.Context) error {
 		})
 	}
 
-	item, _ := h.service.GetItemByID(placeID, itemID)
+	item, err := h.service.GetItemByID(placeID, itemID)
+	if err != nil {
+		logrus.Error("[error while accessing catalog service]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
 		Status:  200,
