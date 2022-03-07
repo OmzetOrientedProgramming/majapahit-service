@@ -255,3 +255,40 @@ func TestHandler_GetItemByIDPlaceIDError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
+
+func TestHandler_GetItemByIDItemIDError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("name", "")
+	req := httptest.NewRequest(http.MethodGet, "/catalog?"+q.Encode()+"/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/catalog/:itemID")
+	ctx.SetParamNames("placeID", "itemID")
+	ctx.SetParamValues("1", "test")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status: http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"incorrect item id",
+		},
+
+	}
+
+	expectedResponseJson, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.GetItemByID(ctx))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
