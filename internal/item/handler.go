@@ -53,3 +53,21 @@ func (h *Handler) GetListItem(c echo.Context) error {
 		},
 	})
 }
+
+func (h *Handler) GetItemByID(c echo.Context) error {
+	placeIDString := c.Param("placeID")
+	itemIDString := c.Param("itemID")
+
+
+	placeID, _ := strconv.Atoi(placeIDString)
+	itemID, _ := strconv.Atoi(itemIDString)
+	item, _ := h.service.GetItemByID(placeID, itemID)
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  200,
+		Message: "success",
+		Data: map[string]interface{}{
+			"item":     item,
+		},
+	})
+}
