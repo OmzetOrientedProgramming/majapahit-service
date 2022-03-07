@@ -75,7 +75,7 @@ func TestHandler_GetListItem(t *testing.T) {
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"places":     listItem.Items,
+			"items":     listItem.Items,
 		},
 	}
 
@@ -89,4 +89,41 @@ func TestHandler_GetListItem(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
+}
+
+func TestHandler_GetListItemPlaceIDError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("name", "")
+	req := httptest.NewRequest(http.MethodGet, "/catalog?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/catalog")
+	ctx.SetParamNames("placeID")
+	ctx.SetParamValues("test")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status: http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"incorrect place id",
+		},
+
+	}
+
+	expectedResponseJson, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.GetListItem(ctx))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
