@@ -19,10 +19,21 @@ func NewHandler(service Service) *Handler {
 }
 
 func (h *Handler) GetListItem(c echo.Context) error {
+	errorList := []string{}
 	placeIDString := c.Param("placeID")
 	name := c.QueryParam("name")
 
-	placeID, _ := strconv.Atoi(placeIDString)
+
+	placeID, err := strconv.Atoi(placeIDString)
+
+	if err != nil {
+		errorList = append(errorList, "incorrect place id")
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
+	}
 
 	listItem, _ := h.service.GetListItem(placeID, name)
 
@@ -30,7 +41,7 @@ func (h *Handler) GetListItem(c echo.Context) error {
 		Status:  200,
 		Message: "success",
 		Data: map[string]interface{}{
-			"places":     listItem.Items,
+			"items":     listItem.Items,
 		},
 	})
 }
