@@ -46,14 +46,14 @@ func (s service) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesLi
 		return nil, nil, err
 	}
 
-	for _, ratingAndReviewCount := range placeList.Places {
-		ratingAndReviewCountRetrieved, errRating := s.repo.GetPlaceRatingAndReviewCountByPlaceID(ratingAndReviewCount.ID)
+	for i := range placeList.Places {
+		ratingAndReviewCountRetrieved, errRating := s.repo.GetPlaceRatingAndReviewCountByPlaceID(placeList.Places[i].ID)
 		if errRating != nil {
 			return nil, nil, errRating
 		}
 
-		ratingAndReviewCount.Rating = ratingAndReviewCountRetrieved.Rating
-		ratingAndReviewCount.ReviewCount = ratingAndReviewCountRetrieved.ReviewCount
+		placeList.Places[i].Rating = ratingAndReviewCountRetrieved.Rating
+		placeList.Places[i].ReviewCount = ratingAndReviewCountRetrieved.ReviewCount
 	}
 
 	pagination := util.GeneratePagination(placeList.TotalCount, params.Limit, params.Page, params.Path)
