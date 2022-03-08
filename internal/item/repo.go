@@ -2,6 +2,7 @@ package item
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -24,16 +25,21 @@ type Repo interface {
 
 func (r repo) GetListItem(place_id int, name string) (*ListItem, error) {
 	var listItem ListItem
+	var listQuery []interface{}
+	n := 1
 	listItem.Items = make([]Item, 0)
 
 	query := "SELECT id, name, image, price, description FROM items WHERE "
 	
 	if name != "" {
-		query = query + "name LIKE '%$1%' AND "
+		query += fmt.Sprintf("name LIKE $%d AND ", n)
+		n += 1
+		listQuery = append(listQuery, "%"+name+"%")
 	}
 
-	query = query + "place_id = $2"
-	err := r.db.Select(&listItem.Items, query, name, place_id)
+	query += fmt.Sprintf("place_id = $%d", n)
+	listQuery = append(listQuery, place_id)
+	err := r.db.Select(&listItem.Items, query, listQuery...)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
