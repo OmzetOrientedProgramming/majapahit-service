@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/database/postgres"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 )
 
 type Server struct {
@@ -23,6 +24,10 @@ var (
 	checkUpRepo    checkup.Repo
 	checkUpService checkup.Service
 	checkupHandler *checkup.Handler
+
+	catalogRepo 	item.Repo
+	catalogService 	item.Service
+	catalogHandler 	*item.Handler
 )
 
 func (s Server) Init() {
@@ -34,6 +39,11 @@ func (s Server) Init() {
 	checkUpRepo = checkup.NewRepo(db)
 	checkUpService = checkup.NewService(checkUpRepo)
 	checkupHandler = checkup.NewHandler(checkUpService)
+
+	// Catalog Module
+	catalogRepo = item.NewRepo(db)
+	catalogService = item.NewService(catalogRepo)
+	catalogHandler = item.NewHandler(catalogService)
 
 	// Start routing
 	r := NewRoutes(s.Router, checkupHandler)
