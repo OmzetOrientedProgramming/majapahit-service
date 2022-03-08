@@ -63,16 +63,14 @@ func (h *Handler) GetItemByID(c echo.Context) error {
 	placeID, err := strconv.Atoi(placeIDString)
 	if err != nil {
 		errorList = append(errorList, "incorrect place id")
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
 	}
 
 	itemID, err := strconv.Atoi(itemIDString)	
 	if err != nil {
 		errorList = append(errorList, "incorrect item id")
+	}
+
+	if len(errorList) != 0 {
 		return c.JSON(http.StatusBadRequest, util.APIResponse{
 			Status:  http.StatusBadRequest,
 			Message: "input validation error",
