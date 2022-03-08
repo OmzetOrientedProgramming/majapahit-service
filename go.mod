@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect
@@ -36,6 +37,14 @@ require (
 	go.uber.org/atomic v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/net v0.0.0-20211013171255-e13a2654a71e // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
+)
+
+require (
+	github.com/joho/godotenv v1.4.0
+	github.com/labstack/echo/v4 v4.6.3
+	github.com/stretchr/testify v1.7.0
 	golang.org/x/sys v0.0.0-20211103235746-7861aae1554b // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
