@@ -53,8 +53,8 @@ func TestRepo_GetListItem(t *testing.T) {
 			listItemExpected.Items[1].Image,
 			listItemExpected.Items[1].Price,
 			listItemExpected.Items[1].Description)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $2")).
-		WithArgs("",1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1")).
+		WithArgs(1).
 		WillReturnRows(rows)
 
 	// Test
@@ -75,8 +75,8 @@ func TestRepo_GetListItemError(t *testing.T) {
 	// Expectation
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $2")).
-		WithArgs("",1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1")).
+		WithArgs(1).
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
@@ -101,8 +101,8 @@ func TestRepo_GetListItemEmpty(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image,  price, description FROM items WHERE place_id = $2 ")).
-		WithArgs("",1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image,  price, description FROM items WHERE place_id = $1")).
+		WithArgs(1).
 		WillReturnError(sql.ErrNoRows)
 
 	// Test
@@ -155,8 +155,8 @@ func TestRepo_GetListItemByName(t *testing.T) {
 			listItemExpected.Items[1].Image,
 			listItemExpected.Items[1].Price,
 			listItemExpected.Items[1].Description)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE name LIKE '%$1%' AND place_id = $2")).
-		WithArgs("test",1).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE name LIKE $1 AND place_id = $2")).
+		WithArgs("%test%",1).
 		WillReturnRows(rows)
 
 	// Test
