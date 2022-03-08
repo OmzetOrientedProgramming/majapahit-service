@@ -12,14 +12,14 @@ type MockRepository struct {
 	mock.Mock
 }
 
-func (m *MockRepository) GetListItem(place_id int, name string) (*ListItem, error) {
-	args := m.Called(place_id, name)
+func (m *MockRepository) GetListItem(placeID int, name string) (*ListItem, error) {
+	args := m.Called(placeID, name)
 	ret := args.Get(0).(ListItem)
 	return &ret, args.Error(1)
 }
 
-func (m *MockRepository) GetItemById(place_id int, item_id int) (*Item, error) {
-	args := m.Called(place_id, item_id)
+func (m *MockRepository) GetItemByID(placeID int, itemID int) (*Item, error) {
+	args := m.Called(placeID, itemID)
 	ret := args.Get(0).(Item)
 	return &ret, args.Error(1)
 }
@@ -90,7 +90,7 @@ func TestService_GetItemByIDSuccess(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
-	mockRepo.On("GetItemById", 10, 1).Return(itemExpected, nil)
+	mockRepo.On("GetItemByID", 10, 1).Return(itemExpected, nil)
 
 	// Test
 	itemResult, err := mockService.GetItemByID(10, 1)
@@ -107,7 +107,7 @@ func TestService_GetItemByIDError(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
-	mockRepo.On("GetItemById", 10, 1).Return(item, ErrInternalServerError)
+	mockRepo.On("GetItemByID", 10, 1).Return(item, ErrInternalServerError)
 
 	// Test
 	itemResult, err := mockService.GetItemByID(10, 1)

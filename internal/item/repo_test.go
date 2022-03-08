@@ -197,7 +197,7 @@ func TestRepo_GetItemByID(t *testing.T) {
 		WillReturnRows(rows)
 	
 	// Test
-	itemResult, err := repoMock.GetItemById(10,1)
+	itemResult, err := repoMock.GetItemByID(10,1)
 	assert.Equal(t, itemExpected, itemResult)
 	assert.NotNil(t, itemResult)
 	assert.NoError(t, err)
@@ -219,7 +219,7 @@ func TestRepo_GetItemByIDError(t *testing.T) {
 		WillReturnError(sql.ErrTxDone)
 	
 	// Test
-	itemResult, err := repoMock.GetItemById(10, 1)
+	itemResult, err := repoMock.GetItemByID(10, 1)
 	assert.Nil(t, itemResult)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 }
@@ -242,7 +242,7 @@ func TestRepo_GetItemByIDEmpty(t *testing.T) {
 		WillReturnError(sql.ErrNoRows)
 	
 	// Test
-	itemResult, err := repoMock.GetItemById(10, 1)
+	itemResult, err := repoMock.GetItemByID(10, 1)
 	assert.Equal(t, itemExpected, itemResult)
 	assert.NotNil(t, itemResult)
 	assert.NoError(t, err)

@@ -26,7 +26,7 @@ func (s service) GetListItem(placeID int, name string) (*ListItem, error) {
 }
 
 func (s service) GetItemByID(placeID int, itemID int) (*Item, error) {
-	item, err := s.repo.GetItemById(placeID, itemID)
+	item, err := s.repo.GetItemByID(placeID, itemID)
 
 	if err != nil {
 		return nil, err

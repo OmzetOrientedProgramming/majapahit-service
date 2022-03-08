@@ -19,11 +19,11 @@ type repo struct {
 }
 
 type Repo interface {
-	GetListItem(place_id int, name string) (*ListItem, error)
-	GetItemById(place_id int, item_id int) (*Item, error)
+	GetListItem(placeID int, name string) (*ListItem, error)
+	GetItemByID(placeID int, itemID int) (*Item, error)
 }
 
-func (r repo) GetListItem(place_id int, name string) (*ListItem, error) {
+func (r repo) GetListItem(placeID int, name string) (*ListItem, error) {
 	var listItem ListItem
 	var listQuery []interface{}
 	n := 1
@@ -38,7 +38,7 @@ func (r repo) GetListItem(place_id int, name string) (*ListItem, error) {
 	}
 
 	query += fmt.Sprintf("place_id = $%d", n)
-	listQuery = append(listQuery, place_id)
+	listQuery = append(listQuery, placeID)
 	err := r.db.Select(&listItem.Items, query, listQuery...)
 	
 	if err != nil {
@@ -52,12 +52,12 @@ func (r repo) GetListItem(place_id int, name string) (*ListItem, error) {
 	return &listItem, nil
 }
 
-func (r repo) GetItemById(place_id int, item_id int) (*Item, error) {
+func (r repo) GetItemByID(placeID int, itemID int) (*Item, error) {
 	var item Item
 	item = Item{}
 
 	query := "SELECT id, name, image, price, description FROM items WHERE place_id = $1 AND id = $2"
-	err := r.db.Get(&item, query, place_id, item_id)
+	err := r.db.Get(&item, query, placeID, itemID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
