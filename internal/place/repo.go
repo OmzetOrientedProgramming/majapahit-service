@@ -26,7 +26,7 @@ func (r repo) GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList
 	placeList.Places = make([]Place, 0)
 	placeList.TotalCount = 0
 
-	query := "SELECT id, name, description, address FROM places LIMIT $1 OFFSET $2"
+	query := "SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2"
 	err := r.db.Select(&placeList.Places, query, params.Limit, (params.Page-1)*params.Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
