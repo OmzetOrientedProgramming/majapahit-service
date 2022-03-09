@@ -32,6 +32,6 @@ func (r *Routes) Init() {
 
 	// Catalog module
 	catalog := place.Group("/:placeID/catalog")
-	catalog.GET("", r.catalogHandler.GetListItem)
+	catalog.GET("", r.catalogHandler.GetListItemWithPagination)
 	catalog.GET("/:itemID", r.catalogHandler.GetItemByID)
 }

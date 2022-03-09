@@ -19,31 +19,45 @@ type repo struct {
 }
 
 type Repo interface {
-	GetListItem(placeID int, name string) (*ListItem, error)
+	GetListItemWithPagination(params ListItemRequest) (*ListItem, error)
 	GetItemByID(placeID int, itemID int) (*Item, error)
 }
 
-func (r repo) GetListItem(placeID int, name string) (*ListItem, error) {
+func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, error) {
 	var listItem ListItem
+	listItem.Items = make([]Item, 0)
+	listItem.TotalCount = 0
 	var listQuery []interface{}
 	n := 1
-	listItem.Items = make([]Item, 0)
 
-	query := "SELECT id, name, image, price, description FROM items WHERE "
+	main_query := "FROM items WHERE "
+	query_1 := "SELECT id, name, image, price, description "
+	query_2 := "SELECT COUNT(id) "
 	
-	if name != "" {
-		query += fmt.Sprintf("name LIKE $%d AND ", n)
+	if params.Name != "" {
+		main_query += fmt.Sprintf("name LIKE $%d AND ", n)
 		n += 1
-		listQuery = append(listQuery, "%"+name+"%")
+		listQuery = append(listQuery, "%"+params.Name+"%")
 	}
 
-	query += fmt.Sprintf("place_id = $%d", n)
-	listQuery = append(listQuery, placeID)
-	err := r.db.Select(&listItem.Items, query, listQuery...)
+	main_query += fmt.Sprintf("place_id = $%d LIMIT $%d OFFSET $%d", n, n+1, n+2)
+	listQuery = append(listQuery, params.PlaceID, params.Limit, (params.Page-1)*params.Limit)
+	err := r.db.Select(&listItem.Items, query_1 + main_query, listQuery...)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
+			listItem.TotalCount = 0
+			return &listItem, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	err = r.db.Get(&listItem.TotalCount, query_2 + main_query, listQuery...)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			listItem.Items = make([]Item, 0)
+			listItem.TotalCount = 0
 			return &listItem, nil
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
