@@ -25,26 +25,30 @@ func GeneratePagination(totalCount, limit, page int, path string) Pagination {
 	pagination := Pagination{
 		Limit:     limit,
 		Page:      page,
-		FirstUrl:  fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		LastUrl:   fmt.Sprintf("%s%s?limit=10&page=%d", os.Getenv("BASE_URL"), path, totalPage),
+		FirstUrl:  getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1),
+		LastUrl:   getPaginationURL(os.Getenv("BASE_URL"), path, limit, totalPage),
 		TotalPage: totalPage,
 	}
 
 	if limit < totalCount {
 		if page == 1 {
-			pagination.PreviousUrl = fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path)
-			pagination.NextUrl = fmt.Sprintf("%s%s?limit=10&page=%d", os.Getenv("BASE_URL"), path, page+1)
+			pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
+			pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page+1)
 		} else if page == totalPage {
-			pagination.PreviousUrl = fmt.Sprintf("%s%s?limit=10&page=%d", os.Getenv("BASE_URL"), path, page-1)
-			pagination.NextUrl = fmt.Sprintf("%s%s?limit=10&page=%d", os.Getenv("BASE_URL"), path, totalPage)
+			pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page-1)
+			pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, totalPage)
 		} else {
-			pagination.PreviousUrl = fmt.Sprintf("%s%s?limit=10&page=%d", os.Getenv("BASE_URL"), path, page-1)
-			pagination.NextUrl = fmt.Sprintf("%s%s?limit=10&page=%d", os.Getenv("BASE_URL"), path, page+1)
+			pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page-1)
+			pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page+1)
 		}
 	} else {
-		pagination.NextUrl = fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path)
-		pagination.PreviousUrl = fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path)
+		pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
+		pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
 	}
 
 	return pagination
+}
+
+func getPaginationURL(baseURL, path string, limit, page int) string {
+	return fmt.Sprintf("%s%s?limit=%d&page=%d", baseURL, path, limit, page)
 }

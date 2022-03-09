@@ -17,11 +17,13 @@ func TestRepo_GetPlacesListWithPaginationSuccess(t *testing.T) {
 				ID:          1,
 				Name:        "test",
 				Description: "test",
+				Image:       "test/image.png",
 			},
 			{
 				ID:          2,
 				Name:        "test 2",
 				Description: "test 2",
+				Image:       "test/image.png",
 			},
 		},
 		TotalCount: 10,
@@ -43,16 +45,18 @@ func TestRepo_GetPlacesListWithPaginationSuccess(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "name", "description", "address"}).
+		NewRows([]string{"id", "name", "description", "address", "image"}).
 		AddRow(placeListExpected.Places[0].ID,
 			placeListExpected.Places[0].Name,
 			placeListExpected.Places[0].Description,
-			placeListExpected.Places[0].Address).
+			placeListExpected.Places[0].Address,
+			placeListExpected.Places[0].Image).
 		AddRow(placeListExpected.Places[1].ID,
 			placeListExpected.Places[1].Name,
 			placeListExpected.Places[1].Description,
-			placeListExpected.Places[1].Address)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address FROM places LIMIT $1 OFFSET $2")).
+			placeListExpected.Places[1].Address,
+			placeListExpected.Places[1].Image)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
@@ -88,7 +92,7 @@ func TestRepo_GetPlacesListWithPaginationEmpty(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address FROM places LIMIT $1 OFFSET $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
@@ -123,7 +127,7 @@ func TestRepo_GetPlacesListWithPaginationEmptyWhenCount(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "name", "description", "address"}).
 		AddRow("1", "test name", "description", "address")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address FROM places LIMIT $1 OFFSET $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM places")).
@@ -152,7 +156,7 @@ func TestRepo_GetPlacesListWithPaginationError(t *testing.T) {
 	// Expectation
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address FROM places LIMIT $1 OFFSET $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
 
@@ -181,7 +185,7 @@ func TestRepo_GetPlacesListWithPaginationErrorWhenCount(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "name", "description", "address"}).
 		AddRow("1", "test name", "description", "address")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address FROM places LIMIT $1 OFFSET $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM places")).

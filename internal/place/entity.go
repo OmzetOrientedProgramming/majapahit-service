@@ -13,6 +13,7 @@ type Place struct {
 	Distance    float64 `json:"distance"`
 	Rating      float64 `json:"rating"`
 	ReviewCount int     `json:"review_count"`
+	Image       string  `json:"image"`
 }
 
 type PlacesListRequest struct {
