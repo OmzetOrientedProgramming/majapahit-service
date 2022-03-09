@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Repo will contain all the function that can be used by repo
 type Repo interface {
 	GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList, error)
 	GetPlaceRatingAndReviewCountByPlaceID(int) (*PlacesRatingAndReviewCount, error)
@@ -15,12 +16,14 @@ type repo struct {
 	db *sqlx.DB
 }
 
+// NewRepo used to initialize repo
 func NewRepo(db *sqlx.DB) Repo {
 	return &repo{
 		db: db,
 	}
 }
 
+// GetPlacesListWithPagination will do the query to database for getting list places data
 func (r repo) GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList, error) {
 	var placeList PlacesList
 	placeList.Places = make([]Place, 0)
@@ -51,6 +54,7 @@ func (r repo) GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList
 	return &placeList, nil
 }
 
+// GetPlaceRatingAndReviewCountByPlaceID will do the query to database for getting review and review count data
 func (r repo) GetPlaceRatingAndReviewCountByPlaceID(placeID int) (*PlacesRatingAndReviewCount, error) {
 	var result PlacesRatingAndReviewCount
 

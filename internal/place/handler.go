@@ -9,16 +9,19 @@ import (
 	"strconv"
 )
 
+// Handler struct for place package
 type Handler struct {
 	service Service
 }
 
+// NewHandler is used to initialize Handler
 func NewHandler(service Service) *Handler {
 	return &Handler{
 		service: service,
 	}
 }
 
+// GetPlacesListWithPagination will be used to handling the API request for get places
 func (h *Handler) GetPlacesListWithPagination(c echo.Context) error {
 	errorList := []string{}
 	limitString := c.QueryParam("limit")

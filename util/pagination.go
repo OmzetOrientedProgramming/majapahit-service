@@ -6,16 +6,18 @@ import (
 	"os"
 )
 
+// Pagination struct for pagination data response
 type Pagination struct {
 	Limit       int    `json:"limit"`
 	Page        int    `json:"page"`
-	FirstUrl    string `json:"first_url"`
-	LastUrl     string `json:"last_url"`
-	NextUrl     string `json:"next_url"`
-	PreviousUrl string `json:"previous_url"`
+	FirstURL    string `json:"first_url"`
+	LastURL     string `json:"last_url"`
+	NextURL     string `json:"next_url"`
+	PreviousURL string `json:"previous_url"`
 	TotalPage   int    `json:"total_page"`
 }
 
+// GeneratePagination function will generate the pagination given the parameter
 func GeneratePagination(totalCount, limit, page int, path string) Pagination {
 	totalPage := int(math.Ceil(float64(totalCount) / float64(limit)))
 	if totalPage == 0 {
@@ -25,25 +27,25 @@ func GeneratePagination(totalCount, limit, page int, path string) Pagination {
 	pagination := Pagination{
 		Limit:     limit,
 		Page:      page,
-		FirstUrl:  getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1),
-		LastUrl:   getPaginationURL(os.Getenv("BASE_URL"), path, limit, totalPage),
+		FirstURL:  getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1),
+		LastURL:   getPaginationURL(os.Getenv("BASE_URL"), path, limit, totalPage),
 		TotalPage: totalPage,
 	}
 
 	if limit < totalCount {
 		if page == 1 {
-			pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
-			pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page+1)
+			pagination.PreviousURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
+			pagination.NextURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page+1)
 		} else if page == totalPage {
-			pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page-1)
-			pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, totalPage)
+			pagination.PreviousURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page-1)
+			pagination.NextURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, totalPage)
 		} else {
-			pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page-1)
-			pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page+1)
+			pagination.PreviousURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page-1)
+			pagination.NextURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, page+1)
 		}
 	} else {
-		pagination.NextUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
-		pagination.PreviousUrl = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
+		pagination.NextURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
+		pagination.PreviousURL = getPaginationURL(os.Getenv("BASE_URL"), path, limit, 1)
 	}
 
 	return pagination

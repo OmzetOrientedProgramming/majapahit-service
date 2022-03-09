@@ -6,12 +6,14 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 )
 
+// Routes struct for routing endpoint
 type Routes struct {
 	Router         *echo.Echo
 	checkUPHandler *checkup.Handler
 	placeHandler   *place.Handler
 }
 
+// NewRoutes for creating Routes instance
 func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, placeHandler *place.Handler) *Routes {
 	return &Routes{
 		Router:         router,
@@ -20,6 +22,7 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, placeHandler 
 	}
 }
 
+// Init to init list of endpoint URL
 func (r *Routes) Init() {
 	// Application check up
 	r.Router.GET("/", r.checkUPHandler.GetApplicationCheckUp)

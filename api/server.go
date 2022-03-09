@@ -10,10 +10,12 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 )
 
+// Server struct to for the server dependency
 type Server struct {
 	Router *echo.Echo
 }
 
+// NewServer is used to initialize server
 func NewServer(router *echo.Echo) *Server {
 	return &Server{
 		Router: router,
@@ -30,6 +32,7 @@ var (
 	placeHandler *place.Handler
 )
 
+// Init all dependency
 func (s Server) Init() {
 	// Init DB
 	db := postgres.Init()
@@ -50,6 +53,7 @@ func (s Server) Init() {
 	r.Init()
 }
 
+// RunServer to run the server
 func (s Server) RunServer(port string) {
 	if err := s.Router.Start(":" + port); err != http.ErrServerClosed {
 		logrus.Error(err)
