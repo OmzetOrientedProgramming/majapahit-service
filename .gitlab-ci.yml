@@ -31,6 +31,7 @@ Test:
 Linter:
   stage: quality
   script:
+    - go get -u golang.org/x/lint/golint
     - go fmt $(go list ./... | grep -v /vendor/)
     - golint -set_exit_status $(go list ./... | grep -v /vendor/)
 
