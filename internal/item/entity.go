@@ -1,7 +1,8 @@
 package item
 
 type ListItem struct {
-	Items []Item `json:"items"`
+	Items      []Item `json:"items"`
+	TotalCount int    `json:"total_count"`
 }
 
 type Item struct {
