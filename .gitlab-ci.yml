@@ -25,13 +25,14 @@ stages:
 Test:
   stage: test
   script:
-    - go test -v $(go list ./... | grep -v ./main.go)
-    - go test $(go list ./... | grep -v ./main.go) -coverprofile=coverage.out && go tool cover -func coverage.out
+    - go test -v $(go list ./... | grep -v ./main.go | grep -v /vendor/)
+    - go test $(go list ./... | grep -v ./main.go | grep -v /vendor/) -coverprofile=coverage.out && go tool cover -func coverage.out
 
 Linter:
   stage: quality
   script:
     - go get -u golang.org/x/lint/golint
+    - go vet $(go list ./... | grep -v /vendor/)
     - go fmt $(go list ./... | grep -v /vendor/)
     - golint -set_exit_status $(go list ./... | grep -v /vendor/)
 

@@ -5,9 +5,9 @@ migrate-up :
 migrate-down :
 	migrate -source file:database/postgres/migrations -database postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable down $(N)
 test :
-	go test -v $$(go list ./... | grep -v ./main.go) 
+	go test -v $$(go list ./... | grep -v ./main.go | grep -v /vendor/)
 coverage :
-	go test $$(go list ./... | grep -v ./main.go) -coverprofile=coverage.out && go tool cover -func coverage.out
+	go test $$(go list ./... | grep -v ./main.go | grep -v /vendor/) -coverprofile=coverage.out && go tool cover -func coverage.out
 lint:
 	golint -set_exit_status $$(go list ./... | grep -v /vendor/)
 fmt:
