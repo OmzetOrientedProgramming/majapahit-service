@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/labstack/echo/v4/middleware"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -21,6 +22,10 @@ func main() {
 
 	// Creating router
 	router := echo.New()
+	router.Pre(middleware.RemoveTrailingSlash())
+	router.Use(middleware.Logger())
+	router.Use(middleware.CORS())
+
 	s := api.NewServer(router)
 	s.Init()
 
