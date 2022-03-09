@@ -7,12 +7,14 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
+// NewService for initialize service
 func NewService(repo Repo) Service {
 	return &service{
 		repo: repo,
 	}
 }
 
+// Service will contain all the function that can be used by service
 type Service interface {
 	GetListItemWithPagination(params ListItemRequest) (*ListItem, *util.Pagination, error)
 	GetItemByID(placeID int, itemID int) (*Item, error)

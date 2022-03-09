@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewRepo used to initialize repo
 func NewRepo(db *sqlx.DB) Repo {
 	return &repo{
 		db: db,
@@ -18,6 +19,7 @@ type repo struct {
 	db *sqlx.DB
 }
 
+// Repo will contain all the function that can be used by repo
 type Repo interface {
 	GetListItemWithPagination(params ListItemRequest) (*ListItem, error)
 	GetItemByID(placeID int, itemID int) (*Item, error)
@@ -30,20 +32,20 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 	var listQuery []interface{}
 	n := 1
 
-	main_query := "FROM items WHERE "
-	query_1 := "SELECT id, name, image, price, description "
-	query_2 := "SELECT COUNT(id) "
-	
+	mainQuery := "FROM items WHERE "
+	query1 := "SELECT id, name, image, price, description "
+	query2 := "SELECT COUNT(id) "
+
 	if params.Name != "" {
-		main_query += fmt.Sprintf("name LIKE $%d AND ", n)
-		n += 1
+		mainQuery += fmt.Sprintf("name LIKE $%d AND ", n)
+		n++
 		listQuery = append(listQuery, "%"+params.Name+"%")
 	}
 
-	main_query += fmt.Sprintf("place_id = $%d LIMIT $%d OFFSET $%d", n, n+1, n+2)
+	mainQuery += fmt.Sprintf("place_id = $%d LIMIT $%d OFFSET $%d", n, n+1, n+2)
 	listQuery = append(listQuery, params.PlaceID, params.Limit, (params.Page-1)*params.Limit)
-	err := r.db.Select(&listItem.Items, query_1 + main_query, listQuery...)
-	
+	err := r.db.Select(&listItem.Items, query1+mainQuery, listQuery...)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
@@ -53,7 +55,7 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	err = r.db.Get(&listItem.TotalCount, query_2 + main_query, listQuery...)
+	err = r.db.Get(&listItem.TotalCount, query2+mainQuery, listQuery...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
@@ -62,7 +64,7 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-	
+
 	return &listItem, nil
 }
 

@@ -15,10 +15,10 @@ func TestGeneratePaginationTotalPageGreaterThanPage(t *testing.T) {
 	expectedResult := Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstUrl:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		LastUrl:     fmt.Sprintf("%s%s?limit=10&page=4", os.Getenv("BASE_URL"), path),
-		NextUrl:     fmt.Sprintf("%s%s?limit=10&page=2", os.Getenv("BASE_URL"), path),
-		PreviousUrl: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		FirstURL:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		LastURL:     fmt.Sprintf("%s%s?limit=10&page=4", os.Getenv("BASE_URL"), path),
+		NextURL:     fmt.Sprintf("%s%s?limit=10&page=2", os.Getenv("BASE_URL"), path),
+		PreviousURL: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
 		TotalPage:   4,
 	}
 
@@ -34,10 +34,10 @@ func TestGeneratePaginationTotalPageLowerThanEqualPage(t *testing.T) {
 	expectedResult := Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstUrl:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		LastUrl:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		NextUrl:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		PreviousUrl: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		FirstURL:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		LastURL:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		NextURL:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		PreviousURL: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
 		TotalPage:   1,
 	}
 
@@ -53,10 +53,10 @@ func TestGeneratePaginationInPageNumberTwo(t *testing.T) {
 	expectedResult := Pagination{
 		Limit:       10,
 		Page:        2,
-		FirstUrl:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		LastUrl:     fmt.Sprintf("%s%s?limit=10&page=5", os.Getenv("BASE_URL"), path),
-		NextUrl:     fmt.Sprintf("%s%s?limit=10&page=3", os.Getenv("BASE_URL"), path),
-		PreviousUrl: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		FirstURL:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		LastURL:     fmt.Sprintf("%s%s?limit=10&page=5", os.Getenv("BASE_URL"), path),
+		NextURL:     fmt.Sprintf("%s%s?limit=10&page=3", os.Getenv("BASE_URL"), path),
+		PreviousURL: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
 		TotalPage:   5,
 	}
 
@@ -72,10 +72,10 @@ func TestGeneratePaginationInLastPage(t *testing.T) {
 	expectedResult := Pagination{
 		Limit:       10,
 		Page:        5,
-		FirstUrl:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		LastUrl:     fmt.Sprintf("%s%s?limit=10&page=5", os.Getenv("BASE_URL"), path),
-		NextUrl:     fmt.Sprintf("%s%s?limit=10&page=5", os.Getenv("BASE_URL"), path),
-		PreviousUrl: fmt.Sprintf("%s%s?limit=10&page=4", os.Getenv("BASE_URL"), path),
+		FirstURL:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		LastURL:     fmt.Sprintf("%s%s?limit=10&page=5", os.Getenv("BASE_URL"), path),
+		NextURL:     fmt.Sprintf("%s%s?limit=10&page=5", os.Getenv("BASE_URL"), path),
+		PreviousURL: fmt.Sprintf("%s%s?limit=10&page=4", os.Getenv("BASE_URL"), path),
 		TotalPage:   5,
 	}
 
@@ -91,10 +91,10 @@ func TestGeneratePaginationTotalPageZero(t *testing.T) {
 	expectedResult := Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstUrl:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		LastUrl:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		NextUrl:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
-		PreviousUrl: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		FirstURL:    fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		LastURL:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		NextURL:     fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
+		PreviousURL: fmt.Sprintf("%s%s?limit=10&page=1", os.Getenv("BASE_URL"), path),
 		TotalPage:   1,
 	}
 

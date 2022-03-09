@@ -17,6 +17,7 @@ before_script:
   - cd $GOPATH/src/$REPO_NAME
 
 stages:
+  - quality
   - test
   - build
   - deploy
@@ -24,14 +25,22 @@ stages:
 Test:
   stage: test
   script:
-    - go test -v $(go list ./... | grep -v ./main.go)
-    - go test $(go list ./... | grep -v ./main.go) -coverprofile=coverage.out && go tool cover -func coverage.out
+    - go test -v $(go list ./... | grep -v ./main.go | grep -v /vendor/)
+    - go test $(go list ./... | grep -v ./main.go | grep -v /vendor/) -coverprofile=coverage.out && go tool cover -func coverage.out
+
+Linter:
+  stage: quality
+  script:
+    - go get -u golang.org/x/lint/golint
+    - go vet $(go list ./... | grep -v /vendor/)
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - golint -set_exit_status $(go list ./... | grep -v /vendor/)
 
 SonarScanner Dev:
   image:
     name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [ "" ]
-  stage: test
+  stage: quality
   script:
     - sonar-scanner
       -Dsonar.host.url=$SONARQUBE_HOST_URL
@@ -48,7 +57,7 @@ SonarScanner:
   image:
     name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [ "" ]
-  stage: test
+  stage: quality
   script:
     - sonar-scanner
       -Dsonar.host.url=$SONARQUBE_HOST_URL
@@ -66,6 +75,10 @@ Build:
   script:
     - go get -d -v
     - go build -o bin/majapahit-service -v .
+  only:
+    - master
+    - staging
+    - merge_requests
 
 Deployment:
   rules:

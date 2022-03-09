@@ -28,7 +28,7 @@ func (m *MockService) GetListItemWithPagination(params ListItemRequest) (*ListIt
 	return listItem, &pagination, args.Error(2)
 }
 
-func (m *MockService) GetItemByID(placeID int, itemID int ) (*Item, error) {
+func (m *MockService) GetItemByID(placeID int, itemID int) (*Item, error) {
 	args := m.Called(placeID, itemID)
 	item := args.Get(0).(*Item)
 	return item, args.Error(1)
@@ -54,9 +54,9 @@ func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 	h := NewHandler(mockService)
 
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
-		Path:  "/api/v1/place/1/catalog",
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/v1/place/1/catalog",
 		PlaceID: 1,
 	}
 
@@ -66,18 +66,18 @@ func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 	listItem := ListItem{
 		Items: []Item{
 			{
-				ID:          	1,
-				Name:        	"test",
-				Image:     		"test",
-				Description:	"test",
-				Price:    		10000,
+				ID:          1,
+				Name:        "test",
+				Image:       "test",
+				Description: "test",
+				Price:       10000,
 			},
 			{
-				ID:          	2,
-				Name:        	"test",
-				Image:     		"test",
-				Description:	"test",
-				Price:    		10000,
+				ID:          2,
+				Name:        "test",
+				Image:       "test",
+				Description: "test",
+				Price:       10000,
 			},
 		},
 		TotalCount: 10,
@@ -86,10 +86,10 @@ func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 	pagination := util.Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstUrl:    fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
-		LastUrl:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
-		NextUrl:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousUrl: fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
 		TotalPage:   1,
 	}
 
@@ -97,12 +97,12 @@ func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"items":     listItem.Items,
+			"items":      listItem.Items,
 			"pagination": pagination,
 		},
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, nil)
@@ -110,7 +110,7 @@ func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 	// Tes
 	if assert.NoError(t, h.GetListItemWithPagination(ctx)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
 
@@ -137,20 +137,19 @@ func TestHandler_GetListItemWithPaginationPlaceIDError(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	expectedResponse := util.APIResponse{
-		Status: http.StatusBadRequest,
+		Status:  http.StatusBadRequest,
 		Message: "input validation error",
 		Errors: []string{
 			"incorrect place id",
 		},
-
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
 	assert.NoError(t, h.GetListItemWithPagination(ctx))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetListItemWithPaginationLimitError(t *testing.T) {
@@ -176,9 +175,9 @@ func TestHandler_GetListItemWithPaginationLimitError(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	params := ListItemRequest{
-		Limit: 110,
-		Page:  1,
-		Path:  "/api/v1/place/1/catalog",
+		Limit:   110,
+		Page:    1,
+		Path:    "/api/v1/place/1/catalog",
 		PlaceID: 1,
 	}
 
@@ -190,17 +189,16 @@ func TestHandler_GetListItemWithPaginationLimitError(t *testing.T) {
 		Errors:  errList,
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	var listItem ListItem
 	var pagination util.Pagination
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, errorFromService)
 
-
 	// Tes
 	assert.NoError(t, h.GetListItemWithPagination(ctx))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetListItemWithPaginationLimitAndPageAreNotInt(t *testing.T) {
@@ -234,12 +232,12 @@ func TestHandler_GetListItemWithPaginationLimitAndPageAreNotInt(t *testing.T) {
 		},
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
 	assert.NoError(t, h.GetListItemWithPagination(ctx))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetListItemInternalServerError(t *testing.T) {
@@ -265,9 +263,9 @@ func TestHandler_GetListItemInternalServerError(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	params := ListItemRequest{
-		Limit: 110,
-		Page:  1,
-		Path:  "/api/v1/place/1/catalog",
+		Limit:   110,
+		Page:    1,
+		Path:    "/api/v1/place/1/catalog",
 		PlaceID: 1,
 	}
 
@@ -277,7 +275,7 @@ func TestHandler_GetListItemInternalServerError(t *testing.T) {
 		Message: "internal server error",
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	var listItem ListItem
@@ -287,7 +285,7 @@ func TestHandler_GetListItemInternalServerError(t *testing.T) {
 	// Tes
 	assert.NoError(t, h.GetListItemWithPagination(ctx))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T) {
@@ -307,9 +305,9 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 	h := NewHandler(mockService)
 
 	params := ListItemRequest{
-		Limit: 0,
-		Page:  0,
-		Path:  "/api/v1/place/1/catalog",
+		Limit:   0,
+		Page:    0,
+		Path:    "/api/v1/place/1/catalog",
 		PlaceID: 1,
 	}
 
@@ -319,18 +317,18 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 	listItem := ListItem{
 		Items: []Item{
 			{
-				ID:          	1,
-				Name:        	"test",
-				Image:     		"test",
-				Description:	"test",
-				Price:    		10000,
+				ID:          1,
+				Name:        "test",
+				Image:       "test",
+				Description: "test",
+				Price:       10000,
 			},
 			{
-				ID:          	2,
-				Name:        	"test",
-				Image:     		"test",
-				Description:	"test",
-				Price:    		10000,
+				ID:          2,
+				Name:        "test",
+				Image:       "test",
+				Description: "test",
+				Price:       10000,
 			},
 		},
 		TotalCount: 10,
@@ -339,10 +337,10 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 	pagination := util.Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstUrl:    fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
-		LastUrl:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
-		NextUrl:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousUrl: fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/catalog?limit=10&page=1", os.Getenv("BASE_URL")),
 		TotalPage:   1,
 	}
 
@@ -350,12 +348,12 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"items":     listItem.Items,
+			"items":      listItem.Items,
 			"pagination": pagination,
 		},
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, nil)
@@ -363,7 +361,7 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 	// Tes
 	if assert.NoError(t, h.GetListItemWithPagination(ctx)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
 
@@ -389,23 +387,23 @@ func TestHandler_GetItemByID(t *testing.T) {
 	// Setup Env
 	t.Setenv("BASE_URL", "localhost:8080")
 
-	item := Item {
-			ID:          	1,
-			Name:        	"test",
-			Image:     		"test",
-			Description:	"test",
-			Price:    		10000,
+	item := Item{
+		ID:          1,
+		Name:        "test",
+		Image:       "test",
+		Description: "test",
+		Price:       10000,
 	}
 
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"item":     item,
+			"item": item,
 		},
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	mockService.On("GetItemByID", placeID, itemID).Return(&item, nil)
@@ -413,7 +411,7 @@ func TestHandler_GetItemByID(t *testing.T) {
 	// Tes
 	if assert.NoError(t, h.GetItemByID(ctx)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
 
@@ -438,20 +436,19 @@ func TestHandler_GetItemByIDPlaceIDError(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	expectedResponse := util.APIResponse{
-		Status: http.StatusBadRequest,
+		Status:  http.StatusBadRequest,
 		Message: "input validation error",
 		Errors: []string{
 			"incorrect place id",
 		},
-
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
 	assert.NoError(t, h.GetItemByID(ctx))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetItemByIDItemIDError(t *testing.T) {
@@ -475,20 +472,19 @@ func TestHandler_GetItemByIDItemIDError(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	expectedResponse := util.APIResponse{
-		Status: http.StatusBadRequest,
+		Status:  http.StatusBadRequest,
 		Message: "input validation error",
 		Errors: []string{
 			"incorrect item id",
 		},
-
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
 	assert.NoError(t, h.GetItemByID(ctx))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetItemByIDInternalServerError(t *testing.T) {
@@ -519,7 +515,7 @@ func TestHandler_GetItemByIDInternalServerError(t *testing.T) {
 		Message: "internal server error",
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	var item Item
@@ -528,5 +524,5 @@ func TestHandler_GetItemByIDInternalServerError(t *testing.T) {
 	// Tes
 	assert.NoError(t, h.GetItemByID(ctx))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }

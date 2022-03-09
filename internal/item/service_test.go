@@ -29,27 +29,27 @@ func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
 	listItemExpected := ListItem{
 		Items: []Item{
 			{
-				ID:         	1,
-				Name:       	"test 1",
-				Image:			"test 1",
-				Description:	"test 1",
-				Price:     		10000,
+				ID:          1,
+				Name:        "test 1",
+				Image:       "test 1",
+				Description: "test 1",
+				Price:       10000,
 			},
 			{
-				ID:          	2,
-				Name:        	"test 2",
-				Image:			"test 2",
-				Description: 	"test 2",
-				Price:     		20000,
+				ID:          2,
+				Name:        "test 2",
+				Image:       "test 2",
+				Description: "test 2",
+				Price:       20000,
 			},
 		},
 		TotalCount: 10,
 	}
 
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
-		Path:  "/api/testing",
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
 		PlaceID: 1,
 	}
 
@@ -74,27 +74,27 @@ func TestService_GetListItemByIDWithPaginationSuccessWithDefaultParam(t *testing
 	listItemExpected := ListItem{
 		Items: []Item{
 			{
-				ID:         	1,
-				Name:       	"test 1",
-				Image:			"test 1",
-				Description:	"test 1",
-				Price:     		10000,
+				ID:          1,
+				Name:        "test 1",
+				Image:       "test 1",
+				Description: "test 1",
+				Price:       10000,
 			},
 			{
-				ID:          	2,
-				Name:        	"test 2",
-				Image:			"test 2",
-				Description: 	"test 2",
-				Price:     		20000,
+				ID:          2,
+				Name:        "test 2",
+				Image:       "test 2",
+				Description: "test 2",
+				Price:       20000,
 			},
 		},
 		TotalCount: 10,
 	}
 
 	params := ListItemRequest{
-		Limit: 0,
-		Page:  0,
-		Path:  "/api/testing",
+		Limit:   0,
+		Page:    0,
+		Path:    "/api/testing",
 		PlaceID: 1,
 	}
 
@@ -103,9 +103,9 @@ func TestService_GetListItemByIDWithPaginationSuccessWithDefaultParam(t *testing
 	mockService := NewService(mockRepo)
 
 	paramsDefault := ListItemRequest{
-		Limit: 10,
-		Page:  1,
-		Path:  "/api/testing",
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
 		PlaceID: 1,
 	}
 	// Expectation
@@ -139,15 +139,13 @@ func TestService_GetListItemWithPaginationFailedLimitExceedMaxLimit(t *testing.T
 	assert.Nil(t, listItemResult)
 }
 
-
-
 func TestService_GetListItemByIDWithPaginationError(t *testing.T) {
-	listItem := ListItem {}
+	listItem := ListItem{}
 
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
-		Path:  "/api/testing",
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
 		PlaceID: 1,
 	}
 
@@ -184,13 +182,12 @@ func TestService_GetListItemWithPaginationFailedURLIsEmpty(t *testing.T) {
 	assert.Nil(t, listItemResult)
 }
 
-
 func TestService_GetItemByIDSuccess(t *testing.T) {
-	itemExpected := Item {
-		ID: 1,
-		Name: "test",
-		Image: "test",
-		Price: 10000,
+	itemExpected := Item{
+		ID:          1,
+		Name:        "test",
+		Image:       "test",
+		Price:       10000,
 		Description: "test",
 	}
 	// Mock DB
@@ -209,7 +206,7 @@ func TestService_GetItemByIDSuccess(t *testing.T) {
 }
 
 func TestService_GetItemByIDError(t *testing.T) {
-	item := Item {}
+	item := Item{}
 	// Mock DB
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)

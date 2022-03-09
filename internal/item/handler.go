@@ -10,16 +10,19 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
+// Handler struct for item package
 type Handler struct {
 	service Service
 }
 
+// NewHandler is used to initialize Handler
 func NewHandler(service Service) *Handler {
 	return &Handler{
 		service: service,
 	}
 }
 
+// GetListItemWithPagination is a handler for API request for get list item (catalog)
 func (h *Handler) GetListItemWithPagination(c echo.Context) error {
 	errorList := []string{}
 	placeIDString := c.Param("placeID")
@@ -63,7 +66,7 @@ func (h *Handler) GetListItemWithPagination(c echo.Context) error {
 	params.Name = name
 	params.Limit = limit
 	params.Page = page
-	params.Path = "/api/v1/place/"+placeIDString+"/catalog"
+	params.Path = "/api/v1/place/" + placeIDString + "/catalog"
 
 	listItem, pagination, err := h.service.GetListItemWithPagination(params)
 	if err != nil {
@@ -87,24 +90,24 @@ func (h *Handler) GetListItemWithPagination(c echo.Context) error {
 		Status:  200,
 		Message: "success",
 		Data: map[string]interface{}{
-			"items":     listItem.Items,
+			"items":      listItem.Items,
 			"pagination": pagination,
 		},
 	})
 }
 
+// GetItemByID is A handler for API request for get detail item
 func (h *Handler) GetItemByID(c echo.Context) error {
 	errorList := []string{}
 	placeIDString := c.Param("placeID")
 	itemIDString := c.Param("itemID")
-
 
 	placeID, err := strconv.Atoi(placeIDString)
 	if err != nil {
 		errorList = append(errorList, "incorrect place id")
 	}
 
-	itemID, err := strconv.Atoi(itemIDString)	
+	itemID, err := strconv.Atoi(itemIDString)
 	if err != nil {
 		errorList = append(errorList, "incorrect item id")
 	}
@@ -130,7 +133,7 @@ func (h *Handler) GetItemByID(c echo.Context) error {
 		Status:  200,
 		Message: "success",
 		Data: map[string]interface{}{
-			"item":     item,
+			"item": item,
 		},
 	})
 }

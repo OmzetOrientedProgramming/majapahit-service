@@ -13,28 +13,28 @@ import (
 
 func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 	listItemExpected := &ListItem{
-		Items: []Item {
+		Items: []Item{
 			{
-				ID:         	1,
-				Name:        	"test",
-				Image: 			"test",
-				Price:			10000,
-				Description: 	"test",
+				ID:          1,
+				Name:        "test",
+				Image:       "test",
+				Price:       10000,
+				Description: "test",
 			},
 			{
-				ID:          	2,
-				Name:        	"test",
-				Image: 			"test",
-				Price:			10000,
-				Description: 	"test",
+				ID:          2,
+				Name:        "test",
+				Image:       "test",
+				Price:       10000,
+				Description: "test",
 			},
 		},
 		TotalCount: 10,
 	}
 
 	params := ListItemRequest{
-		Limit: 10,
-		Page: 1,
+		Limit:   10,
+		Page:    1,
 		PlaceID: 1,
 	}
 
@@ -68,7 +68,7 @@ func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	
+
 	// Test
 	listItemResult, err := repoMock.GetListItemWithPagination(params)
 	assert.Equal(t, listItemExpected, listItemResult)
@@ -78,8 +78,8 @@ func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 
 func TestRepo_GetListItemWithPaginationError(t *testing.T) {
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
+		Limit:   10,
+		Page:    1,
 		PlaceID: 1,
 	}
 
@@ -106,8 +106,8 @@ func TestRepo_GetListItemWithPaginationError(t *testing.T) {
 
 func TestRepo_GetListItemWithPaginationCountError(t *testing.T) {
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
+		Limit:   10,
+		Page:    1,
 		PlaceID: 1,
 	}
 
@@ -128,7 +128,7 @@ func TestRepo_GetListItemWithPaginationCountError(t *testing.T) {
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
-		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).	
+		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrConnDone)
 
 	// Test
@@ -140,12 +140,12 @@ func TestRepo_GetListItemWithPaginationCountError(t *testing.T) {
 
 func TestRepo_GetListItemWithPaginationEmpty(t *testing.T) {
 	listItemExpected := &ListItem{
-		Items : make([]Item, 0),
+		Items: make([]Item, 0),
 	}
-	
+
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
+		Limit:   10,
+		Page:    1,
 		PlaceID: 1,
 	}
 
@@ -168,18 +168,18 @@ func TestRepo_GetListItemWithPaginationEmpty(t *testing.T) {
 	assert.Equal(t, listItemExpected, listItemResult)
 	assert.NotNil(t, listItemResult)
 	assert.NoError(t, err)
-	
+
 }
 
 func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	listItemExpected := &ListItem{
-		Items : make([]Item, 0),
+		Items:      make([]Item, 0),
 		TotalCount: 0,
 	}
-	
+
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
+		Limit:   10,
+		Page:    1,
 		PlaceID: 1,
 	}
 
@@ -200,7 +200,7 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
-		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).	
+		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
 	// Test
@@ -212,30 +212,30 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 
 func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 	listItemExpected := &ListItem{
-		Items: []Item {
+		Items: []Item{
 			{
-				ID:         	1,
-				Name:        	"test",
-				Image: 			"test",
-				Price:			10000,
-				Description: 	"test",
+				ID:          1,
+				Name:        "test",
+				Image:       "test",
+				Price:       10000,
+				Description: "test",
 			},
 			{
-				ID:          	2,
-				Name:        	"test",
-				Image: 			"test",
-				Price:			10000,
-				Description: 	"test",
+				ID:          2,
+				Name:        "test",
+				Image:       "test",
+				Price:       10000,
+				Description: "test",
 			},
 		},
 		TotalCount: 10,
 	}
 
 	params := ListItemRequest{
-		Limit: 10,
-		Page:  1,
+		Limit:   10,
+		Page:    1,
 		PlaceID: 1,
-		Name: "test",
+		Name:    "test",
 	}
 
 	// Mock DB
@@ -263,10 +263,10 @@ func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE name LIKE $1 AND place_id = $2 LIMIT $3 OFFSET $4")).
 		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	
+
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE name LIKE $1 AND place_id = $2 LIMIT $3 OFFSET $4")).
-		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).	
+		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
 	// Test
@@ -277,11 +277,11 @@ func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 }
 
 func TestRepo_GetItemByID(t *testing.T) {
-	itemExpected := &Item {
-		ID: 1,
-		Name: "test",
-		Image: "test",
-		Price: 10000,
+	itemExpected := &Item{
+		ID:          1,
+		Name:        "test",
+		Image:       "test",
+		Price:       10000,
 		Description: "test",
 	}
 
@@ -303,11 +303,11 @@ func TestRepo_GetItemByID(t *testing.T) {
 			itemExpected.Price,
 			itemExpected.Description)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 AND id = $2")).
-		WithArgs(10,1).
+		WithArgs(10, 1).
 		WillReturnRows(rows)
-	
+
 	// Test
-	itemResult, err := repoMock.GetItemByID(10,1)
+	itemResult, err := repoMock.GetItemByID(10, 1)
 	assert.Equal(t, itemExpected, itemResult)
 	assert.NotNil(t, itemResult)
 	assert.NoError(t, err)
@@ -327,7 +327,7 @@ func TestRepo_GetItemByIDError(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 AND id = $2")).
 		WithArgs(10, 1).
 		WillReturnError(sql.ErrTxDone)
-	
+
 	// Test
 	itemResult, err := repoMock.GetItemByID(10, 1)
 	assert.Nil(t, itemResult)
@@ -336,7 +336,7 @@ func TestRepo_GetItemByIDError(t *testing.T) {
 
 func TestRepo_GetItemByIDEmpty(t *testing.T) {
 	itemExpected := &Item{}
-	
+
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
 	if err != nil {
@@ -350,7 +350,7 @@ func TestRepo_GetItemByIDEmpty(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 AND id = $2")).
 		WithArgs(10, 1).
 		WillReturnError(sql.ErrNoRows)
-	
+
 	// Test
 	itemResult, err := repoMock.GetItemByID(10, 1)
 	assert.Equal(t, itemExpected, itemResult)

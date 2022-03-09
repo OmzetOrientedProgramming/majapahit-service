@@ -80,10 +80,10 @@ func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
 	pagination := util.Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstUrl:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		LastUrl:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		NextUrl:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousUrl: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		FirstURL:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
 		TotalPage:   1,
 	}
 
@@ -96,7 +96,7 @@ func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
 		},
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, nil)
@@ -104,7 +104,7 @@ func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
 	// Tes
 	if assert.NoError(t, h.GetPlacesListWithPagination(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
 
@@ -140,7 +140,7 @@ func TestHandler_GetPlacesListWithPaginationWithParamsError(t *testing.T) {
 		Errors:  errList,
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	var placeList PlacesList
@@ -150,7 +150,7 @@ func TestHandler_GetPlacesListWithPaginationWithParamsError(t *testing.T) {
 	// Tes
 	assert.NoError(t, h.GetPlacesListWithPagination(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetPlacesListWithPaginationWithInternalServerError(t *testing.T) {
@@ -183,7 +183,7 @@ func TestHandler_GetPlacesListWithPaginationWithInternalServerError(t *testing.T
 		Message: "internal server error",
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	var placeList PlacesList
@@ -193,7 +193,7 @@ func TestHandler_GetPlacesListWithPaginationWithInternalServerError(t *testing.T
 	// Tes
 	assert.NoError(t, h.GetPlacesListWithPagination(c))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetPlacesListWithPaginationWithValidationErrorLimitPageNotInt(t *testing.T) {
@@ -222,12 +222,12 @@ func TestHandler_GetPlacesListWithPaginationWithValidationErrorLimitPageNotInt(t
 		},
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
 	assert.NoError(t, h.GetPlacesListWithPagination(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetPlacesListWithPaginationWithoutParams(t *testing.T) {
@@ -281,10 +281,10 @@ func TestHandler_GetPlacesListWithPaginationWithoutParams(t *testing.T) {
 	pagination := util.Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstUrl:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		LastUrl:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		NextUrl:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousUrl: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		FirstURL:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
 		TotalPage:   1,
 	}
 
@@ -297,7 +297,7 @@ func TestHandler_GetPlacesListWithPaginationWithoutParams(t *testing.T) {
 		},
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, nil)
@@ -305,6 +305,6 @@ func TestHandler_GetPlacesListWithPaginationWithoutParams(t *testing.T) {
 	// Tes
 	if assert.NoError(t, h.GetPlacesListWithPagination(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
