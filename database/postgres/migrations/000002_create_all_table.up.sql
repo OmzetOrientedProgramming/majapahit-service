@@ -122,8 +122,8 @@ CREATE TABLE IF NOT EXISTS  "place_tags" (
 );
 
 CREATE TABLE IF NOT EXISTS "otp_codes" (
-    "id" serial primary  key ,
-    "otp" int not null ,
+    "id" serial primary  key,
+    "otp" int not null,
     "expired_date" timestamp not null ,
     "phone_number" varchar(15) not null,
     "created_at" timestamp default now(),

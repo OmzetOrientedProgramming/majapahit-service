@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
+
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/database/postgres"
@@ -28,6 +30,9 @@ var (
 	catalogRepo 	item.Repo
 	catalogService 	item.Service
 	catalogHandler 	*item.Handler
+	placeRepo    place.Repo
+	placeService place.Service
+	placeHandler *place.Handler
 )
 
 func (s Server) Init() {
@@ -44,9 +49,13 @@ func (s Server) Init() {
 	catalogRepo = item.NewRepo(db)
 	catalogService = item.NewService(catalogRepo)
 	catalogHandler = item.NewHandler(catalogService)
+	// Place module
+	placeRepo = place.NewRepo(db)
+	placeService = place.NewService(placeRepo)
+	placeHandler = place.NewHandler(placeService)
 
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler)
+	r := NewRoutes(s.Router, checkupHandler, placeHandler)
 	r.Init()
 }
 

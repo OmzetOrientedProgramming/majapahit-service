@@ -4,19 +4,22 @@ import (
 	"github.com/labstack/echo/v4"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 )
 
 type Routes struct {
 	Router         *echo.Echo
 	checkUPHandler *checkup.Handler
 	catalogHandler *item.Handler
+	placeHandler   *place.Handler
 }
 
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, placeHandler *place.Handler) *Routes {
 	return &Routes{
 		Router:         router,
 		checkUPHandler: checkUpHandler,
 		catalogHandler: catalogHandler,
+		placeHandler:   placeHandler,
 	}
 }
 
@@ -29,6 +32,7 @@ func (r *Routes) Init() {
 
 	// Place module
 	place := v1.Group("/place")
+	place.GET("", r.placeHandler.GetPlacesListWithPagination)
 
 	// Catalog module
 	catalog := place.Group("/:placeID/catalog")
