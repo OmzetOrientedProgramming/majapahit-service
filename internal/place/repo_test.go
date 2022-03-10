@@ -85,7 +85,7 @@ func TestRepo_GetUserReviewForPlaceDetail(t *testing.T) {
 	placeId := 1
 	expectedAverageRatingAndReviews := &AverageRatingAndReviews{
 		AverageRating: 3.50,
-		ReviewCount:   20,
+		ReviewCount:   30,
 		Reviews: []UserReview{
 			{
 				User:    "test_user_1",
@@ -111,13 +111,13 @@ func TestRepo_GetUserReviewForPlaceDetail(t *testing.T) {
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
 
-	rows := mock.NewRows([]string{"sum_rating"}).AddRow(105)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
+	rows := mock.NewRows([]string{"count_review"}).AddRow(30)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
 		WithArgs(placeId).
 		WillReturnRows(rows)
 
-	rows = mock.NewRows([]string{"count_review"}).AddRow(30)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
+	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
 		WithArgs(placeId).
 		WillReturnRows(rows)
 
