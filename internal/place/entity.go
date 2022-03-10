@@ -14,6 +14,12 @@ type PlaceDetail struct {
 	Reviews       []UserReview `json:"reviews"`
 }
 
+type AverageRatingAndReviews struct {
+	AverageRating float64      `json:"average_rating"`
+	ReviewCount   int          `json:"review_count" db:"count_review"`
+	Reviews       []UserReview `json:"reviews"`
+}
+
 type UserReview struct {
 	User    string  `json:"user"`
 	Rating  float64 `json:"rating"`
