@@ -7,9 +7,9 @@ type PlaceDetail struct {
 	Distance      float64      `json:"distance"`
 	Address       string       `json:"address"`
 	Description   string       `json:"description"`
-	OpenHour      string       `json:"open_hour"`
-	CloseHour     string       `json:"close_hour"`
-	AverageRating float64      `json:"average_rating"`
+	OpenHour      string       `json:"open_hour" db:"open_hour"`
+	CloseHour     string       `json:"close_hour" db:"close_hour"`
+	AverageRating float64      `json:"average_rating" db:"rating"`
 	ReviewCount   int          `json:"review_count"`
 	Reviews       []UserReview `json:"reviews"`
 }
