@@ -1,11 +1,13 @@
 package place
 
 import (
+	"database/sql"
 	"regexp"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,4 +58,27 @@ func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
 	assert.Equal(t, placeDetailExpected, placeDetailRetrieve)
 	assert.NotNil(t, placeDetailRetrieve)
 	assert.NoError(t, err)
+}
+
+func TestRepo_GetPlaceDetailInternalServerError(t *testing.T) {
+	placeId := 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, rating FROM places WHERE id = $1")).
+		WithArgs(placeId).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	placeDetailRetrieve, err := repoMock.GetPlaceDetail(placeId)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, placeDetailRetrieve)
 }
