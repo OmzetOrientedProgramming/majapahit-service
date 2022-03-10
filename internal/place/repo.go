@@ -2,6 +2,7 @@ package place
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 type Repo interface {
@@ -24,7 +25,7 @@ func (r *repo) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
 	query := "SELECT id, name, image, distance, address, description, open_hour, close_hour, rating FROM places WHERE id = $1"
 	err := r.db.Get(&result, query, placeId)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &result, nil
