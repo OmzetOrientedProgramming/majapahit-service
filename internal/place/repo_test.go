@@ -129,9 +129,8 @@ func TestRepo_GetUserReviewForPlaceDetail(t *testing.T) {
 		AddRow(
 			expectedAverageRatingAndReviews.Reviews[1].User,
 			expectedAverageRatingAndReviews.Reviews[1].Rating,
-			expectedAverageRatingAndReviews.Reviews[1].Content,
-		)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1")).
+			expectedAverageRatingAndReviews.Reviews[1].Content)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2")).
 		WithArgs(placeId).
 		WillReturnRows(rows)
 
