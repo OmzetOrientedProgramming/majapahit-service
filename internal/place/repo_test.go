@@ -14,15 +14,14 @@ import (
 func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
 	placeId := 1
 	placeDetailExpected := &PlaceDetail{
-		ID:            1,
-		Name:          "test_name_place",
-		Image:         "test_image_place",
-		Distance:      200,
-		Address:       "test_address_place",
-		Description:   "test_description_place",
-		OpenHour:      "08:00",
-		CloseHour:     "16:00",
-		AverageRating: 3.5,
+		ID:          1,
+		Name:        "test_name_place",
+		Image:       "test_image_place",
+		Distance:    200,
+		Address:     "test_address_place",
+		Description: "test_description_place",
+		OpenHour:    "08:00",
+		CloseHour:   "16:00",
 	}
 
 	// Mock DB
@@ -36,7 +35,7 @@ func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "name", "image", "distance", "address", "description", "open_hour", "close_hour", "rating"}).
+		NewRows([]string{"id", "name", "image", "distance", "address", "description", "open_hour", "close_hour"}).
 		AddRow(
 			placeDetailExpected.ID,
 			placeDetailExpected.Name,
@@ -46,10 +45,9 @@ func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
 			placeDetailExpected.Description,
 			placeDetailExpected.OpenHour,
 			placeDetailExpected.CloseHour,
-			placeDetailExpected.AverageRating,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, rating FROM places WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour FROM places WHERE id = $1")).
 		WithArgs(placeId).
 		WillReturnRows(rows)
 
