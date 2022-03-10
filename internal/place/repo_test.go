@@ -80,3 +80,64 @@ func TestRepo_GetPlaceDetailInternalServerError(t *testing.T) {
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, placeDetailRetrieve)
 }
+
+func TestRepo_GetUserReviewForPlaceDetail(t *testing.T) {
+	placeId := 1
+	expectedAverageRatingAndReviews := &AverageRatingAndReviews{
+		AverageRating: 3.50,
+		ReviewCount:   20,
+		Reviews: []UserReview{
+			{
+				User:    "test_user_1",
+				Rating:  4.50,
+				Content: "test_review_content_1",
+			},
+			{
+				User:    "test_user_2",
+				Rating:  5,
+				Content: "test_review_content_2",
+			},
+		},
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+
+	// Expectation
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+
+	rows := mock.NewRows([]string{"sum_rating"}).AddRow(105)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
+		WithArgs(placeId).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"count_review"}).AddRow(30)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
+		WithArgs(placeId).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"user", "rating", "content"}).
+		AddRow(
+			expectedAverageRatingAndReviews.Reviews[0].User,
+			expectedAverageRatingAndReviews.Reviews[0].Rating,
+			expectedAverageRatingAndReviews.Reviews[0].Content).
+		AddRow(
+			expectedAverageRatingAndReviews.Reviews[1].User,
+			expectedAverageRatingAndReviews.Reviews[1].Rating,
+			expectedAverageRatingAndReviews.Reviews[1].Content,
+		)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1")).
+		WithArgs(placeId).
+		WillReturnRows(rows)
+
+	// Test
+	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeId)
+	assert.Equal(t, expectedAverageRatingAndReviews, retrivedAverageRatingAndReviews)
+	assert.NotNil(t, retrivedAverageRatingAndReviews)
+	assert.NoError(t, err)
+}
