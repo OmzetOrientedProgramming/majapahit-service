@@ -41,7 +41,7 @@ func (r *repo) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews
 	query := "SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1"
 	err := r.db.Get(&result, query, placeId)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	var sum_rating int
@@ -49,7 +49,7 @@ func (r *repo) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews
 	query = "SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1"
 	err = r.db.Get(&sum_rating, query, placeId)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	var averageRating float64 = float64(sum_rating) / float64(result.ReviewCount)
@@ -59,7 +59,7 @@ func (r *repo) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews
 	query = "SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2"
 	err = r.db.Select(&result.Reviews, query, placeId)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &result, nil
