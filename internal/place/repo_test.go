@@ -81,7 +81,7 @@ func TestRepo_GetPlaceDetailInternalServerError(t *testing.T) {
 	assert.Nil(t, placeDetailRetrieve)
 }
 
-func TestRepo_GetUserReviewForPlaceDetail(t *testing.T) {
+func TestRepo_GetUserReviewForPlaceDetailSuccess(t *testing.T) {
 	placeId := 1
 	expectedAverageRatingAndReviews := &AverageRatingAndReviews{
 		AverageRating: 3.50,
