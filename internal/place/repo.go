@@ -49,7 +49,7 @@ func (r *repo) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews
 	query = "SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1"
 	err = r.db.Get(&sum_rating, query, placeId)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	var averageRating float64 = float64(sum_rating) / float64(result.ReviewCount)
