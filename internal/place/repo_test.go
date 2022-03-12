@@ -163,3 +163,33 @@ func TestRepo_GetUserReviewForPlaceDetailCountReviewInternalServerError(t *testi
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, retrivedAverageRatingAndReviews)
 }
+
+func TestRepo_GetUserReviewForPlaceDetailSumRatingInternalServerError(t *testing.T) {
+	placeId := 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	rows := mock.NewRows([]string{"count_review"}).AddRow(30)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
+		WithArgs(placeId).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
+		WithArgs(placeId).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeId)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, retrivedAverageRatingAndReviews)
+}
