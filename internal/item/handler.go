@@ -90,8 +90,9 @@ func (h *Handler) GetListItemWithPagination(c echo.Context) error {
 		Status:  200,
 		Message: "success",
 		Data: map[string]interface{}{
-			"items":      listItem.Items,
-			"pagination": pagination,
+			"items":     	listItem.Items,
+			"info":			listItem.PlaceInfo,
+			"pagination":	pagination,
 		},
 	})
 }

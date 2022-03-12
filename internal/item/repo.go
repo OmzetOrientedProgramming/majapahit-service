@@ -29,12 +29,14 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 	var listItem ListItem
 	listItem.Items = make([]Item, 0)
 	listItem.TotalCount = 0
+	listItem.PlaceInfo = make([]PlaceInfo, 0)
 	var listQuery []interface{}
 	n := 1
 
 	mainQuery := "FROM items WHERE "
 	query1 := "SELECT id, name, image, price, description "
 	query2 := "SELECT COUNT(id) "
+	query3 := "SELECT name, image FROM places WHERE id = $1"
 
 	if params.Name != "" {
 		mainQuery += fmt.Sprintf("name LIKE $%d AND ", n)
@@ -50,6 +52,7 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
 			listItem.TotalCount = 0
+			listItem.PlaceInfo = make([]PlaceInfo, 0)
 			return &listItem, nil
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
@@ -60,6 +63,19 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
 			listItem.TotalCount = 0
+			listItem.PlaceInfo = make([]PlaceInfo, 0)
+			return &listItem, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	err = r.db.Select(&listItem.PlaceInfo, query3, params.PlaceID)
+	fmt.Print(err)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			listItem.Items = make([]Item, 0)
+			listItem.TotalCount = 0
+			listItem.PlaceInfo = make([]PlaceInfo, 0)
 			return &listItem, nil
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
