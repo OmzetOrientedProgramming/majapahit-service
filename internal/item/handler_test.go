@@ -81,9 +81,9 @@ func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 			},
 		},
 		TotalCount: 10,
-		PlaceInfo: []PlaceInfo {
+		PlaceInfo: []PlaceInfo{
 			{
-				Name: "test",
+				Name:  "test",
 				Image: "test",
 			},
 		},
@@ -103,9 +103,9 @@ func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"items":      	listItem.Items,
-			"info":			listItem.PlaceInfo,
-			"pagination": 	pagination,
+			"items":      listItem.Items,
+			"info":       listItem.PlaceInfo,
+			"pagination": pagination,
 		},
 	}
 
@@ -339,9 +339,9 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 			},
 		},
 		TotalCount: 10,
-		PlaceInfo: []PlaceInfo {
+		PlaceInfo: []PlaceInfo{
 			{
-				Name: "test",
+				Name:  "test",
 				Image: "test",
 			},
 		},
@@ -361,9 +361,9 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"items":      	listItem.Items,
-			"info":			listItem.PlaceInfo,
-			"pagination": 	pagination,
+			"items":      listItem.Items,
+			"info":       listItem.PlaceInfo,
+			"pagination": pagination,
 		},
 	}
 

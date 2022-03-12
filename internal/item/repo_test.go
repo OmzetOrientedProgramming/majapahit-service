@@ -30,9 +30,9 @@ func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 			},
 		},
 		TotalCount: 10,
-		PlaceInfo: []PlaceInfo {
+		PlaceInfo: []PlaceInfo{
 			{
-				Name: "test",
+				Name:  "test",
 				Image: "test",
 			},
 		},
@@ -77,8 +77,8 @@ func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 
 	rows = mock.NewRows([]string{"name", "image"}).
 		AddRow(listItemExpected.PlaceInfo[0].Name,
-		listItemExpected.PlaceInfo[0].Image)
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
+			listItemExpected.PlaceInfo[0].Image)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
 		WithArgs(params.PlaceID).
 		WillReturnRows(rows)
 
@@ -189,10 +189,9 @@ func TestRepo_GetListItemWithPaginationPlaceInfoError(t *testing.T) {
 
 }
 
-
 func TestRepo_GetListItemWithPaginationEmpty(t *testing.T) {
 	listItemExpected := &ListItem{
-		Items: make([]Item, 0),
+		Items:     make([]Item, 0),
 		PlaceInfo: make([]PlaceInfo, 0),
 	}
 
@@ -228,7 +227,7 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	listItemExpected := &ListItem{
 		Items:      make([]Item, 0),
 		TotalCount: 0,
-		PlaceInfo: make([]PlaceInfo, 0),
+		PlaceInfo:  make([]PlaceInfo, 0),
 	}
 
 	params := ListItemRequest{
@@ -268,7 +267,7 @@ func TestRepo_GetListItemWithPaginationPlaceInfoEmpty(t *testing.T) {
 	listItemExpected := &ListItem{
 		Items:      make([]Item, 0),
 		TotalCount: 0,
-		PlaceInfo: make([]PlaceInfo, 0),
+		PlaceInfo:  make([]PlaceInfo, 0),
 	}
 
 	params := ListItemRequest{
@@ -327,9 +326,9 @@ func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 			},
 		},
 		TotalCount: 10,
-		PlaceInfo: []PlaceInfo {
+		PlaceInfo: []PlaceInfo{
 			{
-				Name: "test",
+				Name:  "test",
 				Image: "test",
 			},
 		},
