@@ -30,6 +30,12 @@ func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 			},
 		},
 		TotalCount: 10,
+		PlaceInfo: []PlaceInfo {
+			{
+				Name: "test",
+				Image: "test",
+			},
+		},
 	}
 
 	params := ListItemRequest{
@@ -67,6 +73,13 @@ func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"name", "image"}).
+		AddRow(listItemExpected.PlaceInfo[0].Name,
+		listItemExpected.PlaceInfo[0].Image)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
+		WithArgs(params.PlaceID).
 		WillReturnRows(rows)
 
 	// Test
@@ -138,9 +151,49 @@ func TestRepo_GetListItemWithPaginationCountError(t *testing.T) {
 
 }
 
+func TestRepo_GetListItemWithPaginationPlaceInfoError(t *testing.T) {
+	params := ListItemRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+
+	// Expectation
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "name", "image", "price", "description"}).
+		AddRow("1", "test name", "image", 10, "description")
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
+		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+	rows = mock.NewRows([]string{"count"}).AddRow(10)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
+		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
+		WithArgs(params.PlaceID).
+		WillReturnError(sql.ErrConnDone)
+
+	// Test
+	listItemResult, err := repoMock.GetListItemWithPagination(params)
+	assert.Nil(t, listItemResult)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+
+}
+
+
 func TestRepo_GetListItemWithPaginationEmpty(t *testing.T) {
 	listItemExpected := &ListItem{
 		Items: make([]Item, 0),
+		PlaceInfo: make([]PlaceInfo, 0),
 	}
 
 	params := ListItemRequest{
@@ -175,6 +228,7 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	listItemExpected := &ListItem{
 		Items:      make([]Item, 0),
 		TotalCount: 0,
+		PlaceInfo: make([]PlaceInfo, 0),
 	}
 
 	params := ListItemRequest{
@@ -210,6 +264,50 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRepo_GetListItemWithPaginationPlaceInfoEmpty(t *testing.T) {
+	listItemExpected := &ListItem{
+		Items:      make([]Item, 0),
+		TotalCount: 0,
+		PlaceInfo: make([]PlaceInfo, 0),
+	}
+
+	params := ListItemRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "name", "image", "price", "description"}).
+		AddRow("1", "name", "image", 10, "description")
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
+		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+	rows = mock.NewRows([]string{"count"}).AddRow(10)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
+		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
+		WithArgs(params.PlaceID).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	listItemResult, err := repoMock.GetListItemWithPagination(params)
+	assert.Equal(t, listItemExpected, listItemResult)
+	assert.NotNil(t, listItemResult)
+	assert.NoError(t, err)
+}
+
 func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 	listItemExpected := &ListItem{
 		Items: []Item{
@@ -229,6 +327,12 @@ func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 			},
 		},
 		TotalCount: 10,
+		PlaceInfo: []PlaceInfo {
+			{
+				Name: "test",
+				Image: "test",
+			},
+		},
 	}
 
 	params := ListItemRequest{
@@ -267,6 +371,13 @@ func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE name LIKE $1 AND place_id = $2 LIMIT $3 OFFSET $4")).
 		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"name", "image"}).
+		AddRow(listItemExpected.PlaceInfo[0].Name,
+			listItemExpected.PlaceInfo[0].Image)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
+		WithArgs(params.PlaceID).
 		WillReturnRows(rows)
 
 	// Test
