@@ -141,7 +141,7 @@ func TestRepo_GetUserReviewForPlaceDetailSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRepo_GetUserReviewForPlaceDetailInternalServerError(t *testing.T) {
+func TestRepo_GetUserReviewForPlaceDetailCountReviewInternalServerError(t *testing.T) {
 	placeId := 1
 
 	// Mock DB
