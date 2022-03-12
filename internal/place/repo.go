@@ -59,7 +59,7 @@ func (r *repo) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews
 	query = "SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2"
 	err = r.db.Select(&result.Reviews, query, placeId)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &result, nil
