@@ -41,7 +41,7 @@ func (r *repo) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews
 	query := "SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1"
 	err := r.db.Get(&result, query, placeId)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	var sum_rating int
