@@ -25,11 +25,11 @@ func NewHandler(service Service) *Handler {
 // GetDetail will retrieve information related to a place
 func (h *Handler) GetDetail(c echo.Context) error {
 	errorList := []string{}
-	placeIDString := c.Param("placeId")
+	placeIDString := c.Param("placeID")
 
 	placeID, err := strconv.Atoi(placeIDString)
 	if err != nil {
-		errorList = append(errorList, "placeId must be number")
+		errorList = append(errorList, "placeID must be number")
 	}
 
 	if len(errorList) != 0 {
