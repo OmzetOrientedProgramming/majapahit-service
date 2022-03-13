@@ -1,5 +1,36 @@
 package place
 
+// Detail contain important information in Place
+type Detail struct {
+	ID            int          `json:"id"`
+	Name          string       `json:"name"`
+	Image         string       `json:"image"`
+	Address       string       `json:"address"`
+	Description   string       `json:"description"`
+	OpenHour      string       `json:"open_hour" db:"open_hour"`
+	CloseHour     string       `json:"close_hour" db:"close_hour"`
+	BookingPrice  int          `json:"booking_price" db:"booking_price"`
+	MinSlot       int          `json:"min_slot" db:"min_slot_booking"`
+	MaxSlot       int          `json:"max_slot" db:"max_slot_booking"`
+	AverageRating float64      `json:"average_rating" db:"rating"`
+	ReviewCount   int          `json:"review_count"`
+	Reviews       []UserReview `json:"reviews"`
+}
+
+// AverageRatingAndReviews contain 2 reviews, average rating, and review count of place
+type AverageRatingAndReviews struct {
+	AverageRating float64      `json:"average_rating"`
+	ReviewCount   int          `json:"review_count" db:"count_review"`
+	Reviews       []UserReview `json:"reviews"`
+}
+
+// UserReview will wrap Review of each user and another information
+type UserReview struct {
+	User    string  `json:"user"`
+	Rating  float64 `json:"rating"`
+	Content string  `json:"content"`
+}
+
 // PlacesList will wrap the Places with total count for pagination purposes
 type PlacesList struct {
 	Places     []Place `json:"places"`
