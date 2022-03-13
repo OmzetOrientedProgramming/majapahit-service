@@ -159,7 +159,7 @@ func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
 	mockService.On("GetPlaceDetail", placeId).Return(&placeDetail, errorFromService)
 
 	// Test
-	assert.NoError(t, h.GetPlacesListWithPagination(c))
+	assert.NoError(t, h.GetPlaceDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
