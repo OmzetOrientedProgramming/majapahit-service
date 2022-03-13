@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -9,10 +10,12 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 )
 
+// Server struct to for the server dependency
 type Server struct {
 	Router *echo.Echo
 }
 
+// NewServer is used to initialize server
 func NewServer(router *echo.Echo) *Server {
 	return &Server{
 		Router: router,
@@ -23,8 +26,13 @@ var (
 	checkUpRepo    checkup.Repo
 	checkUpService checkup.Service
 	checkupHandler *checkup.Handler
+
+	placeRepo    place.Repo
+	placeService place.Service
+	placeHandler *place.Handler
 )
 
+// Init all dependency
 func (s Server) Init() {
 	// Init DB
 	db := postgres.Init()
@@ -35,11 +43,17 @@ func (s Server) Init() {
 	checkUpService = checkup.NewService(checkUpRepo)
 	checkupHandler = checkup.NewHandler(checkUpService)
 
+	// Place module
+	placeRepo = place.NewRepo(db)
+	placeService = place.NewService(placeRepo)
+	placeHandler = place.NewHandler(placeService)
+
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler)
+	r := NewRoutes(s.Router, checkupHandler, placeHandler)
 	r.Init()
 }
 
+// RunServer to run the server
 func (s Server) RunServer(port string) {
 	if err := s.Router.Start(":" + port); err != http.ErrServerClosed {
 		logrus.Error(err)
