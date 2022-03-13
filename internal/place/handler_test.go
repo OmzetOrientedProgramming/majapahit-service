@@ -164,6 +164,41 @@ func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
 	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
+func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:placeId")
+	c.SetParamNames("placeId")
+	c.SetParamValues("10")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input and output
+	placeId := 10
+
+	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJson, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var placeDetail PlaceDetail
+	mockService.On("GetPlaceDetail", placeId).Return(&placeDetail, errorFromService)
+
+	// Tes
+	assert.NoError(t, h.GetPlaceDetail(c))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
 func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
 	// Setup echo
 	e := echo.New()
