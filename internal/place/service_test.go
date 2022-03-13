@@ -96,3 +96,21 @@ func TestService_GetPlaceDetailFailedCalledGetPlaceDetail(t *testing.T) {
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, placeDetailResult)
 }
+
+func TestService_GetPlaceDetailFailedCalledGetAverageRatingAndReviews(t *testing.T) {
+	placeId := 1
+	placeDetail := PlaceDetail{}
+	averageRatingAndReviews := AverageRatingAndReviews{}
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetPlaceDetail", placeId).Return(placeDetail, nil)
+	mockRepo.On("GetAverageRatingAndReviews", placeId).Return(averageRatingAndReviews, ErrInternalServerError)
+
+	placeDetailResult, err := mockService.GetPlaceDetail(placeId)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, placeDetailResult)
+}
