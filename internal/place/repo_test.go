@@ -12,7 +12,7 @@ import (
 )
 
 func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
-	placeId := 1
+	placeID := 1
 	placeDetailExpected := &PlaceDetail{
 		ID:           1,
 		Name:         "test_name_place",
@@ -54,18 +54,18 @@ func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
 		)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnRows(rows)
 
 	// Test
-	placeDetailRetrieve, err := repoMock.GetPlaceDetail(placeId)
+	placeDetailRetrieve, err := repoMock.GetPlaceDetail(placeID)
 	assert.Equal(t, placeDetailExpected, placeDetailRetrieve)
 	assert.NotNil(t, placeDetailRetrieve)
 	assert.NoError(t, err)
 }
 
 func TestRepo_GetPlaceDetailInternalServerError(t *testing.T) {
-	placeId := 1
+	placeID := 1
 
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
@@ -79,17 +79,17 @@ func TestRepo_GetPlaceDetailInternalServerError(t *testing.T) {
 	repoMock := NewRepo(sqlxDB)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
-	placeDetailRetrieve, err := repoMock.GetPlaceDetail(placeId)
+	placeDetailRetrieve, err := repoMock.GetPlaceDetail(placeID)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, placeDetailRetrieve)
 }
 
 func TestRepo_GetUserReviewForPlaceDetailSuccess(t *testing.T) {
-	placeId := 1
+	placeID := 1
 	expectedAverageRatingAndReviews := &AverageRatingAndReviews{
 		AverageRating: 3.50,
 		ReviewCount:   30,
@@ -120,12 +120,12 @@ func TestRepo_GetUserReviewForPlaceDetailSuccess(t *testing.T) {
 
 	rows := mock.NewRows([]string{"count_review"}).AddRow(30)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"user", "rating", "content"}).
@@ -138,18 +138,18 @@ func TestRepo_GetUserReviewForPlaceDetailSuccess(t *testing.T) {
 			expectedAverageRatingAndReviews.Reviews[1].Rating,
 			expectedAverageRatingAndReviews.Reviews[1].Content)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnRows(rows)
 
 	// Test
-	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeId)
+	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeID)
 	assert.Equal(t, expectedAverageRatingAndReviews, retrivedAverageRatingAndReviews)
 	assert.NotNil(t, retrivedAverageRatingAndReviews)
 	assert.NoError(t, err)
 }
 
 func TestRepo_GetUserReviewForPlaceDetailCountReviewInternalServerError(t *testing.T) {
-	placeId := 1
+	placeID := 1
 
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
@@ -163,17 +163,17 @@ func TestRepo_GetUserReviewForPlaceDetailCountReviewInternalServerError(t *testi
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
-	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeId)
+	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeID)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, retrivedAverageRatingAndReviews)
 }
 
 func TestRepo_GetUserReviewForPlaceDetailSumRatingInternalServerError(t *testing.T) {
-	placeId := 1
+	placeID := 1
 
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
@@ -189,22 +189,22 @@ func TestRepo_GetUserReviewForPlaceDetailSumRatingInternalServerError(t *testing
 
 	rows := mock.NewRows([]string{"count_review"}).AddRow(30)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
-	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeId)
+	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeID)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, retrivedAverageRatingAndReviews)
 }
 
 func TestRepo_GetUserReviewForPlaceDetailInternalServerError(t *testing.T) {
-	placeId := 1
+	placeID := 1
 
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
@@ -219,20 +219,20 @@ func TestRepo_GetUserReviewForPlaceDetailInternalServerError(t *testing.T) {
 
 	rows := mock.NewRows([]string{"count_review"}).AddRow(30)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnRows(rows)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2")).
-		WithArgs(placeId).
+		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
-	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeId)
+	retrivedAverageRatingAndReviews, err := repoMock.GetAverageRatingAndReviews(placeID)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, retrivedAverageRatingAndReviews)
 }

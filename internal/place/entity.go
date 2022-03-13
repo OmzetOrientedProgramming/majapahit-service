@@ -1,5 +1,6 @@
 package place
 
+// PlaceDetail contain important information in Place
 type PlaceDetail struct {
 	ID            int          `json:"id"`
 	Name          string       `json:"name"`
@@ -17,12 +18,14 @@ type PlaceDetail struct {
 	Reviews       []UserReview `json:"reviews"`
 }
 
+// AverageRatingAndReviews contain 2 reviews, average rating, and review count of place
 type AverageRatingAndReviews struct {
 	AverageRating float64      `json:"average_rating"`
 	ReviewCount   int          `json:"review_count" db:"count_review"`
 	Reviews       []UserReview `json:"reviews"`
 }
 
+// UserReview will wrap Review of each user and another information
 type UserReview struct {
 	User    string  `json:"user"`
 	Rating  float64 `json:"rating"`

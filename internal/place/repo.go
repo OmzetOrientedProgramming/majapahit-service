@@ -28,11 +28,11 @@ func NewRepo(db *sqlx.DB) Repo {
 	}
 }
 
-func (r *repo) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
+func (r *repo) GetPlaceDetail(placeID int) (*PlaceDetail, error) {
 	var result PlaceDetail
 
 	query := "SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1"
-	err := r.db.Get(&result, query, placeId)
+	err := r.db.Get(&result, query, placeID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
@@ -40,30 +40,30 @@ func (r *repo) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
 	return &result, nil
 }
 
-func (r *repo) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews, error) {
+func (r *repo) GetAverageRatingAndReviews(placeID int) (*AverageRatingAndReviews, error) {
 	var result AverageRatingAndReviews
 	result.Reviews = make([]UserReview, 0)
 
 	query := "SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1"
-	err := r.db.Get(&result, query, placeId)
+	err := r.db.Get(&result, query, placeID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	var sum_rating int
+	var sumRating int
 
 	query = "SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1"
-	err = r.db.Get(&sum_rating, query, placeId)
+	err = r.db.Get(&sumRating, query, placeID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	var averageRating float64 = float64(sum_rating) / float64(result.ReviewCount)
+	var averageRating float64 = float64(sumRating) / float64(result.ReviewCount)
 	var roundedAverageRating float64 = math.Round(averageRating*100) / 100
 	result.AverageRating = roundedAverageRating
 
 	query = "SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2"
-	err = r.db.Select(&result.Reviews, query, placeId)
+	err = r.db.Select(&result.Reviews, query, placeID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}

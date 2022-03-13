@@ -22,11 +22,12 @@ func NewHandler(service Service) *Handler {
 	}
 }
 
+// GetPlaceDetail will retrieve information related to a place
 func (h *Handler) GetPlaceDetail(c echo.Context) error {
 	errorList := []string{}
-	placeIdString := c.Param("placeId")
+	placeIDString := c.Param("placeId")
 
-	placeId, err := strconv.Atoi(placeIdString)
+	placeID, err := strconv.Atoi(placeIDString)
 	if err != nil {
 		errorList = append(errorList, "placeId must be number")
 	}
@@ -39,7 +40,7 @@ func (h *Handler) GetPlaceDetail(c echo.Context) error {
 		})
 	}
 
-	placeDetail, err := h.service.GetPlaceDetail(placeId)
+	placeDetail, err := h.service.GetPlaceDetail(placeID)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
 			errList, errMessage := util.ErrorUnwrap(err)
@@ -58,7 +59,7 @@ func (h *Handler) GetPlaceDetail(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
-		Status:  200,
+		Status:  http.StatusOK,
 		Message: "success",
 		Data:    placeDetail,
 	})

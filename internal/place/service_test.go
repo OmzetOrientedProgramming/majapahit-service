@@ -12,20 +12,20 @@ type MockRepository struct {
 	mock.Mock
 }
 
-func (m *MockRepository) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
-	args := m.Called(placeId)
+func (m *MockRepository) GetPlaceDetail(placeID int) (*PlaceDetail, error) {
+	args := m.Called(placeID)
 	ret := args.Get(0).(PlaceDetail)
 	return &ret, args.Error(1)
 }
 
-func (m *MockRepository) GetAverageRatingAndReviews(placeId int) (*AverageRatingAndReviews, error) {
-	args := m.Called(placeId)
+func (m *MockRepository) GetAverageRatingAndReviews(placeID int) (*AverageRatingAndReviews, error) {
+	args := m.Called(placeID)
 	ret := args.Get(0).(AverageRatingAndReviews)
 	return &ret, args.Error(1)
 }
 
 func TestService_GetPlaceDetailSuccess(t *testing.T) {
-	placeId := 1
+	placeID := 1
 	placeDetail := PlaceDetail{
 		ID:          1,
 		Name:        "test_name_place",
@@ -57,10 +57,10 @@ func TestService_GetPlaceDetailSuccess(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
-	mockRepo.On("GetPlaceDetail", placeId).Return(placeDetail, nil)
-	mockRepo.On("GetAverageRatingAndReviews", placeId).Return(averageRatingAndReviews, nil)
+	mockRepo.On("GetPlaceDetail", placeID).Return(placeDetail, nil)
+	mockRepo.On("GetAverageRatingAndReviews", placeID).Return(averageRatingAndReviews, nil)
 
-	placeDetailResult, err := mockService.GetPlaceDetail(placeId)
+	placeDetailResult, err := mockService.GetPlaceDetail(placeID)
 	mockRepo.AssertExpectations(t)
 
 	placeDetail.AverageRating = averageRatingAndReviews.AverageRating
@@ -82,29 +82,29 @@ func TestService_GetPlaceDetailSuccess(t *testing.T) {
 
 func TestService_GetPlaceDetailWrongInput(t *testing.T) {
 	// Define input
-	placeId := -1
+	placeID := -1
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
 	// Test
-	placeDetail, err := mockService.GetPlaceDetail(placeId)
+	placeDetail, err := mockService.GetPlaceDetail(placeID)
 
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	assert.Nil(t, placeDetail)
 }
 
 func TestService_GetPlaceDetailFailedCalledGetPlaceDetail(t *testing.T) {
-	placeId := 1
+	placeID := 1
 	var placeDetail PlaceDetail
 
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
-	mockRepo.On("GetPlaceDetail", placeId).Return(placeDetail, ErrInternalServerError)
+	mockRepo.On("GetPlaceDetail", placeID).Return(placeDetail, ErrInternalServerError)
 
-	placeDetailResult, err := mockService.GetPlaceDetail(placeId)
+	placeDetailResult, err := mockService.GetPlaceDetail(placeID)
 	mockRepo.AssertExpectations(t)
 
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
@@ -112,17 +112,17 @@ func TestService_GetPlaceDetailFailedCalledGetPlaceDetail(t *testing.T) {
 }
 
 func TestService_GetPlaceDetailFailedCalledGetAverageRatingAndReviews(t *testing.T) {
-	placeId := 1
+	placeID := 1
 	placeDetail := PlaceDetail{}
 	averageRatingAndReviews := AverageRatingAndReviews{}
 
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
-	mockRepo.On("GetPlaceDetail", placeId).Return(placeDetail, nil)
-	mockRepo.On("GetAverageRatingAndReviews", placeId).Return(averageRatingAndReviews, ErrInternalServerError)
+	mockRepo.On("GetPlaceDetail", placeID).Return(placeDetail, nil)
+	mockRepo.On("GetAverageRatingAndReviews", placeID).Return(averageRatingAndReviews, ErrInternalServerError)
 
-	placeDetailResult, err := mockService.GetPlaceDetail(placeId)
+	placeDetailResult, err := mockService.GetPlaceDetail(placeID)
 	mockRepo.AssertExpectations(t)
 
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))

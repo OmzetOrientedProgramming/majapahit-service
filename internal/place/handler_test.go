@@ -29,8 +29,8 @@ func (m *MockService) GetPlaceListWithPagination(params PlacesListRequest) (*Pla
 	return placeList, &pagination, args.Error(2)
 }
 
-func (m *MockService) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
-	args := m.Called(placeId)
+func (m *MockService) GetPlaceDetail(placeID int) (*PlaceDetail, error) {
+	args := m.Called(placeID)
 	placeDetail := args.Get(0).(*PlaceDetail)
 	return placeDetail, args.Error(1)
 }
@@ -41,8 +41,8 @@ func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetPath("/api/v1/place/:placeId")
-	c.SetParamNames("placeId")
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
 	c.SetParamValues("1")
 
 	// Setting up service
@@ -53,7 +53,7 @@ func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	// Setting up input and output
-	placeId := 1
+	placeID := 1
 
 	placeDetail := PlaceDetail{
 		ID:            1,
@@ -89,7 +89,7 @@ func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
-	mockService.On("GetPlaceDetail", placeId).Return(&placeDetail, nil)
+	mockService.On("GetPlaceDetail", placeID).Return(&placeDetail, nil)
 
 	// Test Fields
 	if assert.NoError(t, h.GetPlaceDetail(c)) {
@@ -104,8 +104,8 @@ func TestHandler_GetPlaceDetailWithPlaceIdString(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetPath("/api/v1/place/:placeId")
-	c.SetParamNames("placeId")
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
 	c.SetParamValues("satu")
 
 	// Setup service
@@ -117,7 +117,7 @@ func TestHandler_GetPlaceDetailWithPlaceIdString(t *testing.T) {
 		Status:  http.StatusBadRequest,
 		Message: "input validation error",
 		Errors: []string{
-			"placeId must be number",
+			"placeID must be number",
 		},
 	}
 
@@ -134,8 +134,8 @@ func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetPath("/api/v1/place/:placeId")
-	c.SetParamNames("placeId")
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
 	c.SetParamValues("0")
 
 	// Setup service
@@ -143,25 +143,25 @@ func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
 	h := NewHandler(mockService)
 
 	// Define input
-	placeId := 0
+	placeID := 0
 
-	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"placeId must be above 0"}, ","))
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"placeID must be above 0"}, ","))
 	errList, errMessage := util.ErrorUnwrap(errorFromService)
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusBadRequest,
 		Message: errMessage,
 		Errors:  errList,
 	}
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	var placeDetail PlaceDetail
-	mockService.On("GetPlaceDetail", placeId).Return(&placeDetail, errorFromService)
+	mockService.On("GetPlaceDetail", placeID).Return(&placeDetail, errorFromService)
 
 	// Test
 	assert.NoError(t, h.GetPlaceDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
@@ -170,8 +170,8 @@ func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetPath("/api/v1/place/:placeId")
-	c.SetParamNames("placeId")
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
 	c.SetParamValues("10")
 
 	// Setup service
@@ -179,7 +179,7 @@ func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
 	h := NewHandler(mockService)
 
 	// Define input and output
-	placeId := 10
+	placeID := 10
 
 	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
 	expectedResponse := util.APIResponse{
@@ -187,16 +187,16 @@ func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
 		Message: "internal server error",
 	}
 
-	expectedResponseJson, _ := json.Marshal(expectedResponse)
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
 	var placeDetail PlaceDetail
-	mockService.On("GetPlaceDetail", placeId).Return(&placeDetail, errorFromService)
+	mockService.On("GetPlaceDetail", placeID).Return(&placeDetail, errorFromService)
 
 	// Tes
 	assert.NoError(t, h.GetPlaceDetail(c))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
