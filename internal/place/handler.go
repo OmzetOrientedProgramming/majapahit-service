@@ -23,11 +23,20 @@ func NewHandler(service Service) *Handler {
 }
 
 func (h *Handler) GetPlaceDetail(c echo.Context) error {
+	errorList := []string{}
 	placeIdString := c.Param("placeId")
 
 	placeId, err := strconv.Atoi(placeIdString)
 	if err != nil {
+		errorList = append(errorList, "placeId must be number")
+	}
 
+	if len(errorList) != 0 {
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
 	}
 
 	placeDetail, err := h.service.GetPlaceDetail(placeId)
