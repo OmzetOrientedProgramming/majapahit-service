@@ -22,8 +22,8 @@ func NewHandler(service Service) *Handler {
 	}
 }
 
-// GetPlaceDetail will retrieve information related to a place
-func (h *Handler) GetPlaceDetail(c echo.Context) error {
+// GetDetail will retrieve information related to a place
+func (h *Handler) GetDetail(c echo.Context) error {
 	errorList := []string{}
 	placeIDString := c.Param("placeId")
 
@@ -40,7 +40,7 @@ func (h *Handler) GetPlaceDetail(c echo.Context) error {
 		})
 	}
 
-	placeDetail, err := h.service.GetPlaceDetail(placeID)
+	placeDetail, err := h.service.GetDetail(placeID)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
 			errList, errMessage := util.ErrorUnwrap(err)

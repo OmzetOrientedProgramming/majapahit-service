@@ -13,7 +13,7 @@ import (
 type Repo interface {
 	GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList, error)
 	GetPlaceRatingAndReviewCountByPlaceID(int) (*PlacesRatingAndReviewCount, error)
-	GetPlaceDetail(int) (*PlaceDetail, error)
+	GetDetail(int) (*Detail, error)
 	GetAverageRatingAndReviews(int) (*AverageRatingAndReviews, error)
 }
 
@@ -28,8 +28,8 @@ func NewRepo(db *sqlx.DB) Repo {
 	}
 }
 
-func (r *repo) GetPlaceDetail(placeID int) (*PlaceDetail, error) {
-	var result PlaceDetail
+func (r *repo) GetDetail(placeID int) (*Detail, error) {
+	var result Detail
 
 	query := "SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1"
 	err := r.db.Get(&result, query, placeID)

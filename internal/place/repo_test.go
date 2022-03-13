@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
+func TestRepo_GetDetailSuccess(t *testing.T) {
 	placeID := 1
-	placeDetailExpected := &PlaceDetail{
+	placeDetailExpected := &Detail{
 		ID:           1,
 		Name:         "test_name_place",
 		Image:        "test_image_place",
@@ -58,13 +58,13 @@ func TestRepo_GetPlaceDetailSuccess(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Test
-	placeDetailRetrieve, err := repoMock.GetPlaceDetail(placeID)
+	placeDetailRetrieve, err := repoMock.GetDetail(placeID)
 	assert.Equal(t, placeDetailExpected, placeDetailRetrieve)
 	assert.NotNil(t, placeDetailRetrieve)
 	assert.NoError(t, err)
 }
 
-func TestRepo_GetPlaceDetailInternalServerError(t *testing.T) {
+func TestRepo_GetDetailInternalServerError(t *testing.T) {
 	placeID := 1
 
 	// Mock DB
@@ -83,12 +83,12 @@ func TestRepo_GetPlaceDetailInternalServerError(t *testing.T) {
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
-	placeDetailRetrieve, err := repoMock.GetPlaceDetail(placeID)
+	placeDetailRetrieve, err := repoMock.GetDetail(placeID)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, placeDetailRetrieve)
 }
 
-func TestRepo_GetUserReviewForPlaceDetailSuccess(t *testing.T) {
+func TestRepo_GetUserReviewForDetailSuccess(t *testing.T) {
 	placeID := 1
 	expectedAverageRatingAndReviews := &AverageRatingAndReviews{
 		AverageRating: 3.50,
@@ -148,7 +148,7 @@ func TestRepo_GetUserReviewForPlaceDetailSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRepo_GetUserReviewForPlaceDetailCountReviewInternalServerError(t *testing.T) {
+func TestRepo_GetUserReviewForDetailCountReviewInternalServerError(t *testing.T) {
 	placeID := 1
 
 	// Mock DB
@@ -172,7 +172,7 @@ func TestRepo_GetUserReviewForPlaceDetailCountReviewInternalServerError(t *testi
 	assert.Nil(t, retrivedAverageRatingAndReviews)
 }
 
-func TestRepo_GetUserReviewForPlaceDetailSumRatingInternalServerError(t *testing.T) {
+func TestRepo_GetUserReviewForDetailSumRatingInternalServerError(t *testing.T) {
 	placeID := 1
 
 	// Mock DB
@@ -203,7 +203,7 @@ func TestRepo_GetUserReviewForPlaceDetailSumRatingInternalServerError(t *testing
 	assert.Nil(t, retrivedAverageRatingAndReviews)
 }
 
-func TestRepo_GetUserReviewForPlaceDetailInternalServerError(t *testing.T) {
+func TestRepo_GetUserReviewForDetailInternalServerError(t *testing.T) {
 	placeID := 1
 
 	// Mock DB

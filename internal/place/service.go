@@ -10,7 +10,7 @@ import (
 // Service will contain all the function that can be used by service
 type Service interface {
 	GetPlaceListWithPagination(params PlacesListRequest) (*PlacesList, *util.Pagination, error)
-	GetPlaceDetail(placeID int) (*PlaceDetail, error)
+	GetDetail(placeID int) (*Detail, error)
 }
 
 type service struct {
@@ -23,7 +23,7 @@ func NewService(repo Repo) Service {
 		repo: repo}
 }
 
-func (s *service) GetPlaceDetail(placeID int) (*PlaceDetail, error) {
+func (s *service) GetDetail(placeID int) (*Detail, error) {
 	errorList := []string{}
 
 	if placeID <= 0 {
@@ -34,7 +34,7 @@ func (s *service) GetPlaceDetail(placeID int) (*PlaceDetail, error) {
 		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
 	}
 
-	placeDetail, err := s.repo.GetPlaceDetail(placeID)
+	placeDetail, err := s.repo.GetDetail(placeID)
 	if err != nil {
 		return nil, err
 	}

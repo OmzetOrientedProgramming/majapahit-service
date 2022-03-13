@@ -29,13 +29,13 @@ func (m *MockService) GetPlaceListWithPagination(params PlacesListRequest) (*Pla
 	return placeList, &pagination, args.Error(2)
 }
 
-func (m *MockService) GetPlaceDetail(placeID int) (*PlaceDetail, error) {
+func (m *MockService) GetDetail(placeID int) (*Detail, error) {
 	args := m.Called(placeID)
-	placeDetail := args.Get(0).(*PlaceDetail)
+	placeDetail := args.Get(0).(*Detail)
 	return placeDetail, args.Error(1)
 }
 
-func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
+func TestHandler_GetDetailSuccess(t *testing.T) {
 	// Setting up echo router
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -55,7 +55,7 @@ func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
 	// Setting up input and output
 	placeID := 1
 
-	placeDetail := PlaceDetail{
+	placeDetail := Detail{
 		ID:            1,
 		Name:          "test_name_place",
 		Image:         "test_image_place",
@@ -89,16 +89,16 @@ func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
-	mockService.On("GetPlaceDetail", placeID).Return(&placeDetail, nil)
+	mockService.On("GetDetail", placeID).Return(&placeDetail, nil)
 
 	// Test Fields
-	if assert.NoError(t, h.GetPlaceDetail(c)) {
+	if assert.NoError(t, h.GetDetail(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
 
-func TestHandler_GetPlaceDetailWithPlaceIdString(t *testing.T) {
+func TestHandler_GetDetailWithPlaceIdString(t *testing.T) {
 	// Setting up echo router
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -124,7 +124,7 @@ func TestHandler_GetPlaceDetailWithPlaceIdString(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetPlaceDetail(c))
+	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -155,11 +155,11 @@ func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
-	var placeDetail PlaceDetail
-	mockService.On("GetPlaceDetail", placeID).Return(&placeDetail, errorFromService)
+	var placeDetail Detail
+	mockService.On("GetDetail", placeID).Return(&placeDetail, errorFromService)
 
 	// Test
-	assert.NoError(t, h.GetPlaceDetail(c))
+	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -190,11 +190,11 @@ func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
-	var placeDetail PlaceDetail
-	mockService.On("GetPlaceDetail", placeID).Return(&placeDetail, errorFromService)
+	var placeDetail Detail
+	mockService.On("GetDetail", placeID).Return(&placeDetail, errorFromService)
 
 	// Tes
-	assert.NoError(t, h.GetPlaceDetail(c))
+	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
