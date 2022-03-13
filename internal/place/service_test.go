@@ -3,6 +3,7 @@ package place
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -78,4 +79,20 @@ func TestService_GetPlaceDetailSuccess(t *testing.T) {
 	assert.NotNil(t, placeDetailResult)
 	assert.NoError(t, err)
 
+}
+
+func TestService_GetPlaceDetailFailedCalledGetPlaceDetail(t *testing.T) {
+	placeId := 1
+	var placeDetail PlaceDetail
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetPlaceDetail", placeId).Return(placeDetail, ErrInternalServerError)
+
+	placeDetailResult, err := mockService.GetPlaceDetail(placeId)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, placeDetailResult)
 }
