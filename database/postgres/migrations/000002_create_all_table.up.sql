@@ -129,23 +129,3 @@ CREATE TABLE IF NOT EXISTS "otp_codes" (
     "created_at" timestamp default now(),
     "updated_at" timestamp default now()
 );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

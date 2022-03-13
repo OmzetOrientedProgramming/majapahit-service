@@ -2,9 +2,10 @@ package util
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGeneratePaginationTotalPageGreaterThanPage(t *testing.T) {
