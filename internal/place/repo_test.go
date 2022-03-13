@@ -17,7 +17,6 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 		ID:           1,
 		Name:         "test_name_place",
 		Image:        "test_image_place",
-		Distance:     200,
 		Address:      "test_address_place",
 		Description:  "test_description_place",
 		OpenHour:     "08:00",
@@ -38,12 +37,11 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "name", "image", "distance", "address", "description", "open_hour", "close_hour", "booking_price", "min_slot_booking", "max_slot_booking"}).
+		NewRows([]string{"id", "name", "image", "address", "description", "open_hour", "close_hour", "booking_price", "min_slot_booking", "max_slot_booking"}).
 		AddRow(
 			placeDetailExpected.ID,
 			placeDetailExpected.Name,
 			placeDetailExpected.Image,
-			placeDetailExpected.Distance,
 			placeDetailExpected.Address,
 			placeDetailExpected.Description,
 			placeDetailExpected.OpenHour,
@@ -53,7 +51,7 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 			placeDetailExpected.MaxSlot,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
 		WithArgs(placeID).
 		WillReturnRows(rows)
 
@@ -78,7 +76,7 @@ func TestRepo_GetDetailInternalServerError(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
 		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 
@@ -124,7 +122,7 @@ func TestRepo_GetUserReviewForDetailSuccess(t *testing.T) {
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COALESCE(SUM(rating), 0) as sum_rating FROM reviews WHERE place_id = $1")).
 		WithArgs(placeID).
 		WillReturnRows(rows)
 
@@ -193,7 +191,7 @@ func TestRepo_GetUserReviewForDetailSumRatingInternalServerError(t *testing.T) {
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COALESCE(SUM(rating), 0) as sum_rating FROM reviews WHERE place_id = $1")).
 		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 
@@ -223,7 +221,7 @@ func TestRepo_GetUserReviewForDetailInternalServerError(t *testing.T) {
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"sum_rating"}).AddRow(105)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COALESCE(SUM(rating), 0) as sum_rating FROM reviews WHERE place_id = $1")).
 		WithArgs(placeID).
 		WillReturnRows(rows)
 

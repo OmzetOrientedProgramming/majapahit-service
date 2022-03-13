@@ -5,7 +5,6 @@ type Detail struct {
 	ID            int          `json:"id"`
 	Name          string       `json:"name"`
 	Image         string       `json:"image"`
-	Distance      float64      `json:"distance"`
 	Address       string       `json:"address"`
 	Description   string       `json:"description"`
 	OpenHour      string       `json:"open_hour" db:"open_hour"`

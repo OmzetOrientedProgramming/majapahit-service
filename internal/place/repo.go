@@ -31,7 +31,7 @@ func NewRepo(db *sqlx.DB) Repo {
 func (r *repo) GetDetail(placeID int) (*Detail, error) {
 	var result Detail
 
-	query := "SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1"
+	query := "SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1"
 	err := r.db.Get(&result, query, placeID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
@@ -52,14 +52,17 @@ func (r *repo) GetAverageRatingAndReviews(placeID int) (*AverageRatingAndReviews
 
 	var sumRating int
 
-	query = "SELECT SUM(rating) as sum_rating FROM reviews WHERE place_id = $1"
+	query = "SELECT COALESCE(SUM(rating), 0) as sum_rating FROM reviews WHERE place_id = $1"
 	err = r.db.Get(&sumRating, query, placeID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	var averageRating float64 = float64(sumRating) / float64(result.ReviewCount)
-	var roundedAverageRating float64 = math.Round(averageRating*100) / 100
+	var averageRating float64
+	if result.ReviewCount != 0 {
+		averageRating = float64(sumRating) / float64(result.ReviewCount)
+	}
+	var roundedAverageRating = math.Round(averageRating*100) / 100
 	result.AverageRating = roundedAverageRating
 
 	query = "SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2"

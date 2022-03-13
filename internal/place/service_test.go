@@ -30,7 +30,6 @@ func TestService_GetDetailSuccess(t *testing.T) {
 		ID:          1,
 		Name:        "test_name_place",
 		Image:       "test_image_place",
-		Distance:    200,
 		Address:     "test_address_place",
 		Description: "test_description_place",
 		OpenHour:    "08:00",
