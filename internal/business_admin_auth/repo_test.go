@@ -30,7 +30,7 @@ func TestRepo_CheckRequiredFields(t *testing.T) {
 		PlaceMaxIntervalBooking: 3,
 		PlaceMinSlotBooking:     1,
 		PlaceMaxSlotBooking:     5,
-		PlaceLat:                2.0002638,
+		PlaceLat:                100.0,
 		PlaceLong:               2.0002638,
 	}
 
@@ -69,7 +69,7 @@ func TestRepo_CheckUserFields(t *testing.T) {
 		PlaceMaxIntervalBooking: 3,
 		PlaceMinSlotBooking:     1,
 		PlaceMaxSlotBooking:     5,
-		PlaceLat:                2.0002638,
+		PlaceLat:                100.0,
 		PlaceLong:               2.0002638,
 	}
 
@@ -118,7 +118,7 @@ func TestRepo_CheckBusinessAdminFields(t *testing.T) {
 		PlaceMaxIntervalBooking: 3,
 		PlaceMinSlotBooking:     1,
 		PlaceMaxSlotBooking:     5,
-		PlaceLat:                2.0002638,
+		PlaceLat:                100.0,
 		PlaceLong:               2.0002638,
 	}
 
@@ -441,7 +441,7 @@ func TestRepo_CreateUser(t *testing.T) {
 		PlaceMaxIntervalBooking: 3,
 		PlaceMinSlotBooking:     1,
 		PlaceMaxSlotBooking:     5,
-		PlaceLat:                2.0002638,
+		PlaceLat:                100.0,
 		PlaceLong:               2.0002638,
 	}
 	password := "12345678"
@@ -508,7 +508,7 @@ func TestRepo_CreateBusinessAdmin(t *testing.T) {
 		PlaceMaxIntervalBooking: 3,
 		PlaceMinSlotBooking:     1,
 		PlaceMaxSlotBooking:     5,
-		PlaceLat:                2.0002638,
+		PlaceLat:                100.0,
 		PlaceLong:               2.0002638,
 	}
 	balance := 0.0
@@ -551,7 +551,7 @@ func TestRepo_CreatePlace(t *testing.T) {
 		PlaceMaxIntervalBooking: 3,
 		PlaceMinSlotBooking:     1,
 		PlaceMaxSlotBooking:     5,
-		PlaceLat:                2.0002638,
+		PlaceLat:                100.0,
 		PlaceLong:               2.0002638,
 	}
 
