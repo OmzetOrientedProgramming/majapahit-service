@@ -14,6 +14,12 @@ require (
 )
 
 require (
+	github.com/joho/godotenv v1.4.0
+	github.com/labstack/echo/v4 v4.7.0
+	github.com/stretchr/testify v1.7.0
+)
+
+require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
@@ -34,9 +40,6 @@ require (
 )
 
 require (
-	github.com/joho/godotenv v1.4.0
-	github.com/labstack/echo/v4 v4.6.3
-	github.com/stretchr/testify v1.7.0
 	golang.org/x/sys v0.0.0-20211103235746-7861aae1554b // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

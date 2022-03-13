@@ -117,4 +117,3 @@ If you are using docker I have set up the pgAdmin as database client GUI, you ca
    ```
    git push
    ```
-   
