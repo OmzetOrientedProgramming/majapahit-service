@@ -78,7 +78,21 @@ func TestService_GetPlaceDetailSuccess(t *testing.T) {
 	assert.Equal(t, &placeDetail, placeDetailResult)
 	assert.NotNil(t, placeDetailResult)
 	assert.NoError(t, err)
+}
 
+func TestService_GetPlaceDetailWrongInput(t *testing.T) {
+	// Define input
+	placeId := -1
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	placeDetail, err := mockService.GetPlaceDetail(placeId)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, placeDetail)
 }
 
 func TestService_GetPlaceDetailFailedCalledGetPlaceDetail(t *testing.T) {
