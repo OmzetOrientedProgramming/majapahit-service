@@ -17,7 +17,7 @@ func NewService(repo Repo) Service {
 func (s *service) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
 	placeDetail, err := s.repo.GetPlaceDetail(placeId)
 	if err != nil {
-
+		return nil, err
 	}
 
 	averageRatingAndReviews, err := s.repo.GetAverageRatingAndReviews(placeId)
