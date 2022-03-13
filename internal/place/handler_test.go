@@ -22,6 +22,13 @@ type MockService struct {
 	mock.Mock
 }
 
+func (m *MockService) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesList, *util.Pagination, error) {
+	args := m.Called(params)
+	placeList := args.Get(0).(*PlacesList)
+	pagination := args.Get(1).(util.Pagination)
+	return placeList, &pagination, args.Error(2)
+}
+
 func (m *MockService) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
 	args := m.Called(placeId)
 	placeDetail := args.Get(0).(*PlaceDetail)
@@ -91,11 +98,35 @@ func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
 	}
 }
 
-func (m *MockService) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesList, *util.Pagination, error) {
-	args := m.Called(params)
-	placeList := args.Get(0).(*PlacesList)
-	pagination := args.Get(1).(util.Pagination)
-	return placeList, &pagination, args.Error(2)
+func TestHandler_GetPlaceDetailWithPlaceIdString(t *testing.T) {
+	// Setting up echo router
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:placeId")
+	c.SetParamNames("placeId")
+	c.SetParamValues("satu")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Expectation
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"placeId must be number",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.GetPlaceDetail(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
