@@ -65,6 +65,7 @@ func TestService_GetPlaceDetailSuccess(t *testing.T) {
 	placeDetail.AverageRating = averageRatingAndReviews.AverageRating
 	placeDetail.ReviewCount = averageRatingAndReviews.ReviewCount
 
+	placeDetail.Reviews = make([]UserReview, 2)
 	placeDetail.Reviews[0].User = averageRatingAndReviews.Reviews[0].User
 	placeDetail.Reviews[0].Rating = averageRatingAndReviews.Reviews[0].Rating
 	placeDetail.Reviews[0].Content = averageRatingAndReviews.Reviews[0].Content
