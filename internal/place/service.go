@@ -24,6 +24,16 @@ func NewService(repo Repo) Service {
 }
 
 func (s *service) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
+	errorList := []string{}
+
+	if placeId <= 0 {
+		errorList = append(errorList, "placeId must be above 0")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
 	placeDetail, err := s.repo.GetPlaceDetail(placeId)
 	if err != nil {
 		return nil, err
