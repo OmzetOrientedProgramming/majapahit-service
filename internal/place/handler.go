@@ -40,6 +40,16 @@ func (h *Handler) GetPlaceDetail(c echo.Context) error {
 	}
 
 	placeDetail, err := h.service.GetPlaceDetail(placeId)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
+	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
 		Status:  200,
