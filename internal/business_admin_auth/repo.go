@@ -36,7 +36,8 @@ type Repo interface {
 	CheckUserFields(request RegisterBusinessAdminRequest) error
 	CheckPlaceFields(request RegisterBusinessAdminRequest) error
 
-	GetByPhoneNumber(phoneNumber string) (*User, error)
+	// GetByPhoneNumber(phoneNumber string) (*User, error)
+	CheckIfPhoneNumberIsUnique(phoneNumber string) (bool, error)
 	CheckIfBankAccountIsUnique(bankAccount string) (bool, error)
 	CheckIfEmailIsUnique(email string) (bool, error)
 	CheckIfPlaceNameIsUnique(name string) (bool, error)
@@ -48,8 +49,11 @@ type Repo interface {
 func (r repo) CreateUser(phoneNumber, name, email, password string, status int) (*User, error) {
 	var user User
 
-	err := r.db.Get(&user, "INSERT INTO users (phone_number, name, email, password, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, phone_number, name, email",
-		phoneNumber, name, email, password, status)
+	_, err := r.db.Exec("INSERT INTO users (phone_number, name, email, password, status) VALUES ($1, $2, $3, $4, $5)", phoneNumber, name, email, password, status)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+	err = r.db.Get(&user, "SELECT id FROM users WHERE phone_number=$1 LIMIT 1", phoneNumber)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
@@ -90,22 +94,16 @@ func (r repo) CreatePlace(name, address string, capacity int, description string
 	return nil
 }
 
-func (r repo) GetByPhoneNumber(phoneNumber string) (*User, error) {
-	var user User
-
-	// Unknown internal error
-	err := r.db.Get(&user, "SELECT * FROM users WHERE phone_number=$1 LIMIT 1", phoneNumber)
-	if err != nil {
-		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+func (r repo) CheckIfPhoneNumberIsUnique(phoneNumber string) (bool, error) {
+	var phoneNumberResult string
+	err := r.db.Get(&phoneNumberResult, "SELECT phone_number FROM users WHERE phone_number=$1 LIMIT 1", phoneNumber)
+	switch err {
+	case nil:
+		return false, nil
+	case sql.ErrNoRows:
+		return true, nil
 	}
-
-	// Found
-	if user.PhoneNumber != "" {
-		return &user, nil
-	}
-
-	// Not found
-	return nil, nil
+	return false, errors.Wrap(ErrInternalServerError, err.Error())
 }
 
 func (r repo) CheckIfBankAccountIsUnique(bankAccount string) (bool, error) {
@@ -228,21 +226,22 @@ func (r repo) CheckUserFields(request RegisterBusinessAdminRequest) error {
 	if len(request.AdminName) > 50 {
 		return errors.Wrap(ErrInputValidationError, "name is at most 50 characters")
 	}
+
+	// Check if phone number is valid
 	for _, num := range request.AdminPhoneNumber {
 		if num < '0' || num > '9' {
 			return errors.Wrap(ErrInputValidationError, "phone number is invalid")
 		}
 	}
-
 	if len(request.AdminPhoneNumber) > 15 {
 		return errors.Wrap(ErrInputValidationError, "phone number is too long")
 	}
-	userByPhoneNumber, err := r.GetByPhoneNumber(request.AdminPhoneNumber)
-	if err != nil && errors.Cause(err) != ErrUserNotFound {
+	isPhoneNumberUnique, err := r.CheckIfPhoneNumberIsUnique(request.AdminPhoneNumber)
+	if err != nil {
 		return err
 	}
-	if userByPhoneNumber != nil {
-		return errors.Wrap(ErrPhoneNumberAlreadyExist, "phone_number is already taken")
+	if !isPhoneNumberUnique {
+		return errors.Wrap(ErrInputValidationError, "phone number was already taken")
 	}
 
 	// Check if user email format is valid
@@ -257,7 +256,7 @@ func (r repo) CheckUserFields(request RegisterBusinessAdminRequest) error {
 		return err
 	}
 	if !isEmailUnique {
-		return errors.Wrap(ErrInputValidationError, "a unique email is needed")
+		return errors.Wrap(ErrInputValidationError, "email was already taken")
 	}
 
 	return nil
@@ -272,8 +271,10 @@ func (r repo) CheckBusinessAdminFields(request RegisterBusinessAdminRequest) err
 		return errors.Wrap(ErrInputValidationError, "bank account name is at most 50 characters")
 	}
 	request.AdminBankAccountName = strings.ToUpper(request.AdminBankAccountName)
-	for _, num := range request.AdminBankAccountName {
-		if num < 'A' || num > 'Z' {
+	for _, char := range request.AdminBankAccountName {
+		if char == ' ' {
+			continue
+		} else if char < 'A' || char > 'Z' {
 			return errors.Wrap(ErrInputValidationError, "admin bank account name is invalid")
 		}
 	}
@@ -373,7 +374,7 @@ func (r repo) CheckPlaceFields(request RegisterBusinessAdminRequest) error {
 
 	// Image
 	placeImageSize := len(request.PlaceImage)
-	if request.PlaceImage[:31] != "https://drive.google.com/file/d/" ||
+	if request.PlaceImage[:32] != "https://drive.google.com/file/d/" ||
 		request.PlaceImage[(placeImageSize-17):] != "/view?usp=sharing" {
 		return errors.Wrap(ErrInputValidationError, "image has to be formatted as https://drive.google.com/file/d/.../view?usp=sharing")
 	}
@@ -395,7 +396,7 @@ func (r repo) CheckPlaceFields(request RegisterBusinessAdminRequest) error {
 	// lat, long
 	if request.PlaceLat < 94.5 || request.PlaceLat > 141.5 {
 		return errors.Wrap(ErrInputValidationError, "latitude of the place is out of reach")
-	} else if request.PlaceLong > -11.5 || request.PlaceLong > 6.5 {
+	} else if request.PlaceLong < -11.5 || request.PlaceLong > 6.5 {
 		return errors.Wrap(ErrInputValidationError, "longitude of the place is out of reach")
 	}
 
@@ -410,6 +411,8 @@ func (r repo) VerifyHour(hour, hourName string) (bool, error) {
 	for index, char := range hour {
 		if index == 2 && char != ':' {
 			return false, errors.Wrap(ErrInputValidationError, fmt.Sprintf("please use HH:mm format for %s", hourName))
+		} else if index == 2 && char == ':' {
+			continue
 		} else if char < '0' || char > '9' {
 			return false, errors.Wrap(ErrInputValidationError, fmt.Sprintf("please use HH:mm format for %s", hourName))
 		}
@@ -436,19 +439,19 @@ func (r repo) VerifyHour(hour, hourName string) (bool, error) {
 }
 
 func (r repo) CompareOpenAndCloseHour(openHour, closeHour string) (bool, error) {
-	openHourHourtime, err := strconv.ParseInt(openHour[0:1], 10, 64)
+	openHourHourtime, err := strconv.ParseInt(openHour[0:2], 10, 64)
 	if err != nil {
 		return false, err
 	}
-	openHourMinutetime, err := strconv.ParseInt(openHour[3:4], 10, 64)
+	openHourMinutetime, err := strconv.ParseInt(openHour[3:5], 10, 64)
 	if err != nil {
 		return false, err
 	}
-	closeHourHourtime, err := strconv.ParseInt(closeHour[0:1], 10, 64)
+	closeHourHourtime, err := strconv.ParseInt(closeHour[0:2], 10, 64)
 	if err != nil {
 		return false, err
 	}
-	closeHourMinutetime, err := strconv.ParseInt(closeHour[3:4], 10, 64)
+	closeHourMinutetime, err := strconv.ParseInt(closeHour[3:5], 10, 64)
 	if err != nil {
 		return false, err
 	}
@@ -466,7 +469,7 @@ func (r repo) GeneratePassword() string {
 	const characters string = "abcdefghijklmnopqrstuvwxyz0123456789"
 	var password string = ""
 
-	for i := 0; i <= 8; i++ {
+	for i := 0; i < 8; i++ {
 		idx, err := rand.Int(rand.Reader, big.NewInt(36))
 		if err != nil {
 			return ""

@@ -1,10 +1,12 @@
 package businessadminauth
 
 type User struct {
-	ID          int    `json:"id"`
-	PhoneNumber string `json:"phone_number"`
-	Name        string `json:"name"`
-	Email       string `json:"email"`
+	ID          int    `json:"id" db:"id"`
+	PhoneNumber string `json:"phone_number" db:"phone_number"`
+	Name        string `json:"name" db:"name"`
+	Email       string `json:"email" db:"email"`
+	Password    string `json:"password" db:"password"`
+	Status      string `json:"status" db:"status"`
 }
 
 type RegisterBusinessAdminRequest struct {
