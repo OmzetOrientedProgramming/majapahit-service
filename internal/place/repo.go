@@ -31,7 +31,7 @@ func NewRepo(db *sqlx.DB) Repo {
 func (r *repo) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
 	var result PlaceDetail
 
-	query := "SELECT id, name, image, distance, address, description, open_hour, close_hour FROM places WHERE id = $1"
+	query := "SELECT id, name, image, distance, address, description, open_hour, close_hour, booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1"
 	err := r.db.Get(&result, query, placeId)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())

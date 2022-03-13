@@ -9,6 +9,9 @@ type PlaceDetail struct {
 	Description   string       `json:"description"`
 	OpenHour      string       `json:"open_hour" db:"open_hour"`
 	CloseHour     string       `json:"close_hour" db:"close_hour"`
+	BookingPrice  int          `json:"booking_price" db:"booking_price"`
+	MinSlot       int          `json:"min_slot" db:"min_slot_booking"`
+	MaxSlot       int          `json:"max_slot" db:"max_slot_booking"`
 	AverageRating float64      `json:"average_rating" db:"rating"`
 	ReviewCount   int          `json:"review_count"`
 	Reviews       []UserReview `json:"reviews"`
