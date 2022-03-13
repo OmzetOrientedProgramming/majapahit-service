@@ -129,6 +129,41 @@ func TestHandler_GetPlaceDetailWithPlaceIdString(t *testing.T) {
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
+func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:placeId")
+	c.SetParamNames("placeId")
+	c.SetParamValues("0")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input
+	placeId := 0
+
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"placeId must be above 0"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+	expectedResponseJson, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var placeDetail PlaceDetail
+	mockService.On("GetPlaceDetail", placeId).Return(&placeDetail, errorFromService)
+
+	// Test
+	assert.NoError(t, h.GetPlacesListWithPagination(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJson), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
 func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
 	// Setup echo
 	e := echo.New()
