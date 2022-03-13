@@ -462,11 +462,8 @@ func TestRepo_CreateUser(t *testing.T) {
 		WithArgs(request.AdminPhoneNumber, request.AdminName, request.AdminEmail, password, status).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	user, err := repoMock.CreateUser(request.AdminPhoneNumber, request.AdminName, request.AdminEmail, password, status)
+	err = repoMock.CreateUser(request.AdminPhoneNumber, request.AdminName, request.AdminEmail, password, status)
 	assert.NoError(t, err)
-	assert.Equal(t, "sebuahemail@gmail.com", user.Email)
-	assert.Equal(t, "089782828888", user.PhoneNumber)
-	assert.Equal(t, "Rafi Muhammad", user.Name)
 }
 
 func TestRepo_RetrieveUserId(t *testing.T) {
@@ -479,8 +476,10 @@ func TestRepo_RetrieveUserId(t *testing.T) {
 
 	repoMock := NewRepo(sqlxDB)
 
-	rows := mock.NewRows([]string{"id", "phone_number"}).AddRow(1, "081234567890")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM users WHERE phone_number=$1 LIMIT 1")).
+	rows := mock.NewRows([]string{"id", "phone_number"}).
+		AddRow(1, "081234567890")
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE phone_number=$1 LIMIT 1")).
 		WithArgs("081234567890").
 		WillReturnRows(rows)
 

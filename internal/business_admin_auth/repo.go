@@ -24,7 +24,7 @@ type repo struct {
 }
 
 type Repo interface {
-	CreateUser(phoneNumber, name, email, password string, status int) (*User, error)              //status = 1
+	CreateUser(phoneNumber, name, email, password string, status int) error                       //status = 1
 	CreateBusinessAdmin(userId int, bankAccount, bank_account_name string, balance float32) error //balance = 0.0
 	CreatePlace(name, address string, capacity int, description string,
 		userID, interval int, openHour, closeHour, image string,
@@ -36,8 +36,8 @@ type Repo interface {
 	CheckUserFields(request RegisterBusinessAdminRequest) error
 	CheckPlaceFields(request RegisterBusinessAdminRequest) error
 
-	// GetByPhoneNumber(phoneNumber string) (*User, error)
 	CheckIfPhoneNumberIsUnique(phoneNumber string) (bool, error)
+	RetrieveUserId(phoneNumber string) (int, error)
 	CheckIfBankAccountIsUnique(bankAccount string) (bool, error)
 	CheckIfEmailIsUnique(email string) (bool, error)
 	CheckIfPlaceNameIsUnique(name string) (bool, error)
@@ -46,19 +46,13 @@ type Repo interface {
 	CompareOpenAndCloseHour(openHour, closeHour string) (bool, error)
 }
 
-func (r repo) CreateUser(phoneNumber, name, email, password string, status int) (*User, error) {
-	var user User
-
+func (r repo) CreateUser(phoneNumber, name, email, password string, status int) error {
 	_, err := r.db.Exec("INSERT INTO users (phone_number, name, email, password, status) VALUES ($1, $2, $3, $4, $5)", phoneNumber, name, email, password, status)
 	if err != nil {
-		return nil, errors.Wrap(ErrInternalServerError, err.Error())
-	}
-	err = r.db.Get(&user, "SELECT id FROM users WHERE phone_number=$1 LIMIT 1", phoneNumber)
-	if err != nil {
-		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+		return errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	return &user, nil
+	return nil
 }
 
 func (r repo) CreateBusinessAdmin(userId int, bankAccount, bank_account_name string, balance float32) error {
@@ -104,6 +98,18 @@ func (r repo) CheckIfPhoneNumberIsUnique(phoneNumber string) (bool, error) {
 		return true, nil
 	}
 	return false, errors.Wrap(ErrInternalServerError, err.Error())
+}
+
+func (r repo) RetrieveUserId(phoneNumber string) (int, error) {
+	var user User
+	err := r.db.Get(&user, "SELECT * FROM users WHERE phone_number=$1 LIMIT 1", phoneNumber)
+	if err != nil {
+		return -1, errors.Wrap(ErrInternalServerError, err.Error())
+	} else {
+		userID := user.ID
+		return userID, nil
+	}
+
 }
 
 func (r repo) CheckIfBankAccountIsUnique(bankAccount string) (bool, error) {
