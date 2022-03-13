@@ -1,10 +1,11 @@
 package util
 
 import (
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestErrorUnwrap(t *testing.T) {

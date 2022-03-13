@@ -1,13 +1,15 @@
 package api
 
 import (
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"net/http"
+
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/database/postgres"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 )
 
 // Server struct to for the server dependency
@@ -27,9 +29,12 @@ var (
 	checkUpService checkup.Service
 	checkupHandler *checkup.Handler
 
-	placeRepo    place.Repo
-	placeService place.Service
-	placeHandler *place.Handler
+	catalogRepo    item.Repo
+	catalogService item.Service
+	catalogHandler *item.Handler
+	placeRepo      place.Repo
+	placeService   place.Service
+	placeHandler   *place.Handler
 )
 
 // Init all dependency
@@ -43,6 +48,10 @@ func (s Server) Init() {
 	checkUpService = checkup.NewService(checkUpRepo)
 	checkupHandler = checkup.NewHandler(checkUpService)
 
+	// Catalog Module
+	catalogRepo = item.NewRepo(db)
+	catalogService = item.NewService(catalogRepo)
+	catalogHandler = item.NewHandler(catalogService)
 	// Place module
 	placeRepo = place.NewRepo(db)
 	placeService = place.NewService(placeRepo)
