@@ -22,7 +22,7 @@ func (s *service) GetPlaceDetail(placeId int) (*PlaceDetail, error) {
 
 	averageRatingAndReviews, err := s.repo.GetAverageRatingAndReviews(placeId)
 	if err != nil {
-
+		return nil, err
 	}
 
 	placeDetail.AverageRating = averageRatingAndReviews.AverageRating
