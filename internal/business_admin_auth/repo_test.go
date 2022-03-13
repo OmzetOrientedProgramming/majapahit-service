@@ -479,9 +479,7 @@ func TestRepo_RetrieveUserId(t *testing.T) {
 
 	repoMock := NewRepo(sqlxDB)
 
-	rows := mock.
-		NewRows([]string{"id", "phone_number"}).
-		AddRow(1, "081234567890")
+	rows := mock.NewRows([]string{"id", "phone_number"}).AddRow(1, "081234567890")
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM users WHERE phone_number=$1 LIMIT 1")).
 		WithArgs("081234567890").
 		WillReturnRows(rows)
