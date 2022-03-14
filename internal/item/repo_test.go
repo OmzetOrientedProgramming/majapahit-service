@@ -71,8 +71,8 @@ func TestRepo_GetListItemWwithPaginationSuccess(t *testing.T) {
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
-		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1")).
+		WithArgs(params.PlaceID).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"name", "image"}).
@@ -140,8 +140,8 @@ func TestRepo_GetListItemWithPaginationCountError(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
-		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1")).
+		WithArgs(params.PlaceID).
 		WillReturnError(sql.ErrConnDone)
 
 	// Test
@@ -175,8 +175,8 @@ func TestRepo_GetListItemWithPaginationPlaceInfoError(t *testing.T) {
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
-		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1")).
+		WithArgs(params.PlaceID).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
 		WithArgs(params.PlaceID).
@@ -252,8 +252,8 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
-		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1")).
+		WithArgs(params.PlaceID).
 		WillReturnError(sql.ErrNoRows)
 
 	// Test
@@ -293,8 +293,8 @@ func TestRepo_GetListItemWithPaginationPlaceInfoEmpty(t *testing.T) {
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1 LIMIT $2 OFFSET $3")).
-		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE place_id = $1")).
+		WithArgs(params.PlaceID).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT name, image FROM places WHERE id = $1")).
 		WithArgs(params.PlaceID).
@@ -363,13 +363,13 @@ func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 			listItemExpected.Items[1].Image,
 			listItemExpected.Items[1].Price,
 			listItemExpected.Items[1].Description)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE name LIKE $1 AND place_id = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE LOWER(name) LIKE LOWER($1) AND place_id = $2 LIMIT $3 OFFSET $4")).
 		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE name LIKE $1 AND place_id = $2 LIMIT $3 OFFSET $4")).
-		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE LOWER(name) LIKE LOWER($1) AND place_id = $2")).
+		WithArgs("%"+params.Name+"%", params.PlaceID).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"name", "image"}).
