@@ -77,6 +77,24 @@ func (h *Handler) CheckPhoneNumber(c echo.Context) error {
 			Status:  http.StatusOK,
 			Message: "phone number is available",
 		})
+	case "login":
+		if !exist {
+			return c.JSON(http.StatusNotFound, util.APIResponse{
+				Status:  http.StatusNotFound,
+				Message: "phone number has not been registered",
+			})
+		}
+		if err := h.service.SendOTP(req.PhoneNumber); err != nil {
+			logrus.Error("[error while sending otp]", err.Error())
+			return c.JSON(http.StatusInternalServerError, util.APIResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "cannot send otp to phone number",
+			})
+		}
+		return c.JSON(http.StatusOK, util.APIResponse{
+			Status:  http.StatusOK,
+			Message: "success",
+		})
 	}
 	return nil
 }
@@ -120,7 +138,31 @@ func (h *Handler) VerifyOTP(c echo.Context) error {
 
 		return c.JSON(http.StatusOK, util.APIResponse{
 			Status:  http.StatusOK,
-			Message: "otp verification success",
+			Message: "success",
+		})
+	case "login":
+		if !ok {
+			return c.JSON(http.StatusUnprocessableEntity, util.APIResponse{
+				Status:  http.StatusUnprocessableEntity,
+				Message: "wrong otp code",
+			})
+		}
+
+		customer, err := h.service.GetCustomerByPhoneNumber(req.PhoneNumber)
+
+		token, err := createJWTToken(1, 1, h.jwtSecret)
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, util.APIResponse{
+			Status:  http.StatusOK,
+			Message: "success",
+			Data: map[string]interface{}{
+				"customer":      *customer,
+				"access_token":  token,
+				"refresh_token": "not implemented",
+			},
 		})
 	}
 	return nil

@@ -21,6 +21,14 @@ func (m *MockRepository) CreateCustomer(customer Customer) (*Customer, error) {
 	return args.Get(0).(*Customer), args.Error(1)
 }
 
+func (m *MockRepository) GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error) {
+	args := m.Called(phoneNumber)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Customer), args.Error(1)
+}
+
 func TestService_CheckPhoneNumber(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
@@ -124,5 +132,22 @@ func TestService_Register(t *testing.T) {
 			Name:        "Bambang",
 			Status:      1,
 		})
+	})
+}
+
+func TestService_GetCustomerByPhoneNumber(t *testing.T) {
+	t.Run("validation error", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockService := NewService(mockRepo, TwillioCredentials{
+			SID:        "mockSID",
+			AccountSID: "mockAccountSID",
+			AuthToken:  "mockAuthToken",
+		})
+
+		actual, err := mockService.GetCustomerByPhoneNumber("abc")
+		mockRepo.AssertExpectations(t)
+
+		assert.Error(t, err)
+		assert.Nil(t, actual)
 	})
 }

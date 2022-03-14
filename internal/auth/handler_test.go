@@ -45,9 +45,12 @@ func (m *MockService) Register(customer Customer) (*Customer, error) {
 	return args.Get(0).(*Customer), args.Error(1)
 }
 
-func (m *MockService) CreateJWTToken(userID int, status int) (string, error) {
-	args := m.Called(userID, status)
-	return args.String(0), args.Error(1)
+func (m *MockService) GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error) {
+	args := m.Called(phoneNumber)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Customer), args.Error(1)
 }
 
 func TestHandler_CheckPhoneNumber(t *testing.T) {
@@ -194,6 +197,77 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
+
+	t.Run("phone number is not registered when log in", func(t *testing.T) {
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusNotFound,
+			Message: "phone number has not been registered",
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService, "mockJWTSecret")
+		mockService.On("CheckPhoneNumber", "087748176534").Return(false, nil)
+
+		payload, _ := json.Marshal(map[string]string{
+			"phone_number": "087748176534",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/?session=login", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("fail to send otp when log in", func(t *testing.T) {
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "cannot send otp to phone number",
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService, "mockJWTSecret")
+		mockService.On("CheckPhoneNumber", "087748176534").Return(true, nil)
+		mockService.On("SendOTP", "087748176534").Return(ErrInternalServer)
+
+		payload, _ := json.Marshal(map[string]string{
+			"phone_number": "087748176534",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/?session=login", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("login success", func(t *testing.T) {
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusOK,
+			Message: "success",
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService, "mockJWTSecret")
+		mockService.On("CheckPhoneNumber", "087748176534").Return(true, nil)
+		mockService.On("SendOTP", "087748176534").Return(nil)
+
+		payload, _ := json.Marshal(map[string]string{
+			"phone_number": "087748176534",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/?session=login", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
 }
 
 func TestHandler_VerifyOTP(t *testing.T) {
@@ -203,7 +277,7 @@ func TestHandler_VerifyOTP(t *testing.T) {
 	t.Run("otp is valid", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusOK,
-			Message: "otp verification success",
+			Message: "success",
 			Data:    nil,
 		})
 
