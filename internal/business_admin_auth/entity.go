@@ -1,5 +1,6 @@
 package businessadminauth
 
+// User is a media to retrieve the user_id
 type User struct {
 	ID          int    `json:"id" db:"id"`
 	PhoneNumber string `json:"phone_number" db:"phone_number"`
@@ -7,8 +8,11 @@ type User struct {
 	Email       string `json:"email" db:"email"`
 	Password    string `json:"password" db:"password"`
 	Status      string `json:"status" db:"status"`
+	CreatedAt   string `json:"created_at" db:"created_at"`
+	UpdatedAt   string `json:"updated_at" db:"updated_at"`
 }
 
+// RegisterBusinessAdminRequest is a media to bind JSON request
 type RegisterBusinessAdminRequest struct {
 	AdminPhoneNumber        string  `json:"admin_phone_number"`
 	AdminEmail              string  `json:"admin_email"`
@@ -31,13 +35,7 @@ type RegisterBusinessAdminRequest struct {
 	PlaceLong               float64 `json:"place_long"`
 }
 
-type RegisterBusinessAdminResponse struct {
-	Status  int             `json:"status"`
-	Message string          `json:"message"`
-	Data    LoginCredential `json:"data,omitempty"`
-	Errors  []string        `json:"errors,omitempty"`
-}
-
+// LoginCredential is a media mainly to put the new-generated password
 type LoginCredential struct {
 	PlaceName string `json:"place_name"`
 	Email     string `json:"email"`

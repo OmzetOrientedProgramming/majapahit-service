@@ -37,8 +37,8 @@ func (m *MockRepository) CheckBusinessAdminFields(request RegisterBusinessAdminR
 	return args.Error(0)
 }
 
-func (m *MockRepository) CreateBusinessAdmin(userId int, bankAccount, bank_account_name string, balance float32) error {
-	args := m.Called(userId, bankAccount, bank_account_name, balance)
+func (m *MockRepository) CreateBusinessAdmin(userID int, bankAccount, bankAccountName string, balance float32) error {
+	args := m.Called(userID, bankAccount, bankAccountName, balance)
 	return args.Error(0)
 }
 
@@ -62,7 +62,7 @@ func (m *MockRepository) CheckIfPhoneNumberIsUnique(phoneNumber string) (bool, e
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockRepository) RetrieveUserId(phoneNumber string) (int, error) {
+func (m *MockRepository) RetrieveUserID(phoneNumber string) (int, error) {
 	args := m.Called(phoneNumber)
 	return args.Int(0), args.Error(1)
 }
@@ -127,16 +127,16 @@ func TestService_RegisterBusinessAdmin(t *testing.T) {
 	mockRepo.On("CreateUser", request.AdminPhoneNumber, request.AdminName, request.AdminEmail,
 		mockPassword, mockStatus).Return(nil)
 
-	mockRepo.On("RetrieveUserId", request.AdminPhoneNumber).Return(1, nil)
+	mockRepo.On("RetrieveUserID", request.AdminPhoneNumber).Return(1, nil)
 	mockRepo.On("CheckBusinessAdminFields", request).Return(nil)
 
-	mockUserId := 1
+	mockUserID := 1
 	var mockBalance float32 = 0.0
-	mockRepo.On("CreateBusinessAdmin", mockUserId, request.AdminBankAccount, request.AdminBankAccountName, mockBalance).Return(nil)
+	mockRepo.On("CreateBusinessAdmin", mockUserID, request.AdminBankAccount, request.AdminBankAccountName, mockBalance).Return(nil)
 
 	mockRepo.On("CheckPlaceFields", request).Return(nil)
 	mockRepo.On("CreatePlace", request.PlaceName, request.PlaceAddress, request.PlaceCapacity,
-		request.PlaceDescription, mockUserId, request.PlaceInterval, request.PlaceOpenHour, request.PlaceCloseHour,
+		request.PlaceDescription, mockUserID, request.PlaceInterval, request.PlaceOpenHour, request.PlaceCloseHour,
 		request.PlaceImage, request.PlaceMinIntervalBooking, request.PlaceMaxIntervalBooking, request.PlaceMinSlotBooking,
 		request.PlaceMaxSlotBooking, request.PlaceLat, request.PlaceLong).Return(nil)
 

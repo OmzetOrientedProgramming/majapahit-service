@@ -134,7 +134,7 @@ func TestRepo_CheckBusinessAdminFields(t *testing.T) {
 
 	rows := mock.
 		NewRows([]string{"name"})
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account FROM business_owners WHERE bank_account=$1 LIMIT 1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account_number FROM business_owners WHERE bank_account_number=$1 LIMIT 1")).
 		WithArgs("008-112492374950").
 		WillReturnRows(rows)
 
@@ -210,7 +210,7 @@ func TestRepo_CheckIfPhoneNumberIsUnique(t *testing.T) {
 
 	t.Run("phone number is unique in database", func(t *testing.T) {
 		rows := mock.
-			NewRows([]string{"bank_account"})
+			NewRows([]string{"phone_number"})
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT phone_number FROM users WHERE phone_number=$1 LIMIT 1")).
 			WithArgs("081234567891").
 			WillReturnRows(rows)
@@ -243,9 +243,9 @@ func TestRepo_CheckIfBankAccountIsUnique(t *testing.T) {
 
 	t.Run("bank account is not unique in database", func(t *testing.T) {
 		rows := mock.
-			NewRows([]string{"bank_account"}).
+			NewRows([]string{"bank_account_number"}).
 			AddRow("008-1234567890")
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account FROM business_owners WHERE bank_account=$1 LIMIT 1")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account_number FROM business_owners WHERE bank_account_number=$1 LIMIT 1")).
 			WithArgs("008-1234567890").
 			WillReturnRows(rows)
 
@@ -256,8 +256,8 @@ func TestRepo_CheckIfBankAccountIsUnique(t *testing.T) {
 
 	t.Run("bank account is unique in database", func(t *testing.T) {
 		rows := mock.
-			NewRows([]string{"bank_account"})
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account FROM business_owners WHERE bank_account=$1 LIMIT 1")).
+			NewRows([]string{"bank_account_number"})
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account_number FROM business_owners WHERE bank_account_number=$1 LIMIT 1")).
 			WithArgs("008-1234567812").
 			WillReturnRows(rows)
 
@@ -267,7 +267,7 @@ func TestRepo_CheckIfBankAccountIsUnique(t *testing.T) {
 	})
 
 	t.Run("database error", func(t *testing.T) {
-		mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account FROM business_owners WHERE bank_account=$1 LIMIT 1")).
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT bank_account_number FROM business_owners WHERE bank_account_number=$1 LIMIT 1")).
 			WithArgs("008-1234567834").
 			WillReturnError(sql.ErrTxDone)
 
@@ -466,7 +466,7 @@ func TestRepo_CreateUser(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRepo_RetrieveUserId(t *testing.T) {
+func TestRepo_RetrieveUserID(t *testing.T) {
 	mockDB, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -483,9 +483,9 @@ func TestRepo_RetrieveUserId(t *testing.T) {
 		WithArgs("081234567890").
 		WillReturnRows(rows)
 
-	userId, err := repoMock.RetrieveUserId("081234567890")
+	userID, err := repoMock.RetrieveUserID("081234567890")
 	assert.NoError(t, err)
-	assert.Equal(t, 1, userId)
+	assert.Equal(t, 1, userID)
 }
 
 func TestRepo_CreateBusinessAdmin(t *testing.T) {
@@ -523,8 +523,8 @@ func TestRepo_CreateBusinessAdmin(t *testing.T) {
 	repoMock := NewRepo(sqlxDB)
 
 	_ = mock.
-		NewRows([]string{"balance", "bank_account", "bank_account_name", "user_id"})
-	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO business_owners (balance, bank_account, bank_account_name, user_id) VALUES ($1, $2, $3, $4)")).
+		NewRows([]string{"balance", "bank_account_number", "bank_account_name", "user_id"})
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO business_owners (balance, bank_account_number, bank_account_name, user_id) VALUES ($1, $2, $3, $4)")).
 		WithArgs(balance, request.AdminBankAccount, request.AdminBankAccountName, userID).WillReturnResult(sqlmock.NewResult(1, 1))
 
 	err = repoMock.CreateBusinessAdmin(userID, request.AdminBankAccount, request.AdminBankAccountName, float32(balance))
