@@ -51,7 +51,7 @@ func (r *Routes) Init() {
 		authRoutes := v1.Group("/auth")
 		{
 			authRoutes.POST("/check-phone-number", r.authHandler.CheckPhoneNumber)
-			authRoutes.POST("/verifyPhoneNumber", r.authHandler.VerifyOTP)
+			authRoutes.POST("/verify-otp", r.authHandler.VerifyOTP)
 			authRoutes.POST("/register", r.authHandler.Register)
 		}
 	}
