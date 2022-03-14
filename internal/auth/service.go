@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -32,6 +33,8 @@ type Service interface {
 	VerifyOTP(phoneNumber, otp string) (bool, error)
 
 	Register(customer Customer) (*Customer, error)
+
+	GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error)
 }
 
 func (s service) CheckPhoneNumber(phoneNumber string) (bool, error) {
@@ -60,6 +63,7 @@ func (s service) SendOTP(phoneNumber string) error {
 	if err != nil {
 		return err
 	}
+	log.Println(req)
 	req.SetBasicAuth(s.twillioCredentials.AccountSID, s.twillioCredentials.AuthToken)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := http.DefaultClient.Do(req)
@@ -101,6 +105,7 @@ func (s service) VerifyOTP(phoneNumber, otp string) (bool, error) {
 		return false, err
 	}
 	req.SetBasicAuth(s.twillioCredentials.AccountSID, s.twillioCredentials.AuthToken)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return false, err
@@ -147,4 +152,14 @@ func (s service) Register(customer Customer) (*Customer, error) {
 	}
 
 	return createdCustomer, nil
+}
+
+func (s service) GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error) {
+	for _, num := range phoneNumber {
+		if num < '0' || num > '9' {
+			return nil, errors.Wrap(ErrInputValidation, "phone number is invalid")
+		}
+	}
+
+	return s.repo.GetCustomerByPhoneNumber(phoneNumber)
 }

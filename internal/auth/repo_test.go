@@ -153,3 +153,60 @@ func TestRepo_CreateCustomer(t *testing.T) {
 		assert.Nil(t, createdCustomer)
 	})
 }
+
+func TestRepo_GetCustomerByPhoneNumber(t *testing.T) {
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+
+	t.Run("success", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "phone_number", "name", "status"}).
+			AddRow(1, "081223901234", "Bambang", 1)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE phone_number=$1")).
+			WithArgs("081223901234").
+			WillReturnRows(rows)
+
+		rows = mock.
+			NewRows([]string{"id", "date_of_birth", "gender", "user_id"}).
+			AddRow(1, time.Time{}, 1, 1)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM customers WHERE user_id=$1")).
+			WithArgs(1).
+			WillReturnRows(rows)
+
+		customer, err := repoMock.GetCustomerByPhoneNumber("081223901234")
+		assert.NoError(t, err)
+		assert.NotNil(t, customer)
+	})
+
+	t.Run("error getting user data", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, phone_number, name, status FROM users WHERE phone_number=$1 LIMIT 1")).
+			WithArgs("081223902345").
+			WillReturnError(ErrInternalServer)
+
+		customer, err := repoMock.GetCustomerByPhoneNumber("081223902345")
+		assert.Equal(t, ErrInternalServer, errors.Cause(err))
+		assert.Nil(t, customer)
+	})
+
+	t.Run("error getting customer data", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "phone_number", "name", "status"}).
+			AddRow(1, "081223901234", "Bambang", 1)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE phone_number=$1")).
+			WithArgs("081223901234").
+			WillReturnRows(rows)
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM customers WHERE user_id=$1")).
+			WithArgs(1).
+			WillReturnError(ErrInternalServer)
+
+		customer, err := repoMock.GetCustomerByPhoneNumber("081223901234")
+		assert.Equal(t, ErrInternalServer, errors.Cause(err))
+		assert.Nil(t, customer)
+	})
+}
