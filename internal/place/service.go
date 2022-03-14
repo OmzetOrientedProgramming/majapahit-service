@@ -47,11 +47,9 @@ func (s *service) GetDetail(placeID int) (*Detail, error) {
 	placeDetail.AverageRating = averageRatingAndReviews.AverageRating
 	placeDetail.ReviewCount = averageRatingAndReviews.ReviewCount
 
-	placeDetail.Reviews = make([]UserReview, 2)
-	for i := range averageRatingAndReviews.Reviews {
-		placeDetail.Reviews[i].User = averageRatingAndReviews.Reviews[i].User
-		placeDetail.Reviews[i].Rating = averageRatingAndReviews.Reviews[i].Rating
-		placeDetail.Reviews[i].Content = averageRatingAndReviews.Reviews[i].Content
+	placeDetail.Reviews = make([]UserReview, 0)
+	for _, i := range averageRatingAndReviews.Reviews {
+		placeDetail.Reviews = append(placeDetail.Reviews, i)
 	}
 
 	return placeDetail, nil
