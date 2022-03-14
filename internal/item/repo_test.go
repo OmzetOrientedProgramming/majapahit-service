@@ -363,12 +363,12 @@ func TestRepo_GetListItemWithPaginationByName(t *testing.T) {
 			listItemExpected.Items[1].Image,
 			listItemExpected.Items[1].Price,
 			listItemExpected.Items[1].Description)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE name LIKE $1 AND place_id = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, price, description FROM items WHERE LOWER(name) LIKE LOWER($1) AND place_id = $2 LIMIT $3 OFFSET $4")).
 		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE name LIKE $1 AND place_id = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM items WHERE LOWER(name) LIKE LOWER($1) AND place_id = $2 LIMIT $3 OFFSET $4")).
 		WithArgs("%"+params.Name+"%", params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
