@@ -69,6 +69,53 @@ func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestService_GetListItemByIDWithPaginationSuccessWithParamsName(t *testing.T) {
+	// Define input and output
+	listItemExpected := ListItem{
+		Items: []Item{
+			{
+				ID:          1,
+				Name:        "test 1",
+				Image:       "test 1",
+				Description: "test 1",
+				Price:       10000,
+			},
+		},
+		TotalCount: 10,
+	}
+
+	params := ListItemRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
+		PlaceID: 1,
+		Name:    "test+1",
+	}
+
+	newParams := ListItemRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
+		PlaceID: 1,
+		Name:    "test 1",
+	}
+
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Expectation
+	mockRepo.On("GetListItemWithPagination", newParams).Return(listItemExpected, nil)
+
+	// Test
+	listItemResult, _, err := mockService.GetListItemWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &listItemExpected, listItemResult)
+	assert.NotNil(t, listItemResult)
+	assert.NoError(t, err)
+}
+
 func TestService_GetListItemByIDWithPaginationSuccessWithDefaultParam(t *testing.T) {
 	// Define input and output
 	listItemExpected := ListItem{

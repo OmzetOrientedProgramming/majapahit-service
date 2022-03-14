@@ -22,6 +22,8 @@ type Repo interface {
 	CheckPhoneNumber(phoneNumber string) (bool, error)
 
 	CreateCustomer(customer Customer) (*Customer, error)
+
+	GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error)
 }
 
 func (r repo) CheckPhoneNumber(phoneNumber string) (bool, error) {
@@ -75,5 +77,28 @@ func (r repo) CreateCustomer(customer Customer) (*Customer, error) {
 		PhoneNumber: customer.PhoneNumber,
 		Name:        customer.Name,
 		Status:      customer.Status,
+	}, nil
+}
+
+func (r repo) GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error) {
+	var userModel UserModel
+	query := "SELECT * FROM users WHERE phone_number=$1"
+	if err := r.db.Get(&userModel, query, phoneNumber); err != nil {
+		return nil, errors.Wrap(ErrInternalServer, err.Error())
+	}
+
+	var customerModel CustomerModel
+	query = "SELECT * FROM customers WHERE user_id=$1"
+	if err := r.db.Get(&customerModel, query, userModel.ID); err != nil {
+		return nil, errors.Wrap(ErrInternalServer, err.Error())
+	}
+
+	return &Customer{
+		ID:          userModel.ID,
+		DateOfBirth: customerModel.DateOfBirth,
+		Gender:      customerModel.Gender,
+		PhoneNumber: userModel.PhoneNumber,
+		Name:        userModel.Name,
+		Status:      1,
 	}, nil
 }

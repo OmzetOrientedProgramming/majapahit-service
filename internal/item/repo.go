@@ -39,11 +39,12 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 	query3 := "SELECT name, image FROM places WHERE id = $1"
 
 	if params.Name != "" {
-		mainQuery += fmt.Sprintf("name LIKE $%d AND ", n)
+		mainQuery += fmt.Sprintf("LOWER(name) LIKE LOWER($%d) AND ", n)
 		n++
 		listQuery = append(listQuery, "%"+params.Name+"%")
 	}
 
+	tempQuery2 := mainQuery + fmt.Sprintf("place_id = $%d", n)
 	mainQuery += fmt.Sprintf("place_id = $%d LIMIT $%d OFFSET $%d", n, n+1, n+2)
 	listQuery = append(listQuery, params.PlaceID, params.Limit, (params.Page-1)*params.Limit)
 	err := r.db.Select(&listItem.Items, query1+mainQuery, listQuery...)
@@ -58,7 +59,7 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	err = r.db.Get(&listItem.TotalCount, query2+mainQuery, listQuery...)
+	err = r.db.Get(&listItem.TotalCount, query2+tempQuery2, listQuery[0:len(listQuery)-2]...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
@@ -68,9 +69,8 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-
+	
 	err = r.db.Select(&listItem.PlaceInfo, query3, params.PlaceID)
-	fmt.Print(err)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
