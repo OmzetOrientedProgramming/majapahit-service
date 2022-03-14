@@ -39,7 +39,7 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 	query3 := "SELECT name, image FROM places WHERE id = $1"
 
 	if params.Name != "" {
-		mainQuery += fmt.Sprintf("name LIKE $%d AND ", n)
+		mainQuery += fmt.Sprintf("LOWER(name) LIKE LOWER($%d) AND ", n)
 		n++
 		listQuery = append(listQuery, "%"+params.Name+"%")
 	}
@@ -70,7 +70,6 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 	}
 
 	err = r.db.Select(&listItem.PlaceInfo, query3, params.PlaceID)
-	fmt.Print(err)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			listItem.Items = make([]Item, 0)
