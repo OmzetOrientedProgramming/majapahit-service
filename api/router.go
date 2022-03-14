@@ -36,6 +36,7 @@ func (r *Routes) Init() {
 	// Place module
 	place := v1.Group("/place")
 	place.GET("", r.placeHandler.GetPlacesListWithPagination)
+	place.GET("/:placeID", r.placeHandler.GetDetail)
 
 	// Catalog module
 	catalog := place.Group("/:placeID/catalog")

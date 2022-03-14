@@ -1,7 +1,10 @@
 package place
 
 import (
+	"math"
+
 	"database/sql"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -10,6 +13,8 @@ import (
 type Repo interface {
 	GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList, error)
 	GetPlaceRatingAndReviewCountByPlaceID(int) (*PlacesRatingAndReviewCount, error)
+	GetDetail(int) (*Detail, error)
+	GetAverageRatingAndReviews(int) (*AverageRatingAndReviews, error)
 }
 
 type repo struct {
@@ -21,6 +26,52 @@ func NewRepo(db *sqlx.DB) Repo {
 	return &repo{
 		db: db,
 	}
+}
+
+func (r *repo) GetDetail(placeID int) (*Detail, error) {
+	var result Detail
+
+	query := "SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1"
+	err := r.db.Get(&result, query, placeID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &result, nil
+}
+
+func (r *repo) GetAverageRatingAndReviews(placeID int) (*AverageRatingAndReviews, error) {
+	var result AverageRatingAndReviews
+	result.Reviews = make([]UserReview, 0)
+
+	query := "SELECT COUNT(id) as count_review FROM reviews WHERE place_id = $1"
+	err := r.db.Get(&result, query, placeID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	var sumRating int
+
+	query = "SELECT COALESCE(SUM(rating), 0) as sum_rating FROM reviews WHERE place_id = $1"
+	err = r.db.Get(&sumRating, query, placeID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	var averageRating float64
+	if result.ReviewCount != 0 {
+		averageRating = float64(sumRating) / float64(result.ReviewCount)
+	}
+	var roundedAverageRating = math.Round(averageRating*100) / 100
+	result.AverageRating = roundedAverageRating
+
+	query = "SELECT users.name as user, reviews.rating as rating, reviews.content as content FROM reviews LEFT JOIN users ON reviews.user_id = users.id WHERE reviews.place_id = $1 LIMIT 2"
+	err = r.db.Select(&result.Reviews, query, placeID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &result, nil
 }
 
 // GetPlacesListWithPagination will do the query to database for getting list places data

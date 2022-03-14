@@ -1,12 +1,13 @@
 package place
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
-	"net/http"
-	"strconv"
 )
 
 // Handler struct for place package
@@ -19,6 +20,49 @@ func NewHandler(service Service) *Handler {
 	return &Handler{
 		service: service,
 	}
+}
+
+// GetDetail will retrieve information related to a place
+func (h *Handler) GetDetail(c echo.Context) error {
+	errorList := []string{}
+	placeIDString := c.Param("placeID")
+
+	placeID, err := strconv.Atoi(placeIDString)
+	if err != nil {
+		errorList = append(errorList, "placeID must be number")
+	}
+
+	if len(errorList) != 0 {
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
+	}
+
+	placeDetail, err := h.service.GetDetail(placeID)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
+
+		logrus.Error("[error while accessing place service]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    placeDetail,
+	})
 }
 
 // GetPlacesListWithPagination will be used to handling the API request for get places

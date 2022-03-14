@@ -1,14 +1,16 @@
 package place
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
-	"strings"
 )
 
 // Service will contain all the function that can be used by service
 type Service interface {
 	GetPlaceListWithPagination(params PlacesListRequest) (*PlacesList, *util.Pagination, error)
+	GetDetail(placeID int) (*Detail, error)
 }
 
 type service struct {
@@ -17,7 +19,42 @@ type service struct {
 
 // NewService for initialize service
 func NewService(repo Repo) Service {
-	return &service{repo: repo}
+	return &service{
+		repo: repo}
+}
+
+func (s *service) GetDetail(placeID int) (*Detail, error) {
+	errorList := []string{}
+
+	if placeID <= 0 {
+		errorList = append(errorList, "placeID must be above 0")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	placeDetail, err := s.repo.GetDetail(placeID)
+	if err != nil {
+		return nil, err
+	}
+
+	averageRatingAndReviews, err := s.repo.GetAverageRatingAndReviews(placeID)
+	if err != nil {
+		return nil, err
+	}
+
+	placeDetail.AverageRating = averageRatingAndReviews.AverageRating
+	placeDetail.ReviewCount = averageRatingAndReviews.ReviewCount
+
+	placeDetail.Reviews = make([]UserReview, 2)
+	for i := range averageRatingAndReviews.Reviews {
+		placeDetail.Reviews[i].User = averageRatingAndReviews.Reviews[i].User
+		placeDetail.Reviews[i].Rating = averageRatingAndReviews.Reviews[i].Rating
+		placeDetail.Reviews[i].Content = averageRatingAndReviews.Reviews[i].Content
+	}
+
+	return placeDetail, nil
 }
 
 func (s service) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesList, *util.Pagination, error) {
