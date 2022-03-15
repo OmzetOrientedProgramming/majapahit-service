@@ -1,15 +1,17 @@
 package api
 
 import (
+	"net/http"
+	"os"
+
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
-	"net/http"
-	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/database/postgres"
+	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 )
 
@@ -41,6 +43,10 @@ var (
 	authRepo    auth.Repo
 	authService auth.Service
 	authHandler *auth.Handler
+
+	businessadminauthRepo    businessadminauth.Repo
+	businessadminauthService businessadminauth.Service
+	businessadminauthHandler *businessadminauth.Handler
 )
 
 // Init all dependency
@@ -64,6 +70,11 @@ func (s Server) Init() {
 	placeService = place.NewService(placeRepo)
 	placeHandler = place.NewHandler(placeService)
 
+	// BusinessAdminAuth module
+	businessadminauthRepo = businessadminauth.NewRepo(db)
+	businessadminauthService = businessadminauth.NewService(businessadminauthRepo)
+	businessadminauthHandler = businessadminauth.NewHandler(businessadminauthService)
+
 	// Check up module
 	checkUpRepo = checkup.NewRepo(db)
 	checkUpService = checkup.NewService(checkUpRepo)
@@ -79,7 +90,7 @@ func (s Server) Init() {
 	authHandler = auth.NewHandler(authService, os.Getenv("JWT_SECRET"))
 
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler)
+	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler)
 	r.Init()
 }
 
