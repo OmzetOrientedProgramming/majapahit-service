@@ -3,17 +3,19 @@ package place
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"net/url"
+	"os"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"os"
-	"strings"
-	"testing"
 )
 
 type MockService struct {
@@ -25,6 +27,175 @@ func (m *MockService) GetPlaceListWithPagination(params PlacesListRequest) (*Pla
 	placeList := args.Get(0).(*PlacesList)
 	pagination := args.Get(1).(util.Pagination)
 	return placeList, &pagination, args.Error(2)
+}
+
+func (m *MockService) GetDetail(placeID int) (*Detail, error) {
+	args := m.Called(placeID)
+	placeDetail := args.Get(0).(*Detail)
+	return placeDetail, args.Error(1)
+}
+
+func TestHandler_GetDetailSuccess(t *testing.T) {
+	// Setting up echo router
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
+	c.SetParamValues("1")
+
+	// Setting up service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setting up Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	// Setting up input and output
+	placeID := 1
+
+	placeDetail := Detail{
+		ID:            1,
+		Name:          "test_name_place",
+		Image:         "test_image_place",
+		Address:       "test_address_place",
+		Description:   "test_description_place",
+		OpenHour:      "08:00",
+		CloseHour:     "16:00",
+		AverageRating: 3.50,
+		ReviewCount:   30,
+		Reviews: []UserReview{
+			{
+				User:    "test_user_1",
+				Rating:  4.50,
+				Content: "test_review_content_1",
+			},
+			{
+				User:    "test_user_2",
+				Rating:  5,
+				Content: "test_review_content_2",
+			},
+		},
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    placeDetail,
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("GetDetail", placeID).Return(&placeDetail, nil)
+
+	// Test Fields
+	if assert.NoError(t, h.GetDetail(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetDetailWithPlaceIdString(t *testing.T) {
+	// Setting up echo router
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
+	c.SetParamValues("satu")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Expectation
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"placeID must be number",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.GetDetail(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
+	c.SetParamValues("0")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input
+	placeID := 0
+
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"placeID must be above 0"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var placeDetail Detail
+	mockService.On("GetDetail", placeID).Return(&placeDetail, errorFromService)
+
+	// Test
+	assert.NoError(t, h.GetDetail(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:placeID")
+	c.SetParamNames("placeID")
+	c.SetParamValues("10")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input and output
+	placeID := 10
+
+	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var placeDetail Detail
+	mockService.On("GetDetail", placeID).Return(&placeDetail, errorFromService)
+
+	// Tes
+	assert.NoError(t, h.GetDetail(c))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
 func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {

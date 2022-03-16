@@ -2,6 +2,8 @@ package api
 
 import (
 	"github.com/labstack/echo/v4"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
+	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
@@ -9,19 +11,23 @@ import (
 
 // Routes struct for routing endpoint
 type Routes struct {
-	Router         *echo.Echo
-	checkUPHandler *checkup.Handler
-	catalogHandler *item.Handler
-	placeHandler   *place.Handler
+	Router                   *echo.Echo
+	checkUPHandler           *checkup.Handler
+	catalogHandler           *item.Handler
+	placeHandler             *place.Handler
+	authHandler              *auth.Handler
+	businessadminauthHandler *businessadminauth.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, placeHandler *place.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler) *Routes {
 	return &Routes{
-		Router:         router,
-		checkUPHandler: checkUpHandler,
-		catalogHandler: catalogHandler,
-		placeHandler:   placeHandler,
+		Router:                   router,
+		checkUPHandler:           checkUpHandler,
+		authHandler:              authHandler,
+		catalogHandler:           catalogHandler,
+		placeHandler:             placeHandler,
+		businessadminauthHandler: businessadminauthHandler,
 	}
 }
 
@@ -32,13 +38,26 @@ func (r *Routes) Init() {
 
 	// V1
 	v1 := r.Router.Group("/api/v1")
+	{
+		// Place module
+		placeRoutes := v1.Group("/place")
+		placeRoutes.GET("", r.placeHandler.GetPlacesListWithPagination)
+		placeRoutes.GET("/:placeID", r.placeHandler.GetDetail)
+		{
+			// Catalog module
+			catalogRoutes := placeRoutes.Group("/:placeID/catalog")
+			catalogRoutes.GET("", r.catalogHandler.GetListItemWithPagination)
+			catalogRoutes.GET("/:itemID", r.catalogHandler.GetItemByID)
+		}
 
-	// Place module
-	place := v1.Group("/place")
-	place.GET("", r.placeHandler.GetPlacesListWithPagination)
+		// Auth module
+		authRoutes := v1.Group("/auth")
+		{
+			authRoutes.POST("/check-phone-number", r.authHandler.CheckPhoneNumber)
+			authRoutes.POST("/verify-otp", r.authHandler.VerifyOTP)
+			authRoutes.POST("/register", r.authHandler.Register)
 
-	// Catalog module
-	catalog := place.Group("/:placeID/catalog")
-	catalog.GET("", r.catalogHandler.GetListItemWithPagination)
-	catalog.GET("/:itemID", r.catalogHandler.GetItemByID)
+			authRoutes.POST("/business-admin/register", r.businessadminauthHandler.RegisterBusinessAdmin)
+		}
+	}
 }

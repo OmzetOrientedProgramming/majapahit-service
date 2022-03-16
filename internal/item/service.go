@@ -27,6 +27,10 @@ type service struct {
 func (s service) GetListItemWithPagination(params ListItemRequest) (*ListItem, *util.Pagination, error) {
 	var errorList []string
 
+	if strings.Contains(params.Name, "+") {
+		params.Name = strings.ReplaceAll(params.Name, "+", " ")
+	}
+
 	if params.Page == 0 {
 		params.Page = util.DefaultPage
 	}
