@@ -1,6 +1,8 @@
 package api
 
 import (
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"net/http"
 	"os"
 
@@ -40,9 +42,11 @@ var (
 	placeService place.Service
 	placeHandler *place.Handler
 
-	authRepo    auth.Repo
-	authService auth.Service
-	authHandler *auth.Handler
+	firebaseAuthRepo firebaseauth.Repo
+	authMiddleware   middleware.AuthMiddleware
+	authRepo         auth.Repo
+	authService      auth.Service
+	authHandler      *auth.Handler
 
 	businessadminauthRepo    businessadminauth.Repo
 	businessadminauthService businessadminauth.Service
@@ -82,15 +86,13 @@ func (s Server) Init() {
 
 	// Auth module
 	authRepo = auth.NewRepo(db)
-	authService = auth.NewService(authRepo, auth.TwillioCredentials{
-		SID:        os.Getenv("TWILIO_SID"),
-		AccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
-		AuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
-	})
-	authHandler = auth.NewHandler(authService, os.Getenv("JWT_SECRET"))
+	firebaseAuthRepo = firebaseauth.NewRepo(os.Getenv("IDENTITY_TOOLKIT_URL"), os.Getenv("SECURE_TOKEN_URL"), os.Getenv("FIREBASE_API_KEY"))
+	authMiddleware = middleware.NewAuthMiddleware(firebaseAuthRepo)
+	authService = auth.NewService(authRepo, firebaseAuthRepo)
+	authHandler = auth.NewHandler(authService)
 
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler)
+	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware)
 	r.Init()
 }
 
