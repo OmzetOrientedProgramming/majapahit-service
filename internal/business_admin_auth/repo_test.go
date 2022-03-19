@@ -2,13 +2,12 @@ package businessadminauth
 
 import (
 	"database/sql"
-	"regexp"
-	"testing"
-
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"regexp"
+	"testing"
 )
 
 func TestRepo_CheckRequiredFields(t *testing.T) {
@@ -370,7 +369,7 @@ func TestRepo_CheckIfPlaceNameIsUnique(t *testing.T) {
 }
 
 func TestRepo_VerifyHour(t *testing.T) {
-	var hour, hourName string = "23:59", "openHour"
+	var hour, hourName = "23:59", "openHour"
 
 	mockDB, _, err := sqlmock.New()
 	if err != nil {
@@ -396,7 +395,7 @@ func TestRepo_CompareOpenAndCloseHour(t *testing.T) {
 
 	repoMock := NewRepo(sqlxDB)
 
-	var openHour, closeHour string = "08:00", "21:00"
+	var openHour, closeHour = "08:00", "21:00"
 	compared, err := repoMock.CompareOpenAndCloseHour(openHour, closeHour)
 	assert.NoError(t, err)
 	assert.True(t, compared)
@@ -594,4 +593,73 @@ func TestRepo_CreatePlace(t *testing.T) {
 		request.PlaceImage, request.PlaceMinIntervalBooking, request.PlaceMaxIntervalBooking, request.PlaceMinSlotBooking,
 		request.PlaceMaxSlotBooking, request.PlaceLat, request.PlaceLong)
 	assert.NoError(t, err)
+}
+
+func Test_repo_GetBusinessAdminByEmail(t *testing.T) {
+	expected := &BusinessAdmin{
+		ID:                1,
+		Name:              "Teofanus Gary",
+		PhoneNumber:       "081223906674",
+		Email:             "test@gmail.com",
+		Password:          "testpassword",
+		Status:            1,
+		Balance:           1000,
+		BankAccountNumber: "12321asdfasdf",
+		BankAccountName:   "BCA",
+	}
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+
+	t.Run("business admin exist on database", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "phone_number", "name", "status", "email", "password"}).
+			AddRow(expected.ID, expected.PhoneNumber, expected.Name, expected.Status, expected.Email, expected.Password)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE email = $1")).
+			WithArgs("test@gmail.com").
+			WillReturnRows(rows)
+
+		rows = mock.
+			NewRows([]string{"id", "balance", "bank_account_number", "user_id", "bank_account_name"}).
+			AddRow(1, expected.Balance, expected.BankAccountNumber, expected.ID, expected.BankAccountName)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM business_owners WHERE user_id = $1")).
+			WithArgs(expected.ID).
+			WillReturnRows(rows)
+
+		actual, err := repoMock.GetBusinessAdminByEmail("test@gmail.com")
+		assert.Equal(t, expected, actual)
+		assert.NoError(t, err)
+	})
+
+	t.Run("error getting user data", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE email = $1")).
+			WithArgs("test@gmail.com").
+			WillReturnError(ErrInternalServerError)
+
+		actual, err := repoMock.GetBusinessAdminByEmail("test@gmail.com")
+		assert.Nil(t, actual)
+		assert.True(t, errors.Is(err, ErrInternalServerError))
+	})
+
+	t.Run("error getting business admin data", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "phone_number", "name", "status"}).
+			AddRow(1, "081223901234", "Bambang", 1)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE email = $1")).
+			WithArgs("test@gmail.com").
+			WillReturnRows(rows)
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM business_owners WHERE user_id = $1")).
+			WithArgs(1).
+			WillReturnError(ErrInternalServerError)
+
+		actual, err := repoMock.GetBusinessAdminByEmail("test@gmail.com")
+		assert.True(t, errors.Is(err, ErrInternalServerError))
+		assert.Nil(t, actual)
+	})
 }
