@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// Handler struct for auth package
 type Handler struct {
 	service   Service
 	jwtSecret string
