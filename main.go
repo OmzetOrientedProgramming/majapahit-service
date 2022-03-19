@@ -4,8 +4,9 @@
 package main
 
 import (
-	"github.com/labstack/echo/v4/middleware"
 	"os"
+
+	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
