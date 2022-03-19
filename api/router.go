@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/labstack/echo/v4"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
+	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
@@ -10,21 +11,23 @@ import (
 
 // Routes struct for routing endpoint
 type Routes struct {
-	Router         *echo.Echo
-	checkUPHandler *checkup.Handler
-	catalogHandler *item.Handler
-	placeHandler   *place.Handler
-	authHandler    *auth.Handler
+	Router                   *echo.Echo
+	checkUPHandler           *checkup.Handler
+	catalogHandler           *item.Handler
+	placeHandler             *place.Handler
+	authHandler              *auth.Handler
+	businessadminauthHandler *businessadminauth.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler) *Routes {
 	return &Routes{
-		Router:         router,
-		checkUPHandler: checkUpHandler,
-		authHandler:    authHandler,
-		catalogHandler: catalogHandler,
-		placeHandler:   placeHandler,
+		Router:                   router,
+		checkUPHandler:           checkUpHandler,
+		authHandler:              authHandler,
+		catalogHandler:           catalogHandler,
+		placeHandler:             placeHandler,
+		businessadminauthHandler: businessadminauthHandler,
 	}
 }
 
@@ -53,6 +56,8 @@ func (r *Routes) Init() {
 			authRoutes.POST("/check-phone-number", r.authHandler.CheckPhoneNumber)
 			authRoutes.POST("/verify-otp", r.authHandler.VerifyOTP)
 			authRoutes.POST("/register", r.authHandler.Register)
+
+			authRoutes.POST("/business-admin/register", r.businessadminauthHandler.RegisterBusinessAdmin)
 		}
 	}
 }

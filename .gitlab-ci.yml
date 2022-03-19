@@ -3,6 +3,7 @@ image: golang:latest
 
 services:
   - postgres:latest
+  - cytopia/golint:latest
 
 variables:
   REPO_NAME: gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service
@@ -32,6 +33,10 @@ Linter:
   stage: quality
   script:
     - go get -u golang.org/x/lint/golint
+    - export GOPATH=$HOME/go
+    - export GOBIN=$GOPATH/bin
+    - export PATH=$PATH:$GOPATH/bin
+    - export PATH=$PATH:$GOROOT/bin
     - go vet $(go list ./... | grep -v /vendor/)
     - go fmt $(go list ./... | grep -v /vendor/)
     - golint -set_exit_status $(go list ./... | grep -v /vendor/)
