@@ -27,6 +27,7 @@ type repo struct {
 
 // Repo is an interface to define methods in it
 type Repo interface {
+	GetBusinessAdminByEmail(email string) (*BusinessAdmin, error)
 	CreateUser(phoneNumber, name, email, password string, status int) error                     //status = 1
 	CreateBusinessAdmin(userID int, bankAccount, bankAccountName string, balance float32) error //balance = 0.0
 	CreatePlace(name, address string, capacity int, description string,
@@ -78,7 +79,7 @@ func (r repo) CreatePlace(name, address string, capacity int, description string
 	minIntervalBooking, maxIntervalBooking, minSlotBooking, maxSlotBooking int,
 	lat, long float64) error {
 
-	var sqlCommand string = `INSERT INTO places (
+	var sqlCommand = `INSERT INTO places (
 				name, address, capacity, description, user_id, interval, open_hour, close_hour, image,
 				min_interval_booking, max_interval_booking, min_slot_booking, max_slot_booking, lat, long) 
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
@@ -488,7 +489,7 @@ func (r repo) CompareOpenAndCloseHour(openHour, closeHour string) (bool, error) 
 // GeneratePassword returns a newly generated password
 func (r repo) GeneratePassword() string {
 	const characters string = "abcdefghijklmnopqrstuvwxyz0123456789"
-	var password string = ""
+	var password = ""
 
 	for i := 0; i < 8; i++ {
 		idx, err := rand.Int(rand.Reader, big.NewInt(36))
@@ -499,4 +500,9 @@ func (r repo) GeneratePassword() string {
 	}
 
 	return password
+}
+
+// GetBusinessAdminByEmail returns business admin by given email
+func (r repo) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
+	return nil, nil
 }

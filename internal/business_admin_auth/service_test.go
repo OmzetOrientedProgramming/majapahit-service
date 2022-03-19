@@ -92,6 +92,11 @@ func (m *MockRepository) CompareOpenAndCloseHour(openHour, closeHour string) (bo
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockRepository) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func TestService_RegisterBusinessAdmin(t *testing.T) {
 	request := RegisterBusinessAdminRequest{
 		AdminPhoneNumber:        "089782828888",
