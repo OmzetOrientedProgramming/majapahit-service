@@ -1,5 +1,7 @@
 package businessadminauth
 
+import "time"
+
 // User is a media to retrieve the user_id
 type User struct {
 	ID          int    `json:"id" db:"id"`
@@ -40,4 +42,28 @@ type LoginCredential struct {
 	PlaceName string `json:"place_name"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
+}
+
+// BusinessAdmin represent the business admin entity on business logic
+type BusinessAdmin struct {
+	ID                int
+	Name              string
+	PhoneNumber       string
+	Email             string
+	Password          string
+	Status            int
+	Balance           float64
+	BankAccountNumber string
+	BankAccountName   string
+}
+
+// BusinessAdminModel is a database representation of business_owners table
+type BusinessAdminModel struct {
+	ID                int       `db:"id"`
+	Balance           float64   `db:"balance"`
+	BankAccountNumber string    `db:"bank_account_number"`
+	UserID            int       `db:"user_id"`
+	CreatedAt         time.Time `db:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at"`
+	BankAccountName   string    `db:"bank_account_name"`
 }
