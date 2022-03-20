@@ -7,6 +7,7 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 )
 
 // Routes struct for routing endpoint
@@ -17,10 +18,11 @@ type Routes struct {
 	placeHandler             *place.Handler
 	authHandler              *auth.Handler
 	businessadminauthHandler *businessadminauth.Handler
+	authMiddleware           middleware.AuthMiddleware
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
@@ -28,6 +30,7 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandle
 		catalogHandler:           catalogHandler,
 		placeHandler:             placeHandler,
 		businessadminauthHandler: businessadminauthHandler,
+		authMiddleware:           authMiddleware,
 	}
 }
 
@@ -55,7 +58,7 @@ func (r *Routes) Init() {
 		{
 			authRoutes.POST("/check-phone-number", r.authHandler.CheckPhoneNumber)
 			authRoutes.POST("/verify-otp", r.authHandler.VerifyOTP)
-			authRoutes.POST("/register", r.authHandler.Register)
+			authRoutes.POST("/register", r.authHandler.Register, r.authMiddleware.AuthMiddleware())
 
 			authRoutes.POST("/business-admin/register", r.businessadminauthHandler.RegisterBusinessAdmin)
 		}
