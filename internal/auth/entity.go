@@ -32,6 +32,8 @@ type UserModel struct {
 	FirebaseLocalID string    `db:"firebase_local_id"`
 	CreatedAt       time.Time `db:"created_at"`
 	UpdatedAt       time.Time `db:"updated_at"`
+	Email           string    `db:"email"`
+	Password        string    `db:"password"`
 }
 
 // CheckPhoneNumberRequest represent request body for checking phone number

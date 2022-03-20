@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	"math/big"
 	"net/mail"
 	"strconv"
@@ -504,5 +506,29 @@ func (r repo) GeneratePassword() string {
 
 // GetBusinessAdminByEmail returns business admin by given email
 func (r repo) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
-	return nil, nil
+	var userModel auth.UserModel
+	query := "SELECT * FROM users WHERE email = $1"
+	if err := r.db.Get(&userModel, query, email); err != nil {
+		logrus.Error("[error while accessing user model]", err.Error())
+		return nil, fmt.Errorf("cannot access user table: %w", ErrInternalServerError)
+	}
+
+	var businessAdminModel BusinessAdminModel
+	query = "SELECT * FROM business_owners WHERE user_id = $1"
+	if err := r.db.Get(&businessAdminModel, query, userModel.ID); err != nil {
+		logrus.Error("[error while accessing user model]", err.Error())
+		return nil, fmt.Errorf("cannot access business owner table: %w", ErrInternalServerError)
+	}
+
+	return &BusinessAdmin{
+		ID:                userModel.ID,
+		Name:              userModel.Name,
+		PhoneNumber:       userModel.PhoneNumber,
+		Email:             userModel.Email,
+		Password:          userModel.Password,
+		Status:            userModel.Status,
+		Balance:           businessAdminModel.Balance,
+		BankAccountNumber: businessAdminModel.BankAccountNumber,
+		BankAccountName:   businessAdminModel.BankAccountName,
+	}, nil
 }
