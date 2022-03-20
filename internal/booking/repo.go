@@ -2,6 +2,7 @@ package booking
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 // Repo will contain all the function that can be used by repo
@@ -26,7 +27,7 @@ func (r *repo) GetDetail(BookingID int) (*Detail, error) {
 	query := "SELECT id, date, start_time, end_time, capacity, status, created_at FROM bookings WHERE id = $1"
 	err := r.db.Get(&bookingDetail, query, BookingID)
 	if err != nil {
-
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &bookingDetail, nil
