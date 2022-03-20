@@ -18,6 +18,7 @@ before_script:
   - cd $GOPATH/src/$REPO_NAME
 
 stages:
+  - formatter
   - quality
   - test
   - build
@@ -29,22 +30,21 @@ Test:
     - go test -v $(go list ./... | grep -v ./main.go | grep -v /vendor/)
     - go test $(go list ./... | grep -v ./main.go | grep -v /vendor/) -coverprofile=coverage.out && go tool cover -func coverage.out
 
+Formater:
+  stage: formatter
+  script:
+    - go fmt $(go list ./... | grep -v /vendor/)
+
 Linter:
+  image: golangci/golangci-lint:latest
   stage: quality
   script:
-    - go get -u golang.org/x/lint/golint
-    - export GOPATH=$HOME/go
-    - export GOBIN=$GOPATH/bin
-    - export PATH=$PATH:$GOPATH/bin
-    - export PATH=$PATH:$GOROOT/bin
-    - go vet $(go list ./... | grep -v /vendor/)
-    - go fmt $(go list ./... | grep -v /vendor/)
-    - golint -set_exit_status $(go list ./... | grep -v /vendor/)
+    - golangci-lint run --disable-all -E golint --timeout=5m
 
 SonarScanner Dev:
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [ "" ]
+    entrypoint: ['']
   stage: quality
   script:
     - sonar-scanner
@@ -61,7 +61,7 @@ SonarScanner Dev:
 SonarScanner:
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: [ "" ]
+    entrypoint: ['']
   stage: quality
   script:
     - sonar-scanner
