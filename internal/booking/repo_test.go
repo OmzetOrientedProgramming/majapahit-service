@@ -1,12 +1,14 @@
 package booking
 
 import (
+	"database/sql"
 	"regexp"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,5 +56,28 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 	assert.Equal(t, bookingDetailExpected, bookingDetailRetrieved)
 	assert.NotNil(t, bookingDetailRetrieved)
 	assert.NoError(t, err)
+}
 
+func TestRepo_GetDetailInternalServerError(t *testing.T) {
+	bookingID := 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, date, start_time, end_time, capacity, status, created_at FROM bookings WHERE id = $1")).
+		WithArgs(bookingID).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	bookingDetailRetrieved, err := repoMock.GetDetail(bookingID)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, bookingDetailRetrieved)
 }
