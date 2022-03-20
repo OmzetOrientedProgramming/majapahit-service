@@ -34,6 +34,16 @@ func (r *repo) GetDetail(bookingID int) (*Detail, error) {
 	return &bookingDetail, nil
 }
 
-func (r *repo) GetItemWrapper(BookingID int) (*ItemsWrapper, error) {
-	panic("implement this!")
+func (r *repo) GetItemWrapper(bookingID int) (*ItemsWrapper, error) {
+	var bookingItems ItemsWrapper
+	bookingItems.Items = make([]ItemDetail, 0)
+
+	query := "SELECT items.name as name, items.image as image, items.qty as qty, items.price as price FROM items INNER JOIN booking_items ON items.id = booking_items.item_id WHERE booking_items.booking_id = $1"
+	err := r.db.Select(&bookingItems.Items, query, bookingID)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return &bookingItems, nil
 }
