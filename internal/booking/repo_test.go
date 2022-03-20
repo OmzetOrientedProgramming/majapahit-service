@@ -128,7 +128,7 @@ func TestRepo_GetItemWrapperSucces(t *testing.T) {
 			itemWrapperExpected.Items[1].Price,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT items.name, items.image, items.qty, items.price FROM items INNER JOIN booking_items ON items.id = booking_items.item_id WHERE booking_items.booking_id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT items.name as name, items.image as image, items.qty as qty, items.price as price FROM items INNER JOIN booking_items ON items.id = booking_items.item_id WHERE booking_items.booking_id = $1")).
 		WithArgs(bookingID).
 		WillReturnRows(rows)
 
