@@ -8,6 +8,7 @@ import (
 // Repo will contain all the function that can be used by repo
 type Repo interface {
 	GetDetail(int) (*Detail, error)
+	GetItemWrapper(int) (*ItemsWrapper, error)
 }
 
 type repo struct {
@@ -31,4 +32,8 @@ func (r *repo) GetDetail(bookingID int) (*Detail, error) {
 	}
 
 	return &bookingDetail, nil
+}
+
+func (r *repo) GetItemWrapper(BookingID int) (*ItemsWrapper, error) {
+	panic("implement this!")
 }

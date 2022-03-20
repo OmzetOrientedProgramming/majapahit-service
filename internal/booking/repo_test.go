@@ -83,3 +83,58 @@ func TestRepo_GetDetailInternalServerError(t *testing.T) {
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, bookingDetailRetrieved)
 }
+
+func TestRepo_GetItemWrapperSucces(t *testing.T) {
+	bookingID := 1
+	itemWrapperExpected := &ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "Jus Mangga Asyik",
+				Image: "ini_link_gambar_1",
+				Qty:   10,
+				Price: 10000.0,
+			},
+			{
+				Name:  "Pizza with Pinapple Large",
+				Image: "ini_link_gambar_2",
+				Qty:   2,
+				Price: 150000.0,
+			},
+		},
+	}
+
+	// Initialized Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Setup Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"name", "image", "qty", "price"}).
+		AddRow(
+			itemWrapperExpected.Items[0].Name,
+			itemWrapperExpected.Items[0].Image,
+			itemWrapperExpected.Items[0].Qty,
+			itemWrapperExpected.Items[0].Price,
+		).
+		AddRow(
+			itemWrapperExpected.Items[1].Name,
+			itemWrapperExpected.Items[1].Image,
+			itemWrapperExpected.Items[1].Qty,
+			itemWrapperExpected.Items[1].Price,
+		)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT items.name, items.image, items.qty, items.price FROM items INNER JOIN booking_items ON items.id = booking_items.item_id WHERE booking_items.booking_id = $1")).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	// Test
+	itemWrapperRetrieved, err := repoMock.GetItemWrapper(bookingID)
+	assert.Equal(t, itemWrapperExpected, itemWrapperRetrieved)
+	assert.NotNil(t, itemWrapperRetrieved)
+	assert.NoError(t, err)
+}
