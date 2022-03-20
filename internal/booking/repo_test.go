@@ -74,7 +74,7 @@ func TestRepo_GetDetailInternalServerError(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, date, start_time, end_time, capacity, status, created_at FROM bookings WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, date, start_time, end_time, capacity, status, total_price, created_at FROM bookings WHERE id = $1")).
 		WithArgs(bookingID).
 		WillReturnError(sql.ErrTxDone)
 
