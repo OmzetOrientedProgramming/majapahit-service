@@ -16,13 +16,14 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 	bookingID := 1
 	createdAtRow := time.Date(2021, time.Month(10), 26, 13, 0, 0, 0, time.UTC).Format(time.RFC3339)
 	bookingDetailExpected := &Detail{
-		ID:        1,
-		Date:      "27 Oktober 2021",
-		StartTime: "19:00",
-		EndTime:   "20:00",
-		Capacity:  10,
-		Status:    1,
-		CreatedAt: createdAtRow,
+		ID:             1,
+		Date:           "27 Oktober 2021",
+		StartTime:      "19:00",
+		EndTime:        "20:00",
+		Capacity:       10,
+		Status:         1,
+		TotalPriceItem: 100000.0,
+		CreatedAt:      createdAtRow,
 	}
 
 	// Mock DB
@@ -36,7 +37,7 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "date", "start_time", "end_time", "capacity", "status", "created_at"}).
+		NewRows([]string{"id", "date", "start_time", "end_time", "capacity", "status", "total_price", "created_at"}).
 		AddRow(
 			bookingDetailExpected.ID,
 			bookingDetailExpected.Date,
@@ -44,10 +45,11 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 			bookingDetailExpected.EndTime,
 			bookingDetailExpected.Capacity,
 			bookingDetailExpected.Status,
+			bookingDetailExpected.TotalPriceItem,
 			bookingDetailExpected.CreatedAt,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, date, start_time, end_time, capacity, status, created_at FROM bookings WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, date, start_time, end_time, capacity, status, total_price, created_at FROM bookings WHERE id = $1")).
 		WithArgs(bookingID).
 		WillReturnRows(rows)
 

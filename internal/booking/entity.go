@@ -11,7 +11,7 @@ type Detail struct {
 	CreatedAt        string       `json:"created_at" db:"created_at"`
 	TotalPrice       float64      `json:"total_price"`
 	TotalPriceTicket float64      `json:"total_price_ticket"`
-	TotalPriceItem   float64      `json:"total_price_item"`
+	TotalPriceItem   float64      `json:"total_price_item" db:"total_price"`
 	Items            []ItemDetail `json:"items"`
 }
 
@@ -22,8 +22,7 @@ type TicketPriceWrapper struct {
 
 // ItemsWrapper will wrap information related about item
 type ItemsWrapper struct {
-	TotalPriceItem float64      `json:"total_price_item"`
-	Items          []ItemDetail `json:"items"`
+	Items []ItemDetail `json:"items"`
 }
 
 // ItemDetail contain required information about item

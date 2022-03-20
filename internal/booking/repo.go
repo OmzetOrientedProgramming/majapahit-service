@@ -24,7 +24,7 @@ func NewRepo(db *sqlx.DB) Repo {
 func (r *repo) GetDetail(BookingID int) (*Detail, error) {
 	var bookingDetail Detail
 
-	query := "SELECT id, date, start_time, end_time, capacity, status, created_at FROM bookings WHERE id = $1"
+	query := "SELECT id, date, start_time, end_time, capacity, status, total_price, created_at FROM bookings WHERE id = $1"
 	err := r.db.Get(&bookingDetail, query, BookingID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
