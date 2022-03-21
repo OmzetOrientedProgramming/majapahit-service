@@ -2,11 +2,12 @@ package customerbooking
 
 // CustomerBooking contains information that are needed by Business Admin
 type CustomerBooking struct {
-	ID           int    `json:"id"`
-	CustomerName string `json:"name"`
-	Capacity     int    `json:"capacity"`
-	StartTime    string `json:"start_time" db:"start_time"`
-	EndTime      string `json:"end_time" db:"end_time"`
+	ID           	int    	`json:"id"`
+	CustomerName	string 	`json:"name"`
+	Capacity     	int    	`json:"capacity"`
+	Date			string	`json:"date"`
+	StartTime    	string 	`json:"start_time" db:"start_time"`
+	EndTime      	string 	`json:"end_time" db:"end_time"`
 }
 
 // List is a container for customer bookings
