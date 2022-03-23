@@ -1,6 +1,8 @@
 package customerbooking
 
 import (
+	"database/sql"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -30,6 +32,11 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*List, e
 	err := r.db.Select(&listCustomerBooking.CustomerBookings, query, params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
+			listCustomerBooking.TotalCount = 0
+			return &listCustomerBooking, nil
+		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
@@ -37,6 +44,11 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*List, e
 	err = r.db.Get(&listCustomerBooking.TotalCount, query, params.PlaceID)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
+			listCustomerBooking.TotalCount = 0
+			return &listCustomerBooking, nil
+		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
