@@ -25,8 +25,8 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*List, e
 	listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
 	listCustomerBooking.TotalCount = 0
 
-	query := "SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id LIMIT $2 OFFSET $3"
-	err := r.db.Select(&listCustomerBooking.CustomerBookings, query, params.PlaceID, params.Limit, (params.Page-1)*params.Limit)
+	query := "SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4"
+	err := r.db.Select(&listCustomerBooking.CustomerBookings, query, params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit)
 
 	if err != nil {
 		return nil, nil
