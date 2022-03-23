@@ -14,6 +14,7 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 		CustomerBookings: []CustomerBooking{
 			{
 				ID:          	1,
+				CustomerName:   "test name",
 				Capacity:       10,
 				Date:       	"test date",
 				StartTime: 		"test start time",
@@ -21,6 +22,7 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 			},
 			{
 				ID:          	2,
+				CustomerName:   "test name",
 				Capacity:       10,
 				Date:       	"test date",
 				StartTime: 		"test start time",
@@ -47,18 +49,20 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "capacity", "date", "start_time", "end_time"}).
+		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
 		AddRow(listCustomerBookingExpected.CustomerBookings[0].ID,
+			listCustomerBookingExpected.CustomerBookings[0].CustomerName,
 			listCustomerBookingExpected.CustomerBookings[0].Capacity,
 			listCustomerBookingExpected.CustomerBookings[0].Date,
 			listCustomerBookingExpected.CustomerBookings[0].StartTime,
 			listCustomerBookingExpected.CustomerBookings[0].EndTime).
 		AddRow(listCustomerBookingExpected.CustomerBookings[1].ID,
+			listCustomerBookingExpected.CustomerBookings[1].CustomerName,
 			listCustomerBookingExpected.CustomerBookings[1].Capacity,
 			listCustomerBookingExpected.CustomerBookings[1].Date,
 			listCustomerBookingExpected.CustomerBookings[1].StartTime,
 			listCustomerBookingExpected.CustomerBookings[1].EndTime)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, b.capacity, b.date, b.start_time, b.end_time FROM bookings b WHERE b.place_id = $1 LIMIT $2 OFFSET $3")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id LIMIT $2 OFFSET $3")).
 		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
