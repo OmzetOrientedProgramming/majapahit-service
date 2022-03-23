@@ -2,6 +2,7 @@ package customerbooking
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 // NewRepo used to initialize repo
@@ -29,14 +30,14 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*List, e
 	err := r.db.Select(&listCustomerBooking.CustomerBookings, query, params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit)
 
 	if err != nil {
-		return nil, nil
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	query = "SELECT COUNT(id) FROM bookings WHERE place_id = $1"
 	err = r.db.Get(&listCustomerBooking.TotalCount, query, params.PlaceID)
 
 	if err != nil {
-		return nil, nil
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &listCustomerBooking, nil
