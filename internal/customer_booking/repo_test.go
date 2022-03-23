@@ -74,9 +74,9 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Test
-	listItemResult, err := repoMock.GetListCustomerBookingWithPagination(params)
-	assert.Equal(t, listCustomerBookingExpected, listItemResult)
-	assert.NotNil(t, listItemResult)
+	listCustomerBookingResult, err := repoMock.GetListCustomerBookingWithPagination(params)
+	assert.Equal(t, listCustomerBookingExpected, listCustomerBookingResult)
+	assert.NotNil(t, listCustomerBookingResult)
 	assert.NoError(t, err)
 }
 
@@ -103,8 +103,8 @@ func TestRepo_GetListCustomerBookingWithPaginationError(t *testing.T) {
 		WillReturnError(sql.ErrTxDone)
 
 	// Test
-	listItemResult, err := repoMock.GetListCustomerBookingWithPagination(params)
-	assert.Nil(t, listItemResult)
+	listCustomerBookingResult, err := repoMock.GetListCustomerBookingWithPagination(params)
+	assert.Nil(t, listCustomerBookingResult)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 
 }
@@ -138,8 +138,82 @@ func TestRepo_GetListCustomerBookingWithPaginationCountError(t *testing.T) {
 		WillReturnError(sql.ErrConnDone)
 
 	// Test
-	listItemResult, err := repoMock.GetListCustomerBookingWithPagination(params)
-	assert.Nil(t, listItemResult)
+	listCustomerBookingResult, err := repoMock.GetListCustomerBookingWithPagination(params)
+	assert.Nil(t, listCustomerBookingResult)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 
+}
+
+func TestRepo_GetListCustomerBookingWithPaginationEmpty(t *testing.T) {
+	listCustomerBookingExpected := &List{
+		CustomerBookings: make([]CustomerBooking, 0),
+	}
+
+	params := ListRequest{
+		Limit:   10,
+		Page:    1,
+		State:   1,
+		PlaceID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4")).
+		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	listCustomerBookingResult, err := repoMock.GetListCustomerBookingWithPagination(params)
+	assert.Equal(t, listCustomerBookingExpected, listCustomerBookingResult)
+	assert.NotNil(t, listCustomerBookingResult)
+	assert.NoError(t, err)
+
+}
+
+func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
+	listCustomerBookingExpected := &List{
+		CustomerBookings: make([]CustomerBooking, 0),
+		TotalCount:       0,
+	}
+
+	params := ListRequest{
+		Limit:   10,
+		Page:    1,
+		State:   1,
+		PlaceID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
+		AddRow("1", "test name", 1, "test date", "test start time", "test end time")
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4")).
+		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM bookings WHERE place_id = $1")).
+		WithArgs(params.PlaceID).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	listCustomerBookingResult, err := repoMock.GetListCustomerBookingWithPagination(params)
+	assert.Equal(t, listCustomerBookingExpected, listCustomerBookingResult)
+	assert.NotNil(t, listCustomerBookingResult)
+	assert.NoError(t, err)
 }
