@@ -20,13 +20,14 @@ func NewHandler(service Service) *Handler {
 	}
 }
 
+// GetListCustomerBookingWithPagination is a handler for API request for get customer bookings
 func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 	errorList := []string{}
 	placeIDString := c.Param("placeID")
 	stateString := c.QueryParam("state")
 	limitString := c.QueryParam("limit")
 	pageString := c.QueryParam("page")
-	
+
 	placeID, err := strconv.Atoi(placeIDString)
 	if err != nil {
 		errorList = append(errorList, "incorrect place id")
@@ -80,7 +81,7 @@ func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 		Status:  200,
 		Message: "success",
 		Data: map[string]interface{}{
-			"bookings":     listCustomerBooking.CustomerBookings,
+			"bookings":   listCustomerBooking.CustomerBookings,
 			"pagination": pagination,
 		},
 	})
