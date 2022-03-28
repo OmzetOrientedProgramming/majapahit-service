@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
@@ -75,7 +77,24 @@ func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 	params.Limit = limit
 	params.Page = page
 
-	listCustomerBooking, pagination, _ := h.service.GetListCustomerBookingWithPagination(params)
+	listCustomerBooking, pagination, err := h.service.GetListCustomerBookingWithPagination(params)
+
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
+
+		logrus.Error("[error while accessing customer booking service]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
 		Status:  200,
