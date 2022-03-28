@@ -21,15 +21,51 @@ func NewHandler(service Service) *Handler {
 }
 
 func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
+	errorList := []string{}
 	placeIDString := c.Param("placeID")
 	stateString := c.QueryParam("state")
 	limitString := c.QueryParam("limit")
 	pageString := c.QueryParam("page")
 	
-	placeID, _ := strconv.Atoi(placeIDString)
-	state, _ := strconv.Atoi(stateString)
-	limit, _ := strconv.Atoi(limitString)
-	page, _ := strconv.Atoi(pageString)
+	placeID, err := strconv.Atoi(placeIDString)
+	if err != nil {
+		errorList = append(errorList, "incorrect place id")
+	}
+
+	state, err := strconv.Atoi(stateString)
+	if err != nil {
+		if stateString == "" {
+			state = 0
+		} else {
+			errorList = append(errorList, "state should be positive integer")
+		}
+	}
+
+	limit, err := strconv.Atoi(limitString)
+	if err != nil {
+		if limitString == "" {
+			limit = 0
+		} else {
+			errorList = append(errorList, "limit should be positive integer")
+		}
+	}
+
+	page, err := strconv.Atoi(pageString)
+	if err != nil {
+		if pageString == "" {
+			page = 0
+		} else {
+			errorList = append(errorList, "page should be positive integer")
+		}
+	}
+
+	if len(errorList) != 0 {
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
+	}
 
 	params := ListRequest{}
 	params.Path = "/api/v1/business-admin/" + placeIDString + "/booking"
