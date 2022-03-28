@@ -94,7 +94,7 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 		Limit:   0,
 		Page:    0,
 		Path:    "api/v1/testing",
-		State:   0,
+		State:   -1,
 		PlaceID: 1,
 	}
 
@@ -106,7 +106,7 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 		Limit:   10,
 		Page:    1,
 		Path:    "api/v1/testing",
-		State:   1,
+		State:   0,
 		PlaceID: 1,
 	}
 
@@ -149,7 +149,7 @@ func TestService_GetListCustomerBookingWithPaginationError(t *testing.T) {
 		Limit:   10,
 		Page:    1,
 		Path:    "/api/testing",
-		State:	1,
+		State:   1,
 		PlaceID: 1,
 	}
 
