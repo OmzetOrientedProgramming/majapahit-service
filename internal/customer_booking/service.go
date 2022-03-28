@@ -24,10 +24,10 @@ type service struct {
 }
 
 func (s service) GetListCustomerBookingWithPagination(params ListRequest) (*List, *util.Pagination, error) {
-	var errorList []string;
+	var errorList []string
 
-	if params.State == 0{
-		params.State = 1
+	if params.State < 0 || params.State > 4 {
+		params.State = 0
 	}
 
 	if params.Page == 0 {
@@ -49,7 +49,7 @@ func (s service) GetListCustomerBookingWithPagination(params ListRequest) (*List
 	if len(errorList) > 0 {
 		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
 	}
-	
+
 	listCustomerBooking, err := s.repo.GetListCustomerBookingWithPagination(params)
 	if err != nil {
 		return nil, nil, err
