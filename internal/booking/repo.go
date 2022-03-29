@@ -50,5 +50,14 @@ func (r *repo) GetItemWrapper(bookingID int) (*ItemsWrapper, error) {
 }
 
 func (r *repo) GetTicketPriceWrapper(bookingID int) (*TicketPriceWrapper, error) {
-	panic("Not yet implemented!")
+	var ticketPrice TicketPriceWrapper
+
+	query := "SELECT booking_price FROM places INNER JOIN bookings ON bookings.place_id = places.id WHERE bookings.id= $1"
+	err := r.db.Get(&ticketPrice, query, bookingID)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return &ticketPrice, nil
 }
