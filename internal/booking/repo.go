@@ -56,7 +56,7 @@ func (r *repo) GetTicketPriceWrapper(bookingID int) (*TicketPriceWrapper, error)
 	err := r.db.Get(&ticketPrice, query, bookingID)
 
 	if err != nil {
-		panic(err.Error())
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &ticketPrice, nil
