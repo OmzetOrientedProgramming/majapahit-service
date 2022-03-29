@@ -42,7 +42,7 @@ func (r *repo) GetItemWrapper(bookingID int) (*ItemsWrapper, error) {
 	err := r.db.Select(&bookingItems.Items, query, bookingID)
 
 	if err != nil {
-		panic(err.Error())
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &bookingItems, nil
