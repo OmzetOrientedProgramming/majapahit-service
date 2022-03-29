@@ -195,3 +195,27 @@ func TestRepo_GetTicketPriceWrapperSuccess(t *testing.T) {
 	assert.NotNil(t, ticketPriceWrapperRetrieved)
 	assert.NoError(t, err)
 }
+
+func TestRepo_GetTicketPriceWrapperInternalServerError(t *testing.T) {
+	bookingID := 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT booking_price FROM places INNER JOIN bookings ON bookings.place_id = places.id WHERE bookings.id= $1")).
+		WithArgs(bookingID).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	ticketPriceWrapperRetrieved, err := repoMock.GetTicketPriceWrapper(bookingID)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, ticketPriceWrapperRetrieved)
+}
