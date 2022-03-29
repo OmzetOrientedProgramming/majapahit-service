@@ -192,5 +192,6 @@ func TestRepo_GetTicketPriceWrapperSuccess(t *testing.T) {
 	// Test
 	ticketPriceWrapperRetrieved, err := repoMock.GetTicketPriceWrapper(bookingID)
 	assert.Equal(t, ticketPriceWrapperExpected, ticketPriceWrapperRetrieved)
-	assert.Nil(t, err)
+	assert.NotNil(t, ticketPriceWrapperRetrieved)
+	assert.NoError(t, err)
 }
