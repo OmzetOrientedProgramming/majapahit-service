@@ -17,7 +17,7 @@ type Detail struct {
 
 // TicketPriceWrapper will consist ticket price related to place
 type TicketPriceWrapper struct {
-	Price float64
+	Price float64 `db:"booking_price"`
 }
 
 // ItemsWrapper will wrap information related about item
