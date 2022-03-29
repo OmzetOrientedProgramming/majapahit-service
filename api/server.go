@@ -1,12 +1,14 @@
 package api
 
 import (
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"net/http"
 	"os"
 
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
+	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
+
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
+	customerbooking "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/customer_booking"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 
@@ -51,6 +53,10 @@ var (
 	businessadminauthRepo    businessadminauth.Repo
 	businessadminauthService businessadminauth.Service
 	businessadminauthHandler *businessadminauth.Handler
+
+	customerBookingRepo    customerbooking.Repo
+	customerBookingService customerbooking.Service
+	customerBookingHandler *customerbooking.Handler
 )
 
 // Init all dependency
@@ -91,8 +97,13 @@ func (s Server) Init() {
 	authService = auth.NewService(authRepo, firebaseAuthRepo)
 	authHandler = auth.NewHandler(authService)
 
+	// Customer Booking module
+	customerBookingRepo = customerbooking.NewRepo(db)
+	customerBookingService = customerbooking.NewService(customerBookingRepo)
+	customerBookingHandler = customerbooking.NewHandler(customerBookingService)
+
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware)
+	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, customerBookingHandler)
 	r.Init()
 }
 

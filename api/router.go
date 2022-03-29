@@ -5,6 +5,7 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
+	customerbooking "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/customer_booking"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
@@ -19,10 +20,11 @@ type Routes struct {
 	authHandler              *auth.Handler
 	businessadminauthHandler *businessadminauth.Handler
 	authMiddleware           middleware.AuthMiddleware
+	customerBookingHandler   *customerbooking.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, customerBookingHandler *customerbooking.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
@@ -31,6 +33,7 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandle
 		placeHandler:             placeHandler,
 		businessadminauthHandler: businessadminauthHandler,
 		authMiddleware:           authMiddleware,
+		customerBookingHandler:   customerBookingHandler,
 	}
 }
 
@@ -61,6 +64,13 @@ func (r *Routes) Init() {
 			authRoutes.POST("/register", r.authHandler.Register, r.authMiddleware.AuthMiddleware())
 
 			authRoutes.POST("/business-admin/register", r.businessadminauthHandler.RegisterBusinessAdmin)
+		}
+
+		// Business Admin module
+		businessAdminRoutes := v1.Group("/business-admin")
+		{
+			customerBookingRoutes := businessAdminRoutes.Group("/:placeID/booking")
+			customerBookingRoutes.GET("", r.customerBookingHandler.GetListCustomerBookingWithPagination)
 		}
 	}
 }
