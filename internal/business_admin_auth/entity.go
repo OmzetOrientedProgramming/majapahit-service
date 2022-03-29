@@ -67,3 +67,10 @@ type BusinessAdminModel struct {
 	UpdatedAt         time.Time `db:"updated_at"`
 	BankAccountName   string    `db:"bank_account_name"`
 }
+
+// LoginRequest is a media to bind JSON request
+type LoginRequest struct {
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	AccessToken string `json:"access_token"`
+}
