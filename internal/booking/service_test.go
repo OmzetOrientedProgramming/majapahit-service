@@ -78,19 +78,19 @@ func TestService_GetDetailSuccess(t *testing.T) {
 	totalTicketPrice := ticketPriceWrapper.Price * float64(bookingDetail.Capacity)
 	totalPrice := totalTicketPrice + bookingDetail.TotalPriceItem
 
-	bookingDetailResult.TotalPriceTicket = totalTicketPrice
-	bookingDetailResult.TotalPrice = totalPrice
+	bookingDetail.TotalPriceTicket = totalTicketPrice
+	bookingDetail.TotalPrice = totalPrice
 
-	bookingDetailResult.Items = make([]ItemDetail, 2)
-	bookingDetailResult.Items[0].Name = itemsWrapper.Items[0].Name
-	bookingDetailResult.Items[0].Image = itemsWrapper.Items[0].Image
-	bookingDetailResult.Items[0].Qty = itemsWrapper.Items[0].Qty
-	bookingDetailResult.Items[0].Price = itemsWrapper.Items[0].Price
+	bookingDetail.Items = make([]ItemDetail, 2)
+	bookingDetail.Items[0].Name = itemsWrapper.Items[0].Name
+	bookingDetail.Items[0].Image = itemsWrapper.Items[0].Image
+	bookingDetail.Items[0].Qty = itemsWrapper.Items[0].Qty
+	bookingDetail.Items[0].Price = itemsWrapper.Items[0].Price
 
-	bookingDetailResult.Items[1].Name = itemsWrapper.Items[1].Name
-	bookingDetailResult.Items[1].Image = itemsWrapper.Items[1].Image
-	bookingDetailResult.Items[1].Qty = itemsWrapper.Items[1].Qty
-	bookingDetailResult.Items[1].Price = itemsWrapper.Items[1].Price
+	bookingDetail.Items[1].Name = itemsWrapper.Items[1].Name
+	bookingDetail.Items[1].Image = itemsWrapper.Items[1].Image
+	bookingDetail.Items[1].Qty = itemsWrapper.Items[1].Qty
+	bookingDetail.Items[1].Price = itemsWrapper.Items[1].Price
 
 	assert.Equal(t, &bookingDetail, bookingDetailResult)
 	assert.NotNil(t, bookingDetailResult)
