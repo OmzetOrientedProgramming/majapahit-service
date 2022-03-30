@@ -1,5 +1,6 @@
 package booking
 
+// Service interface consisted function can be used by service
 type Service interface {
 	GetDetail(bookingID int) (*Detail, error)
 }
@@ -22,7 +23,7 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 
 	ticketPriceWrapper, err := s.repo.GetTicketPriceWrapper(bookingID)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 
 	itemsWrapper, err := s.repo.GetItemWrapper(bookingID)
