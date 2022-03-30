@@ -131,3 +131,23 @@ func TestService_GetDetailFailedCalledGetTicketPriceWrapper(t *testing.T) {
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, bookingDetailResult)
 }
+
+func TestService_GetDetailFailedCalledGetItemWrapper(t *testing.T) {
+	bookingID := 1
+	var bookingDetail Detail
+	var ticketPriceWrapper TicketPriceWrapper
+	var itemsWrapper ItemsWrapper
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetail, nil)
+	mockRepo.On("GetTicketPriceWrapper", bookingID).Return(ticketPriceWrapper, nil)
+	mockRepo.On("GetItemWrapper", bookingID).Return(itemsWrapper, ErrInternalServerError)
+
+	bookingDetailResult, err := mockService.GetDetail(bookingID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, bookingDetailResult)
+}
