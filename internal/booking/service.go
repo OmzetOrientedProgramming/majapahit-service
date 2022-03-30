@@ -17,7 +17,7 @@ func NewService(repo Repo) Service {
 func (s *service) GetDetail(bookingID int) (*Detail, error) {
 	bookingDetail, err := s.repo.GetDetail(bookingID)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 
 	ticketPriceWrapper, err := s.repo.GetTicketPriceWrapper(bookingID)
