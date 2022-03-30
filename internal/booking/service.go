@@ -15,5 +15,31 @@ func NewService(repo Repo) Service {
 }
 
 func (s *service) GetDetail(bookingID int) (*Detail, error) {
-	panic("Not yet implemented!")
+	bookingDetail, err := s.repo.GetDetail(bookingID)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	ticketPriceWrapper, err := s.repo.GetTicketPriceWrapper(bookingID)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	itemsWrapper, err := s.repo.GetItemWrapper(bookingID)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	totalPriceTicket := ticketPriceWrapper.Price * float64(bookingDetail.Capacity)
+	totalPrice := totalPriceTicket + bookingDetail.TotalPriceItem
+
+	bookingDetail.TotalPriceTicket = totalPriceTicket
+	bookingDetail.TotalPrice = totalPrice
+
+	bookingDetail.Items = make([]ItemDetail, 0)
+	for _, item := range itemsWrapper.Items {
+		bookingDetail.Items = append(bookingDetail.Items, item)
+	}
+
+	return bookingDetail, nil
 }
