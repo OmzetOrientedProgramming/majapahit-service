@@ -28,7 +28,7 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 
 	itemsWrapper, err := s.repo.GetItemWrapper(bookingID)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 
 	totalPriceTicket := ticketPriceWrapper.Price * float64(bookingDetail.Capacity)
