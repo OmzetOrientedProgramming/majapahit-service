@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -95,4 +96,20 @@ func TestService_GetDetailSuccess(t *testing.T) {
 	assert.Equal(t, &bookingDetail, bookingDetailResult)
 	assert.NotNil(t, bookingDetailResult)
 	assert.NoError(t, err)
+}
+
+func TestService_GetDetailFailedCalledGetDetail(t *testing.T) {
+	bookingID := 1
+	var bookingDetail Detail
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetail, ErrInternalServerError)
+
+	bookingDetailResult, err := mockService.GetDetail(bookingID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, bookingDetailResult)
 }
