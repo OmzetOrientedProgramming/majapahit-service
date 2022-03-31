@@ -114,7 +114,7 @@ func (r repo) SendOTP(params SendOTPParams) (*SendOTPResult, error) {
 			return nil, errors.Wrap(ErrInputValidation, "too many attempts. try again later")
 		}
 
-		return nil, errors.Wrap(ErrInternalServer, "failed to get sessionInfo from response")
+		return nil, errors.Wrap(ErrInternalServer, errorResponse.Error.Message)
 	}
 
 	if sessionInfoString, ok = respAbstract["sessionInfo"].(string); !ok {
