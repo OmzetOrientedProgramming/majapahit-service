@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
@@ -82,4 +83,38 @@ func TestHandler_GetDetailSuccess(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
+}
+
+func TestHandler_GetDetailWithInternalServerError(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/place/:bookingID")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("10")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input and output
+	bookingID := 10
+
+	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var bookingDetail Detail
+	mockService.On("GetDetail", bookingID).Return(&bookingDetail, errorFromService)
+
+	// Tes
+	assert.NoError(t, h.GetDetail(c))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
