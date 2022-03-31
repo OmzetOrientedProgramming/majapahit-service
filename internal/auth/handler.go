@@ -1,32 +1,23 @@
 package auth
 
 import (
-	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"net/http"
-	"time"
 )
 
-// Handler struct for auth package
+// Handler for handling auth endpoint
 type Handler struct {
-	service   Service
-	jwtSecret string
-}
-
-// JWTCustomClaims represent custom claims extending default ones.
-type JWTCustomClaims struct {
-	UserID int `json:"user_id"`
-	Status int `json:"status"`
-	jwt.StandardClaims
+	service Service
 }
 
 // NewHandler is used to initialize Handler
-func NewHandler(service Service, JWTSecret string) *Handler {
+func NewHandler(service Service) *Handler {
 	return &Handler{
-		service:   service,
-		jwtSecret: JWTSecret,
+		service: service,
 	}
 }
 
@@ -52,21 +43,31 @@ func (h *Handler) CheckPhoneNumber(c echo.Context) error {
 
 	exist, err := h.service.CheckPhoneNumber(req.PhoneNumber)
 	if err != nil {
+		logrus.Error("[error while binding phone number request]", err.Error())
 		return c.JSON(http.StatusInternalServerError, util.APIResponse{
 			Status:  http.StatusInternalServerError,
 			Message: "cannot process request to check phone number",
 		})
 	}
 
-	switch session {
-	case "register":
+	if session == "register" {
 		if exist {
-			return c.JSON(http.StatusConflict, util.APIResponse{
-				Status:  http.StatusConflict,
-				Message: "phone number already registered",
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: "input validation error",
+				Errors:  []string{"phone number already registered"},
 			})
 		}
-		if err := h.service.SendOTP(req.PhoneNumber); err != nil {
+		sessionInfo, err := h.service.SendOTP(req.PhoneNumber, req.RecaptchaToken)
+		if err != nil {
+			if errors.Cause(err) == ErrInputValidation {
+				errList, errMessage := util.ErrorUnwrap(err)
+				return c.JSON(http.StatusBadRequest, util.APIResponse{
+					Status:  http.StatusBadRequest,
+					Message: errMessage,
+					Errors:  errList,
+				})
+			}
 			logrus.Error("[error while sending otp]", err.Error())
 			return c.JSON(http.StatusInternalServerError, util.APIResponse{
 				Status:  http.StatusInternalServerError,
@@ -76,40 +77,47 @@ func (h *Handler) CheckPhoneNumber(c echo.Context) error {
 		return c.JSON(http.StatusOK, util.APIResponse{
 			Status:  http.StatusOK,
 			Message: "phone number is available",
-		})
-	case "login":
-		if !exist {
-			return c.JSON(http.StatusNotFound, util.APIResponse{
-				Status:  http.StatusNotFound,
-				Message: "phone number has not been registered",
-			})
-		}
-		if err := h.service.SendOTP(req.PhoneNumber); err != nil {
-			logrus.Error("[error while sending otp]", err.Error())
-			return c.JSON(http.StatusInternalServerError, util.APIResponse{
-				Status:  http.StatusInternalServerError,
-				Message: "cannot send otp to phone number",
-			})
-		}
-		return c.JSON(http.StatusOK, util.APIResponse{
-			Status:  http.StatusOK,
-			Message: "success",
+			Data: CheckPhoneNumberResponse{
+				SessionInfo: sessionInfo,
+			},
 		})
 	}
-	return nil
+
+	if !exist {
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  []string{"phone number has not been registered"},
+		})
+	}
+	sessionInfo, err := h.service.SendOTP(req.PhoneNumber, req.RecaptchaToken)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidation {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
+		logrus.Error("[error while sending otp]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "cannot send otp to phone number",
+		})
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: CheckPhoneNumberResponse{
+			SessionInfo: sessionInfo,
+		},
+	})
 }
 
 // VerifyOTP for handling VerifyOTP endpoint
 func (h *Handler) VerifyOTP(c echo.Context) error {
-	session := c.QueryParam("session")
-	if !(session == "register" || session == "login") {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  []string{"session must be register or login"},
-		})
-	}
-
 	var req VerifyOTPRequest
 	if err := c.Bind(&req); err != nil {
 		logrus.Error("[error while binding verify otp request]", err.Error())
@@ -119,60 +127,47 @@ func (h *Handler) VerifyOTP(c echo.Context) error {
 		})
 	}
 
-	ok, err := h.service.VerifyOTP(req.PhoneNumber, req.OTP)
+	resp, err := h.service.VerifyOTP(req.SessionInfo, req.OTP)
 	if err != nil {
+		if errors.Cause(err) == ErrInputValidation {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
+		logrus.Error("[error while binding verify otp request]", err.Error())
 		return c.JSON(http.StatusInternalServerError, util.APIResponse{
 			Status:  http.StatusInternalServerError,
 			Message: "cannot process request to check phone number",
 		})
 	}
 
-	switch session {
-	case "register":
-		if !ok {
-			return c.JSON(http.StatusUnprocessableEntity, util.APIResponse{
-				Status:  http.StatusUnprocessableEntity,
-				Message: "wrong otp code",
-			})
-		}
-
-		return c.JSON(http.StatusOK, util.APIResponse{
-			Status:  http.StatusOK,
-			Message: "success",
-		})
-	case "login":
-		if !ok {
-			return c.JSON(http.StatusUnprocessableEntity, util.APIResponse{
-				Status:  http.StatusUnprocessableEntity,
-				Message: "wrong otp code",
-			})
-		}
-
-		customer, err := h.service.GetCustomerByPhoneNumber(req.PhoneNumber)
-
-		token, err := createJWTToken(1, 1, h.jwtSecret)
-		if err != nil {
-			return err
-		}
-
-		return c.JSON(http.StatusOK, util.APIResponse{
-			Status:  http.StatusOK,
-			Message: "success",
-			Data: map[string]interface{}{
-				"customer":      *customer,
-				"access_token":  token,
-				"refresh_token": "not implemented",
-			},
-		})
-	}
-	return nil
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    resp,
+	})
 }
 
 // Register for handling Register endpoint
 func (h *Handler) Register(c echo.Context) error {
+	userData, err := middleware.ParseUserData(c, util.StatusCustomer)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			errs, message := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusForbidden, util.APIResponse{
+				Status:  http.StatusForbidden,
+				Message: message,
+				Errors:  errs,
+			})
+		}
+	}
+
 	var req RegisterRequest
 	if err := c.Bind(&req); err != nil {
-		logrus.Error("[error while binding verify otp request]", err.Error())
+		logrus.Error("[error while binding verify otp request] ", err.Error())
 		return c.JSON(http.StatusInternalServerError, util.APIResponse{
 			Status:  http.StatusInternalServerError,
 			Message: "cannot process request",
@@ -180,43 +175,29 @@ func (h *Handler) Register(c echo.Context) error {
 	}
 
 	customer, err := h.service.Register(Customer{
-		PhoneNumber: req.PhoneNumber,
+		PhoneNumber: userData.Users[0].PhoneNumber,
 		Name:        req.FullName,
+		LocalID:     userData.Users[0].LocalID,
 	})
 	if err != nil {
+		if errors.Cause(err) == ErrInputValidation {
+			errs, message := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: message,
+				Errors:  errs,
+			})
+		}
+		logrus.Error("[error while calling user service] ", err.Error())
 		return c.JSON(http.StatusInternalServerError, util.APIResponse{
 			Status:  http.StatusInternalServerError,
 			Message: "cannot process request",
 		})
 	}
 
-	token, err := createJWTToken(customer.ID, customer.Status, h.jwtSecret)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot create JWT token",
-		})
-	}
-
-	return c.JSON(http.StatusOK, util.APIResponse{
-		Status:  http.StatusOK,
-		Message: "success",
-		Data: map[string]interface{}{
-			"customer":      customer,
-			"access_token":  token,
-			"refresh_token": "not implemented",
-		},
+	return c.JSON(http.StatusCreated, util.APIResponse{
+		Status:  http.StatusCreated,
+		Message: "created",
+		Data:    customer,
 	})
-}
-
-func createJWTToken(userID int, status int, secret string) (string, error) {
-	claims := &JWTCustomClaims{
-		UserID: userID,
-		Status: status,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 72).Unix(),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
 }

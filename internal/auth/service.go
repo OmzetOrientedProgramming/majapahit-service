@@ -1,51 +1,49 @@
 package auth
 
 import (
-	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/url"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"strings"
 	"time"
 )
 
 type service struct {
-	repo               Repo
-	twillioCredentials TwillioCredentials
+	repo             Repo
+	firebaseAuthRepo firebaseauth.Repo
 }
 
 // NewService for initialize service
-func NewService(repo Repo, twillioCredentials TwillioCredentials) Service {
+func NewService(repo Repo, firebaseAuthRepo firebaseauth.Repo) Service {
 	return &service{
-		repo:               repo,
-		twillioCredentials: twillioCredentials,
+		repo:             repo,
+		firebaseAuthRepo: firebaseAuthRepo,
 	}
 }
 
 // Service will contain all the function that can be used by service
 type Service interface {
 	CheckPhoneNumber(phoneNumber string) (bool, error)
-
-	SendOTP(phoneNumber string) error
-
-	VerifyOTP(phoneNumber, otp string) (bool, error)
-
+	SendOTP(phoneNumber, recaptchaToken string) (string, error)
+	VerifyOTP(sessionInfo, otp string) (*VerifyOTPResult, error)
 	Register(customer Customer) (*Customer, error)
-
 	GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error)
 }
 
 func (s service) CheckPhoneNumber(phoneNumber string) (bool, error) {
-	//var errorList []string
+	var errorList []string
 	for _, num := range phoneNumber {
 		if num < '0' || num > '9' {
-			return false, errors.Wrap(ErrInputValidation, "phone number is invalid")
+			errorList = append(errorList, "phone number is invalid")
 		}
 	}
 
-	exist, err := s.repo.CheckPhoneNumber(phoneNumber)
+	if len(errorList) > 0 {
+		return false, errors.Wrap(ErrInputValidation, strings.Join(errorList, ","))
+	}
+
+	exist, err := s.repo.CheckPhoneNumber(fmt.Sprintf("+62%s", strings.TrimLeft(phoneNumber, "0")))
 	if err != nil {
 		return false, err
 	}
@@ -53,102 +51,102 @@ func (s service) CheckPhoneNumber(phoneNumber string) (bool, error) {
 	return exist, nil
 }
 
-func (s service) SendOTP(phoneNumber string) error {
-	data := url.Values{}
-	data.Set("To", "+62"+strings.TrimLeft(phoneNumber, "0"))
-	data.Set("Channel", "sms")
-	req, err := http.NewRequest(http.MethodPost,
-		"https://verify.twilio.com/v2/Services/"+s.twillioCredentials.SID+"/Verifications",
-		strings.NewReader(data.Encode()))
+func (s service) SendOTP(phoneNumber, recaptchaToken string) (string, error) {
+	var errorList []string
+
+	if phoneNumber == "" {
+		errorList = append(errorList, "phone number is required")
+	}
+
+	if recaptchaToken == "" {
+		errorList = append(errorList, "recaptcha token is required")
+	}
+
+	if len(errorList) > 0 {
+		return "", errors.Wrap(ErrInputValidation, strings.Join(errorList, ","))
+	}
+
+	firebaseParams := firebaseauth.SendOTPParams{
+		PhoneNumber:    fmt.Sprintf("+62%s", strings.TrimLeft(phoneNumber, "0")),
+		RecaptchaToken: recaptchaToken,
+	}
+
+	resp, err := s.firebaseAuthRepo.SendOTP(firebaseParams)
 	if err != nil {
-		return err
-	}
-	log.Println(req)
-	req.SetBasicAuth(s.twillioCredentials.AccountSID, s.twillioCredentials.AuthToken)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
+		if errors.Cause(err) == firebaseauth.ErrInputValidation {
+			return "", errors.Wrap(ErrInputValidation, err.Error())
+		}
+		return "", err
 	}
 
-	var twillioResponse map[string]interface{}
-	if err := json.Unmarshal(body, &twillioResponse); err != nil {
-		return err
-	}
-	status, ok := twillioResponse["status"].(string)
-	if !ok {
-		return errors.New("failed to parse twillio error code response")
-	}
-
-	if status != "pending" {
-		return errors.New("failed to send OTP")
-	}
-
-	return nil
+	return resp.SessionInfo, nil
 }
 
-func (s service) VerifyOTP(phoneNumber, otp string) (bool, error) {
-	data := url.Values{}
-	data.Set("To", "+62"+strings.TrimLeft(phoneNumber, "0"))
-	data.Set("Code", otp)
+func (s service) VerifyOTP(sessionInfo, otp string) (*VerifyOTPResult, error) {
+	var errorList []string
 
-	req, err := http.NewRequest(http.MethodPost,
-		"https://verify.twilio.com/v2/Services/"+s.twillioCredentials.SID+"/VerificationCheck",
-		strings.NewReader(data.Encode()))
+	if sessionInfo == "" {
+		errorList = append(errorList, "session info is required")
+	}
+
+	if otp == "" {
+		errorList = append(errorList, "otp code is required")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidation, strings.Join(errorList, ","))
+	}
+
+	firebaseParams := firebaseauth.VerifyOTPParams{
+		SessionInfo: sessionInfo,
+		Code:        otp,
+	}
+
+	resp, err := s.firebaseAuthRepo.VerifyOTP(firebaseParams)
 	if err != nil {
-		return false, err
-	}
-	req.SetBasicAuth(s.twillioCredentials.AccountSID, s.twillioCredentials.AuthToken)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return false, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return false, err
+		if errors.Cause(err) == firebaseauth.ErrInputValidation {
+			return nil, errors.Wrap(ErrInputValidation, err.Error())
+		}
+		return nil, err
 	}
 
-	var twillioResponse map[string]interface{}
-	if err := json.Unmarshal(body, &twillioResponse); err != nil {
-		return false, err
-	}
-	status, ok := twillioResponse["status"].(string)
-	if !ok {
-		return false, errors.New("failed to parse twillio error code response")
-	}
-
-	if status != "approved" {
-		return false, nil
+	result := VerifyOTPResult{
+		AccessToken:  resp.IDToken,
+		RefreshToken: resp.RefreshToken,
+		ExpiresIn:    resp.ExpiresIn,
+		LocalID:      resp.LocalID,
+		IsNewUser:    resp.IsNewUser,
+		PhoneNumber:  resp.PhoneNumber,
 	}
 
-	return true, nil
+	return &result, nil
 }
 
 func (s service) Register(customer Customer) (*Customer, error) {
-	for _, num := range customer.PhoneNumber {
-		if num < '0' || num > '9' {
-			return nil, errors.Wrap(ErrInputValidation, "phone number is invalid")
-		}
+	var errorList []string
+
+	if customer.Name == "" {
+		errorList = append(errorList, "name is required")
+	}
+
+	if !util.PhoneNumberRegex.MatchString(customer.PhoneNumber) {
+		errorList = append(errorList, "phone number is invalid")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidation, strings.Join(errorList, ","))
 	}
 
 	createdCustomer, err := s.repo.CreateCustomer(Customer{
 		DateOfBirth: time.Time{},
-		Gender:      false,
+		Gender:      "undefined",
 		PhoneNumber: customer.PhoneNumber,
 		Name:        customer.Name,
-		Status:      1,
+		Status:      "customer",
+		LocalID:     customer.LocalID,
 	})
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	return createdCustomer, nil
