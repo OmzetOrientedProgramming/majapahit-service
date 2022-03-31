@@ -1,5 +1,11 @@
 package booking
 
+import (
+	"strings"
+
+	"github.com/pkg/errors"
+)
+
 // Service interface consisted function can be used by service
 type Service interface {
 	GetDetail(bookingID int) (*Detail, error)
@@ -16,6 +22,16 @@ func NewService(repo Repo) Service {
 }
 
 func (s *service) GetDetail(bookingID int) (*Detail, error) {
+	errorList := []string{}
+
+	if bookingID <= 0 {
+		errorList = append(errorList, "bookingID must be above 0")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
 	bookingDetail, err := s.repo.GetDetail(bookingID)
 	if err != nil {
 		return nil, err
