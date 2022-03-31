@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
@@ -30,7 +31,11 @@ func (h *Handler) GetDetail(c echo.Context) error {
 
 	bookingDetail, err := h.service.GetDetail(bookingID)
 	if err != nil {
-		panic("error get detail service")
+		logrus.Error("[error while accessing booking service]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
