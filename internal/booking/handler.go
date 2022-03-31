@@ -24,10 +24,20 @@ func NewHandler(service Service) *Handler {
 
 // GetDetail will retrieve information related to a booking
 func (h *Handler) GetDetail(c echo.Context) error {
+	errorList := []string{}
+
 	bookingIDString := c.Param("bookingID")
 	bookingID, err := strconv.Atoi(bookingIDString)
 	if err != nil {
-		panic("error atoi")
+		errorList = append(errorList, "bookingID must be number")
+	}
+
+	if len(errorList) != 0 {
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
 	}
 
 	bookingDetail, err := h.service.GetDetail(bookingID)
