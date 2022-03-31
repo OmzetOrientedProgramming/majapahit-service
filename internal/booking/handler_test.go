@@ -30,7 +30,7 @@ func TestHandler_GetDetailSuccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetPath("/api/v1/place/:bookingID")
+	c.SetPath("/api/v1/business-admin/booking/:bookingID")
 	c.SetParamNames("bookingID")
 	c.SetParamValues("1")
 
@@ -90,7 +90,7 @@ func TestHandler_GetDetailWithInternalServerError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.SetPath("/api/v1/place/:bookingID")
+	c.SetPath("/api/v1/business-admin/booking/:bookingID")
 	c.SetParamNames("bookingID")
 	c.SetParamValues("10")
 
