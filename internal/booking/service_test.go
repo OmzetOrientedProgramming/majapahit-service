@@ -151,3 +151,18 @@ func TestService_GetDetailFailedCalledGetItemWrapper(t *testing.T) {
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, bookingDetailResult)
 }
+
+func TestService_GetDetailWrongInput(t *testing.T) {
+	// Define input
+	bookingID := -1
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	bookingDetail, err := mockService.GetDetail(bookingID)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, bookingDetail)
+}
