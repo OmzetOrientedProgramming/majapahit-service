@@ -64,5 +64,10 @@ func (r *repo) GetTicketPriceWrapper(bookingID int) (*TicketPriceWrapper, error)
 }
 
 func (r *repo) UpdateBookingStatus(bookingID int, newStatus int) error {
-	panic("Not yet implemented!")
+	query := "UPDATE bookings SET status = $2 WHERE id= $1"
+	_, err := r.db.Exec(query, bookingID, newStatus)
+	if err != nil {
+		panic(err.Error())
+	}
+	return nil
 }
