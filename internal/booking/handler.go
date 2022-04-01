@@ -64,3 +64,7 @@ func (h *Handler) GetDetail(c echo.Context) error {
 		Data:    bookingDetail,
 	})
 }
+
+func (h *Handler) UpdateBookingStatus(c echo.Context) error {
+	panic("Not yet implemented!")
+}

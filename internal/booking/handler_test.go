@@ -1,6 +1,7 @@
 package booking
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -188,4 +189,37 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_UpdateBookingStatusSuccess(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": 2,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("1")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Expectation
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	if assert.NoError(t, h.GetDetail(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
 }
