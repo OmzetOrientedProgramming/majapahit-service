@@ -201,3 +201,17 @@ func TestService_UpdateBookingStatusWithBookingIDBelowOne(t *testing.T) {
 
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 }
+
+func TestService_UpdateBookingStatusWithNewStatusBelowZero(t *testing.T) {
+	bookingID := 1
+	newStatus := -1
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
