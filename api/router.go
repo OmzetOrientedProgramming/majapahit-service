@@ -57,7 +57,7 @@ func (r *Routes) Init() {
 		}
 
 		// Business Admin Module
-		businessAdminRoutes := v1.Group("/business-admin/:businessAdminID")
+		businessAdminRoutes := v1.Group("/business-admin")
 		{
 			// Booking
 			bookingRoutes := businessAdminRoutes.Group("/booking")
