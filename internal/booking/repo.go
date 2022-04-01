@@ -10,6 +10,7 @@ type Repo interface {
 	GetDetail(int) (*Detail, error)
 	GetItemWrapper(int) (*ItemsWrapper, error)
 	GetTicketPriceWrapper(int) (*TicketPriceWrapper, error)
+	UpdateBookingStatus(int, int) error
 }
 
 type repo struct {
@@ -60,4 +61,8 @@ func (r *repo) GetTicketPriceWrapper(bookingID int) (*TicketPriceWrapper, error)
 	}
 
 	return &ticketPrice, nil
+}
+
+func (r *repo) UpdateBookingStatus(bookingID int, newStatus int) error {
+	panic("Not yet implemented!")
 }
