@@ -1,26 +1,40 @@
 package businessadminauth
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/labstack/echo/v4"
+	"net/http"
+	"net/mail"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/pkg/errors"
 )
 
 // NewService is a constructor to get a Service instance
-func NewService(repo Repo) Service {
+func NewService(repo Repo, firebaseAPIKey, identityToolkitURL string) Service {
 	return &service{
-		repo: repo,
+		repo:               repo,
+		firebaseAPIKey:     firebaseAPIKey,
+		identityToolkitURL: identityToolkitURL,
 	}
 }
 
 // Service is used to define the methods in it
 type Service interface {
 	RegisterBusinessAdmin(request RegisterBusinessAdminRequest) (*LoginCredential, error)
+	Login(email, password, recaptchaToken string) (*BusinessAdmin, string, error)
 }
 
 // service is a struct of service
 type service struct {
-	repo Repo
+	repo               Repo
+	firebaseAPIKey     string
+	identityToolkitURL string
 }
 
 // RegisterBusinessAdmin is called to make users, business_owners and places, with a return of LoginCredential
@@ -95,4 +109,50 @@ func (s service) RegisterBusinessAdmin(request RegisterBusinessAdminRequest) (*L
 	credentials.Password = password
 
 	return &credentials, nil
+}
+
+// Login as a business admin
+func (s service) Login(email, password, recaptchaToken string) (*BusinessAdmin, string, error) {
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, "", fmt.Errorf("invalid email address: %w", ErrInputValidationError)
+	}
+
+	if password == "" {
+		return nil, "", fmt.Errorf("password cannot be empty: %w", ErrInputValidationError)
+	}
+
+	businessAdmin, err := s.repo.GetBusinessAdminByEmail(email)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(businessAdmin.Password), []byte(password)); err != nil {
+		logrus.Errorf("[error while comparing password] %v", err)
+		return nil, "", fmt.Errorf("password is incorrect: %w", ErrUnauthorized)
+	}
+
+	apiURL := fmt.Sprintf("%s/v1/accounts:signInWithPassword?key=%s", s.identityToolkitURL, s.firebaseAPIKey)
+	data := map[string]interface{}{
+		"email":             email,
+		"password":          password,
+		"captchaResponse":   recaptchaToken,
+		"returnSecureToken": true,
+	}
+	jsonData, _ := json.Marshal(data)
+
+	resp, err := http.Post(apiURL, echo.MIMEApplicationJSON, bytes.NewBuffer(jsonData))
+	if err != nil {
+		logrus.Error("[error while creating request] ", err.Error())
+		return nil, "", fmt.Errorf("failed to create request: %w", ErrInternalServerError)
+	}
+
+	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
+		logrus.Error("[non ok status response] ", resp.StatusCode)
+		return nil, "", fmt.Errorf("non ok response code: %w", ErrInternalServerError)
+	}
+
+	var jsonResponse map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&jsonResponse)
+
+	return businessAdmin, jsonResponse["refreshToken"].(string), nil
 }
