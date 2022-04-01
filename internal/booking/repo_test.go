@@ -242,3 +242,26 @@ func TestRepo_UpdateBookingStatusSuccess(t *testing.T) {
 	err = repoMock.UpdateBookingStatus(bookingID, newStatus)
 	assert.Nil(t, err)
 }
+
+func TestRepo_UpdateBookingStatusInternalServerError(t *testing.T) {
+	bookingID := 1
+	newStatus := 2
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE bookings SET status = $2 WHERE id= $1")).
+		WithArgs(bookingID, newStatus).
+		WillReturnError(sql.ErrTxDone)
+
+	err = repoMock.UpdateBookingStatus(bookingID, newStatus)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
