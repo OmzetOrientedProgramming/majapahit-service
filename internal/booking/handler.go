@@ -75,6 +75,14 @@ func (h *Handler) UpdateBookingStatus(c echo.Context) error {
 		errorList = append(errorList, "bookingID must be number")
 	}
 
+	if len(errorList) != 0 {
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
+	}
+
 	var req UpdateBookingStatusRequest
 	if err = c.Bind(&req); err != nil {
 		panic(err.Error())

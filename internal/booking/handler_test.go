@@ -262,7 +262,7 @@ func TestHandler_UpdateBookingStatusWithBookingIDString(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetDetail(c))
+	assert.NoError(t, h.UpdateBookingStatus(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
