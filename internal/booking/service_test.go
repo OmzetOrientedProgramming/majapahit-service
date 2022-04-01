@@ -180,6 +180,8 @@ func TestService_UpdateBookingStatusSuccess(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
+	mockRepo.On("UpdateBookingStatus", bookingID, newStatus).Return(nil)
+
 	// Test
 	err := mockService.UpdateBookingStatus(bookingID, newStatus)
 
