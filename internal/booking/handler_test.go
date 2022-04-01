@@ -174,9 +174,6 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 	mockService := new(MockService)
 	h := NewHandler(mockService)
 
-	bookingID := 1
-	newStatus := 2
-
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusBadRequest,
 		Message: "input validation error",
@@ -184,9 +181,6 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 			"bookingID must be number",
 		},
 	}
-
-	// Excpectation
-	mockService.On("UpdateBookingStatus", bookingID, newStatus).Return(nil)
 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
@@ -217,10 +211,15 @@ func TestHandler_UpdateBookingStatusSuccess(t *testing.T) {
 	mockService := new(MockService)
 	h := NewHandler(mockService)
 
+	bookingID := 1
+	newStatus := 2
+
 	// Expectation
+	mockService.On("UpdateBookingStatus", bookingID, newStatus).Return(nil)
+
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusOK,
-		Message: "success",
+		Message: "Success update status",
 	}
 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
