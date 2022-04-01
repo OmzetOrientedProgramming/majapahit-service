@@ -85,7 +85,11 @@ func (h *Handler) UpdateBookingStatus(c echo.Context) error {
 
 	var req UpdateBookingStatusRequest
 	if err = c.Bind(&req); err != nil {
-		panic(err.Error())
+		logrus.Error("[error while binding update booking status request]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "cannot process request",
+		})
 	}
 
 	err = h.service.UpdateBookingStatus(bookingID, req.Status)
