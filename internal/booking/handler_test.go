@@ -200,6 +200,8 @@ func TestHandler_UpdateBookingStatusSuccess(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
