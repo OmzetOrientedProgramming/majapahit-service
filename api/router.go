@@ -57,11 +57,12 @@ func (r *Routes) Init() {
 		}
 
 		// Business Admin Module
-		businessAdminRoutes := v1.Group("/business-admin/:businessAdminID")
+		businessAdminRoutes := v1.Group("/business-admin")
 		{
 			// Booking
 			bookingRoutes := businessAdminRoutes.Group("/booking")
 			bookingRoutes.GET("/:bookingID", r.bookingHandler.GetDetail)
+			bookingRoutes.PATCH("/:bookingID/confirmation", r.bookingHandler.UpdateBookingStatus)
 		}
 
 		// Auth module
