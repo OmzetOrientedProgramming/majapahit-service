@@ -65,11 +65,14 @@ func (h *Handler) GetDetail(c echo.Context) error {
 	})
 }
 
+// UpdateBookingStatus will update booking status
 func (h *Handler) UpdateBookingStatus(c echo.Context) error {
+	errorList := []string{}
+
 	bookingIDString := c.Param("bookingID")
 	bookingID, err := strconv.Atoi(bookingIDString)
 	if err != nil {
-		panic(err.Error())
+		errorList = append(errorList, "bookingID must be number")
 	}
 
 	var req UpdateBookingStatusRequest

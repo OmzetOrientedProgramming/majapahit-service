@@ -33,6 +33,7 @@ type ItemDetail struct {
 	Price float64 `json:"price"`
 }
 
+// UpdateBookingStatusRequest represent request body for updage booking status
 type UpdateBookingStatusRequest struct {
 	Status int `json:"status"`
 }
