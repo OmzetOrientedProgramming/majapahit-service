@@ -31,11 +31,6 @@ func (m *MockRepository) GetTicketPriceWrapper(bookingID int) (*TicketPriceWrapp
 	return &ret, args.Error(1)
 }
 
-func (m *MockRepository) UpdateBookingStatus(bookingID int, bookingStatus int) error {
-	args := m.Called(bookingID, bookingStatus)
-	return args.Error(0)
-}
-
 func TestService_GetDetailSuccess(t *testing.T) {
 	bookingID := 1
 	createdAtRow := time.Date(2021, time.Month(10), 26, 13, 0, 0, 0, time.UTC).Format(time.RFC3339)
