@@ -171,3 +171,17 @@ func TestService_GetDetailWrongInput(t *testing.T) {
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	assert.Nil(t, bookingDetail)
 }
+
+func TestService_UpdateBookingStatusSuccess(t *testing.T) {
+	bookingID := 1
+	newStatus := 2
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Nil(t, err)
+}

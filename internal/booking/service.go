@@ -9,6 +9,7 @@ import (
 // Service interface consisted function can be used by service
 type Service interface {
 	GetDetail(bookingID int) (*Detail, error)
+	UpdateBookingStatus(bookingID int, newStatus int) error
 }
 
 type service struct {
@@ -59,4 +60,8 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 	}
 
 	return bookingDetail, nil
+}
+
+func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
+	panic("Not yet implemented!")
 }

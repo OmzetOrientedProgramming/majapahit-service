@@ -25,6 +25,11 @@ func (m *MockService) GetDetail(bookingID int) (*Detail, error) {
 	return bookingDetail, args.Error(1)
 }
 
+func (m *MockService) UpdateBookingStatus(bookingID int, newStatus int) error {
+	args := m.Called(bookingID, newStatus)
+	return args.Error(0)
+}
+
 func TestHandler_GetDetailSuccess(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
