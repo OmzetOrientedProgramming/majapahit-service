@@ -1,6 +1,7 @@
 package booking
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -67,6 +68,11 @@ func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
 
 	if bookingID <= 0 {
 		errorList = append(errorList, "bookingID must be above 0")
+	}
+
+	if newStatus < 0 {
+		errorMessage := fmt.Sprintf("there are no status: %d", newStatus)
+		errorList = append(errorList, errorMessage)
 	}
 
 	if len(errorList) > 0 {
