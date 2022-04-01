@@ -63,5 +63,9 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 }
 
 func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
-	panic("Not yet implemented!")
+	err := s.repo.UpdateBookingStatus(bookingID, newStatus)
+	if err != nil {
+		panic(err.Error())
+	}
+	return nil
 }
