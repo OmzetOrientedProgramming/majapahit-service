@@ -67,7 +67,7 @@ func (r *repo) UpdateBookingStatus(bookingID int, newStatus int) error {
 	query := "UPDATE bookings SET status = $2 WHERE id= $1"
 	_, err := r.db.Exec(query, bookingID, newStatus)
 	if err != nil {
-		panic(err.Error())
+		return errors.Wrap(ErrInternalServerError, err.Error())
 	}
 	return nil
 }
