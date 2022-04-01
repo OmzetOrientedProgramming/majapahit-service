@@ -229,3 +229,40 @@ func TestHandler_UpdateBookingStatusSuccess(t *testing.T) {
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
+
+func TestHandler_UpdateBookingStatusWithBookingIDString(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": 2,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("satu")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"bookingID must be number",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.GetDetail(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
