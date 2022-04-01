@@ -32,3 +32,7 @@ type ItemDetail struct {
 	Qty   int     `json:"qty"`
 	Price float64 `json:"price"`
 }
+
+type UpdateBookingStatusRequest struct {
+	Status int `json:"status"`
+}

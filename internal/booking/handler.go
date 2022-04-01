@@ -66,5 +66,24 @@ func (h *Handler) GetDetail(c echo.Context) error {
 }
 
 func (h *Handler) UpdateBookingStatus(c echo.Context) error {
-	panic("Not yet implemented!")
+	bookingIDString := c.Param("bookingID")
+	bookingID, err := strconv.Atoi(bookingIDString)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var req UpdateBookingStatusRequest
+	if err = c.Bind(&req); err != nil {
+		panic(err.Error())
+	}
+
+	err = h.service.UpdateBookingStatus(bookingID, req.Status)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "Success update status",
+	})
 }
