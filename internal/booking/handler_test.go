@@ -344,3 +344,45 @@ func TestHandler_UpdateBookingStatusWithBookingIDBelowOne(t *testing.T) {
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 
 }
+
+func TestHandler_UpdateBookingStatusWithInternalServerError(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": 2,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("10")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input and output
+	bookingID := 10
+	newStatus := 2
+
+	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("UpdateBookingStatus", bookingID, newStatus).Return(errorFromService)
+
+	// Tes
+	assert.NoError(t, h.UpdateBookingStatus(c))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
