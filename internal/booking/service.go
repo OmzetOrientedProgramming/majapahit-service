@@ -81,7 +81,7 @@ func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
 
 	err := s.repo.UpdateBookingStatus(bookingID, newStatus)
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 	return nil
 }
