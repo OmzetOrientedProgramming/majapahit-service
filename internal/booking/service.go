@@ -63,6 +63,16 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 }
 
 func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
+	errorList := []string{}
+
+	if bookingID <= 0 {
+		errorList = append(errorList, "bookingID must be above 0")
+	}
+
+	if len(errorList) > 0 {
+		return errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
 	err := s.repo.UpdateBookingStatus(bookingID, newStatus)
 	if err != nil {
 		panic(err.Error())
