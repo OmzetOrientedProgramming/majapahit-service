@@ -215,3 +215,19 @@ func TestService_UpdateBookingStatusWithNewStatusBelowZero(t *testing.T) {
 
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 }
+
+func TestService_UpdateBookingStatusFailedCalledUpdateBookingStatus(t *testing.T) {
+	bookingID := 1
+	newStatus := 2
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("UpdateBookingStatus", bookingID, newStatus).Return(ErrInternalServerError)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
