@@ -94,7 +94,14 @@ func (h *Handler) UpdateBookingStatus(c echo.Context) error {
 
 	err = h.service.UpdateBookingStatus(bookingID, req.Status)
 	if err != nil {
-		panic(err.Error())
+		if errors.Cause(err) == ErrInputValidationError {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
