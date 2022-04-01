@@ -102,6 +102,12 @@ func (h *Handler) UpdateBookingStatus(c echo.Context) error {
 				Errors:  errList,
 			})
 		}
+
+		logrus.Error("[error while accessing booking service]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
