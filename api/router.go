@@ -74,5 +74,12 @@ func (r *Routes) Init() {
 
 			authRoutes.POST("/business-admin/register", r.businessadminauthHandler.RegisterBusinessAdmin)
 		}
+
+		// Booking module
+		bookingRoutes := v1.Group("/booking", r.authMiddleware.AuthMiddleware())
+		{
+			bookingRoutes.GET("/ongoing", r.bookingHandler.GetMyBookingsOngoing)
+			bookingRoutes.GET("/previous", r.bookingHandler.GetMyBookingsPreviousWithPagination)
+		}
 	}
 }
