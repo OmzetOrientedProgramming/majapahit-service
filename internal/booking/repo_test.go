@@ -64,7 +64,7 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 			listCustomerBookingExpected.CustomerBookings[1].Date,
 			listCustomerBookingExpected.CustomerBookings[1].StartTime,
 			listCustomerBookingExpected.CustomerBookings[1].EndTime)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
@@ -98,7 +98,7 @@ func TestRepo_GetListCustomerBookingWithPaginationError(t *testing.T) {
 	// Expectation
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
 
@@ -130,7 +130,7 @@ func TestRepo_GetListCustomerBookingWithPaginationCountError(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
 		AddRow("1", "test name", 1, "test date", "test start time", "test end time")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM bookings WHERE place_id = $1")).
@@ -166,7 +166,7 @@ func TestRepo_GetListCustomerBookingWithPaginationEmpty(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
@@ -204,7 +204,7 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
 		AddRow("1", "test name", 1, "test date", "test start time", "test end time")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM bookings WHERE place_id = $1")).
