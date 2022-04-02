@@ -22,7 +22,6 @@ func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
-
 // GetListCustomerBookingWithPagination is a handler for API request for get customer bookings
 func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 	errorList := []string{}

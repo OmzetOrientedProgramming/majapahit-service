@@ -12,7 +12,7 @@ type CustomerBooking struct {
 	EndTime      string `json:"end_time" db:"end_time"`
 }
 
-// List is a container for customer bookings
+// ListBooking is a container for customer bookings
 type ListBooking struct {
 	CustomerBookings []CustomerBooking `json:"booking_customer"`
 	TotalCount       int               `json:"total_count"`

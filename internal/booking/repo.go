@@ -21,7 +21,7 @@ func NewRepo(db *sqlx.DB) Repo {
 type repo struct {
 	db *sqlx.DB
 }
-	
+
 // Repo interface for defining function that must have by repo
 type Repo interface {
 	GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, error)
@@ -299,7 +299,7 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-	
+
 	return &bookingList, nil
 }
 

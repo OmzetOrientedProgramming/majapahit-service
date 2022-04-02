@@ -1112,7 +1112,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			}, 
+			},
 			{
 				ID:         2,
 				PlaceID:    3,
