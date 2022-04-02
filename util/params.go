@@ -41,6 +41,27 @@ const (
 
 	// StatusBusinessAdmin for mapping status business admin
 	StatusBusinessAdmin = 1
+
+	// TimeLayout for time layout convention
+	TimeLayout = "15:04:05"
+	// DateLayout for date layout convention
+	DateLayout = "2006-01-02"
+
+	// BookingMenungguKonfirmasi integer mapping
+	BookingMenungguKonfirmasi = 0
+	// BookingBelumMembayar integer mapping
+	BookingBelumMembayar = 1
+	// BookingBerhasil integer mapping
+	BookingBerhasil = 2
+	// BookingSelesai integer mapping
+	BookingSelesai = 3
+	// BookingGagal integer mapping
+	BookingGagal = 4
+
+	// Available booking status
+	Available = 0
+	//FullyBook booking status
+	FullyBook = 1
 )
 
 var (
