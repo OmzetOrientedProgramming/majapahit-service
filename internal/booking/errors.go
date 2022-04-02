@@ -1,4 +1,4 @@
-package customerbooking
+package booking
 
 import "github.com/pkg/errors"
 

@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/labstack/echo/v4"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
-	customerbooking "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/booking"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/booking"
 	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
@@ -20,11 +20,11 @@ type Routes struct {
 	authHandler              *auth.Handler
 	businessadminauthHandler *businessadminauth.Handler
 	authMiddleware           middleware.AuthMiddleware
-	customerBookingHandler   *customerbooking.Handler
+	bookingHandler   *booking.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, customerBookingHandler *customerbooking.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, customerBookingHandler *booking.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
@@ -33,7 +33,7 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandle
 		placeHandler:             placeHandler,
 		businessadminauthHandler: businessadminauthHandler,
 		authMiddleware:           authMiddleware,
-		customerBookingHandler:   customerBookingHandler,
+		bookingHandler:   		bookingHandler,
 	}
 }
 
@@ -70,7 +70,7 @@ func (r *Routes) Init() {
 		businessAdminRoutes := v1.Group("/business-admin")
 		{
 			customerBookingRoutes := businessAdminRoutes.Group("/:placeID/booking")
-			customerBookingRoutes.GET("", r.customerBookingHandler.GetListCustomerBookingWithPagination)
+			customerBookingRoutes.GET("", r.bookingHandler.GetListCustomerBookingWithPagination)
 		}
 	}
 }
