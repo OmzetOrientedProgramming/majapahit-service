@@ -24,6 +24,18 @@ func (m *MockRepository) GetDetail(bookingID int) (*Detail, error) {
 	return &ret, args.Error(1)
 }
 
+func (m *MockRepository) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
+	args := m.Called(localID)
+	ret := args.Get(0).([]Booking)
+	return &ret, args.Error(1)
+}
+
+func (m *MockRepository) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error) {
+	args := m.Called(localID, params)
+	ret := args.Get(0).(List)
+	return &ret, args.Error(1)
+}
+
 func (m *MockRepository) GetItemWrapper(bookingID int) (*ItemsWrapper, error) {
 	args := m.Called(bookingID)
 	ret := args.Get(0).(ItemsWrapper)
@@ -304,12 +316,6 @@ func TestService_UpdateBookingStatusFailedCalledUpdateBookingStatus(t *testing.T
 
 }
 
-func (m *MockRepository) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
-	args := m.Called(localID)
-	ret := args.Get(0).([]Booking)
-	return &ret, args.Error(1)
-}
-
 func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
 	localID := "abc"
 	myBookingsOngoing := []Booking{
@@ -384,12 +390,6 @@ func TestService_GetMyBookingsOngoingFailedCalledGetDetail(t *testing.T) {
 	assert.Nil(t, myBookingsOngoingResult)
 }
 
-func (m *MockRepository) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error) {
-	args := m.Called(params)
-	ret := args.Get(0).(List)
-	return &ret, args.Error(1)
-}
-
 func TestService_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 	// Define input and output
 	myBookingsPrevious := List{
@@ -432,7 +432,7 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 	mockService := NewService(mockRepo, xenditService)
 
 	// Expectation
-	mockRepo.On("GetMyBookingsPreviousWithPagination", params).Return(myBookingsPrevious, nil)
+	mockRepo.On("GetMyBookingsPreviousWithPagination", localID, params).Return(myBookingsPrevious, nil)
 
 	// Test
 	myBookingsPreviousResult, _, err := mockService.GetMyBookingsPreviousWithPagination(localID, params)
@@ -491,7 +491,7 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccessWithDefaultParam(t *t
 	}
 
 	// Expectation
-	mockRepo.On("GetMyBookingsPreviousWithPagination", paramsDefault).Return(myBookingsPrevious, nil)
+	mockRepo.On("GetMyBookingsPreviousWithPagination", localID, paramsDefault).Return(myBookingsPrevious, nil)
 
 	// Test
 	myBookingsPreviousResult, _, err := mockService.GetMyBookingsPreviousWithPagination(localID, params)
@@ -540,7 +540,7 @@ func TestService_GetMyBookingsPreviousWithPaginationFailedCalledGetPlacesListWit
 	mockService := NewService(mockRepo, xenditService)
 
 	// Expectation
-	mockRepo.On("GetMyBookingsPreviousWithPagination", params).Return(myBookingsPrevious, ErrInternalServerError)
+	mockRepo.On("GetMyBookingsPreviousWithPagination", localID, params).Return(myBookingsPrevious, ErrInternalServerError)
 
 	// Test
 	myBookingsPreviousResult, _, err := mockService.GetMyBookingsPreviousWithPagination(localID, params)

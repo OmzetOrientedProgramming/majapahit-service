@@ -243,8 +243,8 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
-		ORDER BY bookings.end_time DESC
+		WHERE users.firebase_local_id = $1 AND bookings.status <= 2
+		ORDER BY bookings.date asc, bookings.start_time asc
 	`
 	err := r.db.Select(&bookingList, query, localID)
 	if err != nil {
@@ -254,6 +254,7 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
+	
 
 	return &bookingList, nil
 }
@@ -267,8 +268,8 @@ func (r repo) GetMyBookingsPreviousWithPagination(localID string, params Booking
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`
 	err := r.db.Select(&myBookingsPrevious.Bookings, query, localID, params.Limit, (params.Page-1)*params.Limit)
 	if err != nil {
@@ -285,7 +286,7 @@ func (r repo) GetMyBookingsPreviousWithPagination(localID string, params Booking
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
 	`
 	err = r.db.Get(&myBookingsPrevious.TotalCount, query, localID)
 	if err != nil {
