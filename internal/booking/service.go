@@ -4,11 +4,14 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
-// Service interface consisted function can be used by service
+// Service will contain all the function that can be used by service
 type Service interface {
 	GetDetail(bookingID int) (*Detail, error)
+	GetMyBookingsOngoing(localID string) (*[]Booking, error)
+	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error)
 }
 
 type service struct {
@@ -18,7 +21,8 @@ type service struct {
 // NewService for initialize service
 func NewService(repo Repo) Service {
 	return &service{
-		repo: repo}
+		repo: repo,
+	}
 }
 
 func (s *service) GetDetail(bookingID int) (*Detail, error) {
@@ -59,4 +63,57 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 	}
 
 	return bookingDetail, nil
+}
+
+
+func (s *service) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
+	errorList := []string{}
+	
+	if localID == "" {
+		errorList = append(errorList, "localID cannot be empty")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	myBookingsOngoing, err := s.repo.GetMyBookingsOngoing(localID)
+	if err != nil {
+		return nil, err
+	}
+
+	return myBookingsOngoing, nil
+}
+
+func (s service) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error) {
+	var errorList []string
+
+	if params.Page == 0 {
+		params.Page = util.DefaultPage
+	}
+
+	if params.Limit == 0 {
+		params.Limit = util.DefaultLimit
+	}
+
+	if params.Limit > util.MaxLimit {
+		errorList = append(errorList, "limit should be 1 - 100")
+	}
+
+	if params.Path == "" {
+		errorList = append(errorList, "path is required for pagination")
+	}
+
+	if len(errorList) > 0 {
+		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	myBookingsPrevious, err := s.repo.GetMyBookingsPreviousWithPagination(localID, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pagination := util.GeneratePagination(myBookingsPrevious.TotalCount, params.Limit, params.Page, params.Path)
+
+	return myBookingsPrevious, &pagination, err
 }

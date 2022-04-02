@@ -1,6 +1,8 @@
 package booking
 
 import (
+	"database/sql"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -10,6 +12,9 @@ type Repo interface {
 	GetDetail(int) (*Detail, error)
 	GetItemWrapper(int) (*ItemsWrapper, error)
 	GetTicketPriceWrapper(int) (*TicketPriceWrapper, error)
+
+	GetMyBookingsOngoing(localID string) (*[]Booking, error)
+	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error)
 }
 
 type repo struct {
@@ -60,4 +65,71 @@ func (r *repo) GetTicketPriceWrapper(bookingID int) (*TicketPriceWrapper, error)
 	}
 
 	return &ticketPrice, nil
+}
+
+
+func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
+	var bookingList []Booking
+	bookingList = make([]Booking, 0)
+
+	query := `
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		FROM users 
+			JOIN bookings ON users.id = bookings.user_id 	
+			JOIN places ON bookings.place_id = places.id 
+		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
+		ORDER BY bookings.end_time DESC
+	`
+	err := r.db.Select(&bookingList, query, localID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			bookingList = make([]Booking, 0)
+			return &bookingList, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+	
+	return &bookingList, nil
+}
+
+func (r repo) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error) {
+	var myBookingsPrevious List
+	myBookingsPrevious.Bookings = make([]Booking, 0)
+
+	query := `
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		FROM users 
+			JOIN bookings ON users.id = bookings.user_id 	
+			JOIN places ON bookings.place_id = places.id 
+		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
+		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+	`
+	err := r.db.Select(&myBookingsPrevious.Bookings, query, localID, params.Limit, (params.Page-1)*params.Limit)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			myBookingsPrevious.Bookings = make([]Booking, 0)
+			myBookingsPrevious.TotalCount = 0
+			return &myBookingsPrevious, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	query = `
+		SELECT COUNT(bookings.id)
+		FROM users 
+			JOIN bookings ON users.id = bookings.user_id 	
+			JOIN places ON bookings.place_id = places.id 
+		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+	`
+	err = r.db.Get(&myBookingsPrevious.TotalCount, query, localID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			myBookingsPrevious.Bookings = make([]Booking, 0)
+			myBookingsPrevious.TotalCount = 0
+			return &myBookingsPrevious, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &myBookingsPrevious, nil
 }

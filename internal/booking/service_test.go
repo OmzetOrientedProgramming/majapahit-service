@@ -166,3 +166,243 @@ func TestService_GetDetailWrongInput(t *testing.T) {
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	assert.Nil(t, bookingDetail)
 }
+
+
+func (m *MockRepository) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
+	args := m.Called(localID)
+	ret := args.Get(0).([]Booking)
+	return &ret, args.Error(1)
+}
+
+func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
+	localID := "abc"
+	myBookingsOngoing := []Booking{
+		{
+			ID:         1,
+			PlaceID:    2,
+			PlaceName:  "test_place_name",
+			PlaceImage: "test_place_image",
+			Date:       "2022-04-10",
+			StartTime:  "08:00",
+			EndTime:    "10:00",
+			Status:     0,
+			TotalPrice: 10000,
+		}, 
+		{
+			ID:         2,
+			PlaceID:    3,
+			PlaceName:  "test_place_name",
+			PlaceImage: "test_place_image",
+			Date:       "2022-04-11",
+			StartTime:  "09:00",
+			EndTime:    "11:00",
+			Status:     0,
+			TotalPrice: 20000,
+		},
+	}
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetMyBookingsOngoing", localID).Return(myBookingsOngoing, nil)
+
+	myBookingsOngoingResult, err := mockService.GetMyBookingsOngoing(localID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &myBookingsOngoing, myBookingsOngoingResult)
+	assert.NotNil(t, myBookingsOngoingResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetMyBookingsOngoingWrongInput(t *testing.T) {
+	// Define input
+	localID := ""
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	myBookingsOngoing, err := mockService.GetMyBookingsOngoing(localID)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, myBookingsOngoing)
+}
+
+func TestService_GetMyBookingsOngoingFailedCalledGetDetail(t *testing.T) {
+	localID := "abc"
+	var myBookingsOngoing []Booking
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetMyBookingsOngoing", localID).Return(myBookingsOngoing, ErrInternalServerError)
+
+	myBookingsOngoingResult, err := mockService.GetMyBookingsOngoing(localID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, myBookingsOngoingResult)
+}
+
+func (m *MockRepository) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error) {
+	args := m.Called(params)
+	ret := args.Get(0).(List)
+	return &ret, args.Error(1)
+}
+
+func TestService_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
+	// Define input and output
+	myBookingsPrevious := List{
+		Bookings: []Booking{
+			{
+				ID:         1,
+				PlaceID:    2,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-10",
+				StartTime:  "08:00",
+				EndTime:    "10:00",
+				Status:     0,
+				TotalPrice: 10000,
+			}, 
+			{
+				ID:         2,
+				PlaceID:    3,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-11",
+				StartTime:  "09:00",
+				EndTime:    "11:00",
+				Status:     0,
+				TotalPrice: 20000,
+			},
+		},
+		TotalCount: 2,
+	}
+	localID := "abc"
+	params := BookingsListRequest{
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Expectation
+	mockRepo.On("GetMyBookingsPreviousWithPagination", params).Return(myBookingsPrevious, nil)
+
+	// Test
+	myBookingsPreviousResult, _, err := mockService.GetMyBookingsPreviousWithPagination(localID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &myBookingsPrevious, myBookingsPreviousResult)
+	assert.NotNil(t, myBookingsPreviousResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetMyBookingsPreviousWithPaginationSuccessWithDefaultParam(t *testing.T) {
+	// Define input and output
+	myBookingsPrevious := List{
+		Bookings: []Booking{
+			{
+				ID:         1,
+				PlaceID:    2,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-10",
+				StartTime:  "08:00",
+				EndTime:    "10:00",
+				Status:     0,
+				TotalPrice: 10000,
+			}, 
+			{
+				ID:         2,
+				PlaceID:    3,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-11",
+				StartTime:  "09:00",
+				EndTime:    "11:00",
+				Status:     0,
+				TotalPrice: 20000,
+			},
+		},
+		TotalCount: 2,
+	}
+	localID := "abc"
+	params := BookingsListRequest{
+		Limit: 0,
+		Page:  0,
+		Path:  "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	paramsDefault := BookingsListRequest{
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/testing",
+	}
+
+	// Expectation
+	mockRepo.On("GetMyBookingsPreviousWithPagination", paramsDefault).Return(myBookingsPrevious, nil)
+
+	// Test
+	myBookingsPreviousResult, _, err := mockService.GetMyBookingsPreviousWithPagination(localID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &myBookingsPrevious, myBookingsPreviousResult)
+	assert.NotNil(t, myBookingsPreviousResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetMyBookingsPreviousWithPaginationFailedLimitExceedMaxLimit(t *testing.T) {
+	// Define input
+	localID := "abc"
+	params := BookingsListRequest{
+		Limit: 101,
+		Page:  0,
+		Path:  "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	myBookingsPreviousResult, _, err := mockService.GetMyBookingsPreviousWithPagination(localID, params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, myBookingsPreviousResult)
+}
+
+func TestService_GetMyBookingsPreviousWithPaginationFailedCalledGetPlacesListWithPagination(t *testing.T) {
+	// Define input and output
+	var myBookingsPrevious List
+
+	localID := "abc"
+	params := BookingsListRequest{
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Expectation
+	mockRepo.On("GetMyBookingsPreviousWithPagination", params).Return(myBookingsPrevious, ErrInternalServerError)
+
+	// Test
+	myBookingsPreviousResult, _, err := mockService.GetMyBookingsPreviousWithPagination(localID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, myBookingsPreviousResult)
+}
