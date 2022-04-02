@@ -14,7 +14,7 @@ import (
 func TestService_CreateInvoiceSuccess(t *testing.T) {
 	_ = godotenv.Load("../../.env")
 	params := CreateInvoiceParams{
-		BookingID: 1,
+		PlaceID: 1,
 		Items: []Item{
 			{
 				Name:  "test item",
@@ -50,7 +50,7 @@ func TestService_CreateInvoiceSuccess(t *testing.T) {
 	assert.Equal(t, params.CustomerName, resp.Customer.GivenNames)
 	assert.Equal(t, params.CustomerPhoneNumber, resp.Customer.MobileNumber)
 	assert.Equal(t, params.Description, resp.Description)
-	assert.Equal(t, strconv.Itoa(params.BookingID), resp.ExternalID)
+	assert.Equal(t, strconv.Itoa(params.PlaceID), resp.ExternalID)
 
 	for i := 0; i < len(resp.Items); i++ {
 		assert.Equal(t, params.Items[i].Name, resp.Items[i].Name)
@@ -67,7 +67,7 @@ func TestService_CreateInvoiceSuccess(t *testing.T) {
 func TestService_CreateInvoiceFailed(t *testing.T) {
 	_ = godotenv.Load("../../.env")
 	params := CreateInvoiceParams{
-		BookingID: 1,
+		PlaceID: 1,
 		Items: []Item{
 			{
 				Name:  "test item",
@@ -137,7 +137,7 @@ func TestService_GetInvoiceSuccess(t *testing.T) {
 	_ = godotenv.Load("../../.env")
 
 	params := CreateInvoiceParams{
-		BookingID: 1,
+		PlaceID: 1,
 		Items: []Item{
 			{
 				Name:  "test item",
@@ -175,7 +175,7 @@ func TestService_GetInvoiceSuccess(t *testing.T) {
 	assert.Equal(t, params.CustomerName, resp.Customer.GivenNames)
 	assert.Equal(t, params.CustomerPhoneNumber, resp.Customer.MobileNumber)
 	assert.Equal(t, params.Description, resp.Description)
-	assert.Equal(t, strconv.Itoa(params.BookingID), resp.ExternalID)
+	assert.Equal(t, strconv.Itoa(params.PlaceID), resp.ExternalID)
 
 	for i := 0; i < len(resp.Items); i++ {
 		assert.Equal(t, params.Items[i].Name, resp.Items[i].Name)

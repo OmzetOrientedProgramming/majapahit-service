@@ -38,6 +38,7 @@ type Repo interface {
 	UpdateBookingStatus(int, int) error
 	GetMyBookingsOngoing(localID string) (*[]Booking, error)
 	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error)
+	InsertXenditInformation(params XenditInformation) (bool, error)
 }
 
 func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, error) {
@@ -70,6 +71,17 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBoo
 	}
 
 	return &listCustomerBooking, nil
+}
+
+func (r repo) InsertXenditInformation(params XenditInformation) (bool, error) {
+	query := "UPDATE bookings SET xendit_id = $1, invoices_url = $2 WHERE id = $3"
+
+	_, err := r.db.Exec(query, params.XenditID, params.InvoicesURL, params.BookingID)
+	if err != nil {
+		return false, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return true, nil
 }
 
 func (r repo) CheckedItem(ids []CheckedItemParams) (*[]CheckedItemParams, bool, error) {
