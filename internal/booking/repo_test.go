@@ -771,6 +771,7 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 			TotalPrice: 20000,
 		},
 	}
+	
 
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
@@ -813,7 +814,8 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
+		WHERE users.firebase_local_id = $1 AND bookings.status <= 2
+		ORDER BY bookings.date asc, bookings.start_time asc
 	`)).
 		WithArgs(localID).
 		WillReturnRows(rows)
@@ -847,7 +849,8 @@ func TestRepo_GetMyBookingsOngoingEmpty(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
+		WHERE users.firebase_local_id = $1 AND bookings.status <= 2
+		ORDER BY bookings.date asc, bookings.start_time asc
 	`)).
 		WithArgs(localID).
 		WillReturnRows(rows)
@@ -878,7 +881,8 @@ func TestRepo_GetMyBookingsOngoingInternalServerError(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
+		WHERE users.firebase_local_id = $1 AND bookings.status <= 2
+		ORDER BY bookings.date asc, bookings.start_time asc
 	`)).
 		WithArgs(localID).
 		WillReturnError(sql.ErrTxDone)
@@ -902,7 +906,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			},
+			}, 
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -962,8 +966,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
@@ -974,7 +978,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
 	`)).
 		WithArgs(localID).
 		WillReturnRows(rows)
@@ -1012,8 +1016,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmpty(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
@@ -1053,8 +1057,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmptyWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
@@ -1063,7 +1067,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmptyWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
 	`)).
 		WillReturnError(sql.ErrNoRows)
 
@@ -1096,8 +1100,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationError(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
@@ -1132,8 +1136,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationErrorWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
@@ -1142,7 +1146,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationErrorWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
 	`)).
 		WillReturnError(sql.ErrConnDone)
 
