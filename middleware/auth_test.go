@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"net/http"
@@ -33,14 +34,24 @@ func (f *FirebaseMockRepository) GetUserDataFromToken(token string) (*firebaseau
 	return args.Get(0).(*firebaseauth.UserDataFromToken), args.Error(1)
 }
 
+type UserMockRepository struct {
+	mock.Mock
+}
+
+func (u *UserMockRepository) GetUserIDByLocalID(localID string) (*user.Model, error) {
+	args := u.Called(localID)
+	return args.Get(0).(*user.Model), args.Error(1)
+}
+
 func TestAuthMiddleware(t *testing.T) {
 	e := echo.New()
 
 	firebaseRepo := new(FirebaseMockRepository)
-	authMock := NewAuthMiddleware(firebaseRepo)
+	userRepo := new(UserMockRepository)
+	authMock := NewAuthMiddleware(firebaseRepo, userRepo)
 
 	e.GET("/", func(c echo.Context) error {
-		data, err := ParseUserData(c, util.StatusCustomer)
+		data, _, err := ParseUserData(c, util.StatusCustomer)
 		if err != nil {
 			return c.JSON(http.StatusForbidden, err)
 		}
@@ -52,7 +63,7 @@ func TestAuthMiddleware(t *testing.T) {
 		Kind: "",
 		Users: []firebaseauth.User{
 			{
-				LocalID: "",
+				LocalID: "1",
 				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
 					{
 						ProviderID:  "phone",
@@ -76,11 +87,23 @@ func TestAuthMiddleware(t *testing.T) {
 		},
 	}
 
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
 	t.Run("success", func(t *testing.T) {
 		expectedRes, _ := json.Marshal(&userData)
 
 		token := "testtoken"
 		firebaseRepo.On("GetUserDataFromToken", token).Return(&userData, nil)
+		userRepo.On("GetUserIDByLocalID", "1").Return(&userModel, nil)
 
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
 		res := httptest.NewRecorder()
@@ -94,7 +117,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 	t.Run("failed forbidden", func(t *testing.T) {
 		e.GET("/", func(c echo.Context) error {
-			data, err := ParseUserData(c, util.StatusBusinessAdmin)
+			data, _, err := ParseUserData(c, util.StatusBusinessAdmin)
 			if err != nil {
 				return c.JSON(http.StatusForbidden, err)
 			}
@@ -134,10 +157,11 @@ func TestAuthMiddlewareUnknown(t *testing.T) {
 	e := echo.New()
 
 	firebaseRepo := new(FirebaseMockRepository)
-	authMock := NewAuthMiddleware(firebaseRepo)
+	userRepo := new(UserMockRepository)
+	authMock := NewAuthMiddleware(firebaseRepo, userRepo)
 
 	e.GET("/", func(c echo.Context) error {
-		data, err := ParseUserData(c, 3)
+		data, _, err := ParseUserData(c, 3)
 		if err != nil {
 			return c.JSON(http.StatusForbidden, err)
 		}
@@ -149,7 +173,7 @@ func TestAuthMiddlewareUnknown(t *testing.T) {
 		Kind: "",
 		Users: []firebaseauth.User{
 			{
-				LocalID: "",
+				LocalID: "1",
 				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
 					{
 						ProviderID:  "password",
@@ -173,9 +197,21 @@ func TestAuthMiddlewareUnknown(t *testing.T) {
 		},
 	}
 
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
 	t.Run("success business admin", func(t *testing.T) {
 		token := "testtoken"
 		firebaseRepo.On("GetUserDataFromToken", token).Return(&userData, nil)
+		userRepo.On("GetUserIDByLocalID", "1").Return(&userModel, nil)
 
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
 		res := httptest.NewRecorder()
@@ -191,11 +227,12 @@ func TestAuthMiddlewareUnknown(t *testing.T) {
 func TestAuthMiddlewareBusinessAdmin(t *testing.T) {
 	e := echo.New()
 
+	userRepo := new(UserMockRepository)
 	firebaseRepo := new(FirebaseMockRepository)
-	authMock := NewAuthMiddleware(firebaseRepo)
+	authMock := NewAuthMiddleware(firebaseRepo, userRepo)
 
 	e.GET("/", func(c echo.Context) error {
-		data, err := ParseUserData(c, util.StatusBusinessAdmin)
+		data, _, err := ParseUserData(c, util.StatusBusinessAdmin)
 		if err != nil {
 			return c.JSON(http.StatusForbidden, err)
 		}
@@ -207,7 +244,7 @@ func TestAuthMiddlewareBusinessAdmin(t *testing.T) {
 		Kind: "",
 		Users: []firebaseauth.User{
 			{
-				LocalID: "",
+				LocalID: "1",
 				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
 					{
 						ProviderID:  "password",
@@ -231,11 +268,23 @@ func TestAuthMiddlewareBusinessAdmin(t *testing.T) {
 		},
 	}
 
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
 	t.Run("success business admin", func(t *testing.T) {
 		expectedRes, _ := json.Marshal(&userData)
 
 		token := "testtoken"
 		firebaseRepo.On("GetUserDataFromToken", token).Return(&userData, nil)
+		userRepo.On("GetUserIDByLocalID", "1").Return(&userModel, nil)
 
 		req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
 		res := httptest.NewRecorder()
@@ -249,7 +298,7 @@ func TestAuthMiddlewareBusinessAdmin(t *testing.T) {
 
 	t.Run("failed forbidden", func(t *testing.T) {
 		e.GET("/", func(c echo.Context) error {
-			data, err := ParseUserData(c, util.StatusCustomer)
+			data, _, err := ParseUserData(c, util.StatusCustomer)
 			if err != nil {
 				return c.JSON(http.StatusForbidden, err)
 			}
@@ -273,10 +322,11 @@ func TestAuthMiddlewareHeaderNotProvided(t *testing.T) {
 	e := echo.New()
 
 	firebaseRepo := new(FirebaseMockRepository)
-	authMock := NewAuthMiddleware(firebaseRepo)
+	userRepo := new(UserMockRepository)
+	authMock := NewAuthMiddleware(firebaseRepo, userRepo)
 
 	e.GET("/", func(c echo.Context) error {
-		data, err := ParseUserData(c, util.StatusCustomer)
+		data, _, err := ParseUserData(c, util.StatusCustomer)
 		if err != nil {
 			return c.JSON(http.StatusForbidden, err)
 		}
@@ -297,10 +347,11 @@ func TestAuthMiddlewareInternalServerError(t *testing.T) {
 	e := echo.New()
 
 	firebaseRepo := new(FirebaseMockRepository)
-	authMock := NewAuthMiddleware(firebaseRepo)
+	userRepo := new(UserMockRepository)
+	authMock := NewAuthMiddleware(firebaseRepo, userRepo)
 
 	e.GET("/", func(c echo.Context) error {
-		data, err := ParseUserData(c, util.StatusCustomer)
+		data, _, err := ParseUserData(c, util.StatusCustomer)
 		if err != nil {
 			return c.JSON(http.StatusForbidden, err)
 		}
@@ -329,10 +380,11 @@ func TestAuthMiddlewareInputValidationError(t *testing.T) {
 	e := echo.New()
 
 	firebaseRepo := new(FirebaseMockRepository)
-	authMock := NewAuthMiddleware(firebaseRepo)
+	userRepo := new(UserMockRepository)
+	authMock := NewAuthMiddleware(firebaseRepo, userRepo)
 
 	e.GET("/", func(c echo.Context) error {
-		data, err := ParseUserData(c, util.StatusCustomer)
+		data, _, err := ParseUserData(c, util.StatusCustomer)
 		if err != nil {
 			return c.JSON(http.StatusForbidden, err)
 		}
@@ -354,5 +406,66 @@ func TestAuthMiddlewareInputValidationError(t *testing.T) {
 
 		e.ServeHTTP(res, req)
 		assert.Equal(t, http.StatusUnauthorized, res.Code)
+	})
+}
+
+func TestAuthMiddleware_ErrorFromGetUserData(t *testing.T) {
+	t.Run("failed internal server error", func(t *testing.T) {
+		e := echo.New()
+
+		firebaseRepo := new(FirebaseMockRepository)
+		userRepo := new(UserMockRepository)
+		authMock := NewAuthMiddleware(firebaseRepo, userRepo)
+
+		e.GET("/", func(c echo.Context) error {
+			data, _, err := ParseUserData(c, util.StatusCustomer)
+			if err != nil {
+				return c.JSON(http.StatusForbidden, err)
+			}
+			return c.JSON(http.StatusOK, data)
+		}, authMock.AuthMiddleware())
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+		var userModel user.Model
+
+		token := "testtoken"
+		firebaseRepo.On("GetUserDataFromToken", token).Return(&userData, nil)
+		userRepo.On("GetUserIDByLocalID", "1").Return(&userModel, errors.Wrap(user.ErrInternalServer, "test error"))
+
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
+		res := httptest.NewRecorder()
+
+		e.ServeHTTP(res, req)
+		firebaseRepo.AssertExpectations(t)
+
+		e.ServeHTTP(res, req)
+		assert.Equal(t, http.StatusInternalServerError, res.Code)
 	})
 }

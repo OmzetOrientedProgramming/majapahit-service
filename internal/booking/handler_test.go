@@ -1,8 +1,16 @@
 package booking
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
+	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,23 +18,1730 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
 type MockService struct {
 	mock.Mock
 }
 
+func (m *MockService) GetAvailableTime(params GetAvailableTimeParams) (*[]AvailableTimeResponse, error) {
+	args := m.Called(params)
+	return args.Get(0).(*[]AvailableTimeResponse), args.Error(1)
+}
+
+func (m *MockService) GetAvailableDate(params GetAvailableDateParams) (*[]AvailableDateResponse, error) {
+	args := m.Called(params)
+	return args.Get(0).(*[]AvailableDateResponse), args.Error(1)
+}
+
+func (m *MockService) CreateBooking(params CreateBookingServiceRequest) (*CreateBookingServiceResponse, error) {
+	args := m.Called(params)
+	return args.Get(0).(*CreateBookingServiceResponse), args.Error(1)
+}
+
+func (m *MockService) GetTimeSlots(placeID int, selectedDate time.Time) (*[]TimeSlot, error) {
+	args := m.Called(placeID, selectedDate)
+	return args.Get(0).(*[]TimeSlot), args.Error(1)
+}
+
 func (m *MockService) GetDetail(bookingID int) (*Detail, error) {
 	args := m.Called(bookingID)
 	bookingDetail := args.Get(0).(*Detail)
 	return bookingDetail, args.Error(1)
+}
+
+func (m *MockService) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
+	args := m.Called(localID)
+	myBookingsOngoing := args.Get(0).(*[]Booking)
+	return myBookingsOngoing, args.Error(1)
+}
+
+func (m *MockService) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error) {
+	args := m.Called(params)
+	myBookingsPrevious := args.Get(0).(*List)
+	pagination := args.Get(1).(util.Pagination)
+	return myBookingsPrevious, &pagination, args.Error(2)
+}
+
+func TestHandler_GetAvailableTime(t *testing.T) {
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	placeID := 1
+	dateString := "2022-03-29"
+	date, _ := time.Parse(util.DateLayout, dateString)
+	checkInString := "08:00:00"
+	checkIn, _ := time.Parse(util.TimeLayout, checkInString)
+	count := 10
+
+	params := GetAvailableTimeParams{
+		PlaceID:      placeID,
+		SelectedDate: date,
+		StartTime:    checkIn,
+		BookedSlot:   count,
+	}
+
+	returnedData := []AvailableTimeResponse{
+		{
+			Time:  "09:00:00",
+			Total: count,
+		},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusOK,
+			Message: "success",
+			Data:    returnedData,
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableTime", params).Return(&returnedData, nil)
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("check_in", checkInString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("error forbidden", func(t *testing.T) {
+		userDataFailed := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableTime", params).Return(&returnedData, nil)
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("check_in", checkInString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userDataFailed)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("input validation error", func(t *testing.T) {
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableTime", params).Return(&returnedData, nil)
+
+		q := make(url.Values)
+		q.Set("count", "testWrong")
+		q.Set("date", "20:20:20")
+		q.Set("check_in", "2020-02-02")
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("test")
+
+		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+}
+
+func TestHandler_GetAvailableTimeInternalServerError(t *testing.T) {
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	placeID := 1
+	dateString := "2022-03-29"
+	date, _ := time.Parse(util.DateLayout, dateString)
+	checkInString := "08:00:00"
+	checkIn, _ := time.Parse(util.TimeLayout, checkInString)
+	count := 10
+
+	params := GetAvailableTimeParams{
+		PlaceID:      placeID,
+		SelectedDate: date,
+		StartTime:    checkIn,
+		BookedSlot:   count,
+	}
+
+	var returnedData []AvailableTimeResponse
+
+	t.Run("internal server error from service", func(t *testing.T) {
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableTime", params).Return(&returnedData, errors.Wrap(ErrInternalServerError, "test error"))
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("check_in", checkInString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("input validation error from service", func(t *testing.T) {
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors: []string{
+				"test error",
+			},
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableTime", params).Return(&returnedData, errors.Wrap(ErrInputValidationError, "test error"))
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("check_in", checkInString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+}
+
+func TestHandler_GetAvailableDate(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		interval := "3"
+		count := 10
+
+		params := GetAvailableDateParams{
+			PlaceID:    placeID,
+			StartDate:  date,
+			Interval:   3,
+			BookedSlot: count,
+		}
+
+		returnedData := []AvailableDateResponse{
+			{
+				Date:   "09:00:00",
+				Status: "available",
+			},
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusOK,
+			Message: "success",
+			Data:    returnedData,
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableDate", params).Return(&returnedData, nil)
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("interval", interval)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("internal server error from service", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		interval := "3"
+		count := 10
+
+		params := GetAvailableDateParams{
+			PlaceID:    placeID,
+			StartDate:  date,
+			Interval:   3,
+			BookedSlot: count,
+		}
+
+		returnedData := []AvailableDateResponse{
+			{
+				Date:   "09:00:00",
+				Status: "available",
+			},
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableDate", params).Return(&returnedData, errors.Wrap(ErrInternalServerError, "test error"))
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("interval", interval)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("error forbidden", func(t *testing.T) {
+		e := echo.New()
+		userDataFailed := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		interval := "3"
+		count := 10
+
+		params := GetAvailableDateParams{
+			PlaceID:    placeID,
+			StartDate:  date,
+			Interval:   3,
+			BookedSlot: count,
+		}
+
+		returnedData := []AvailableDateResponse{
+			{
+				Date:   "09:00:00",
+				Status: "available",
+			},
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableDate", params).Return(&returnedData, nil)
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("interval", interval)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userDataFailed)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("input validation error", func(t *testing.T) {
+		e := echo.New()
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		count := 10
+
+		params := GetAvailableDateParams{
+			PlaceID:    placeID,
+			StartDate:  date,
+			Interval:   3,
+			BookedSlot: count,
+		}
+
+		returnedData := []AvailableDateResponse{
+			{
+				Date:   "09:00:00",
+				Status: "available",
+			},
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableDate", params).Return(&returnedData, nil)
+
+		q := make(url.Values)
+		q.Set("count", "testWrong")
+		q.Set("date", "20:20:20")
+		q.Set("interval", "2020-02-02")
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("test")
+
+		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("input validation error from service", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		interval := "3"
+		count := 10
+
+		params := GetAvailableDateParams{
+			PlaceID:    placeID,
+			StartDate:  date,
+			Interval:   3,
+			BookedSlot: count,
+		}
+
+		returnedData := []AvailableDateResponse{
+			{
+				Date:   "09:00:00",
+				Status: "available",
+			},
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors: []string{
+				"test error",
+			},
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetAvailableDate", params).Return(&returnedData, errors.Wrap(ErrInputValidationError, "test error"))
+
+		q := make(url.Values)
+		q.Set("count", "10")
+		q.Set("date", dateString)
+		q.Set("interval", interval)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+}
+
+func TestHandler_CreateBooking(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		startTimeString := "08:00:00"
+		startTime, _ := time.Parse(util.TimeLayout, startTimeString)
+		endTimeString := "09:00:00"
+		endTime, _ := time.Parse(util.TimeLayout, endTimeString)
+		count := 10
+
+		params := CreateBookingRequestBody{
+			Items: []Item{
+				{
+					ID:    1,
+					Name:  "test item",
+					Price: 10000,
+					Qty:   1,
+				},
+			},
+			Date:      dateString,
+			StartTime: startTimeString,
+			EndTime:   endTimeString,
+			Count:     count,
+		}
+
+		payload, _ := json.Marshal(params)
+
+		serviceRequest := CreateBookingServiceRequest{
+			Items:               params.Items,
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             endTime,
+			Count:               params.Count,
+			PlaceID:             placeID,
+			UserID:              userFromDatabase.ID,
+			CustomerName:        userFromDatabase.Name,
+			CustomerPhoneNumber: userFromDatabase.PhoneNumber,
+		}
+
+		returnedData := CreateBookingServiceResponse{
+			"10",
+			1,
+			"test.com",
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusCreated,
+			Message: "success",
+			Data:    returnedData,
+		})
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("CreateBooking", serviceRequest).Return(&returnedData, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("forbidden", func(t *testing.T) {
+		e := echo.New()
+
+		userDataFailed := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		startTimeString := "08:00:00"
+		startTime, _ := time.Parse(util.TimeLayout, startTimeString)
+		endTimeString := "09:00:00"
+		endTime, _ := time.Parse(util.TimeLayout, endTimeString)
+		count := 10
+
+		params := CreateBookingRequestBody{
+			Items: []Item{
+				{
+					ID:    1,
+					Name:  "test item",
+					Price: 10000,
+					Qty:   1,
+				},
+			},
+			Date:      dateString,
+			StartTime: startTimeString,
+			EndTime:   endTimeString,
+			Count:     count,
+		}
+
+		payload, _ := json.Marshal(params)
+
+		serviceRequest := CreateBookingServiceRequest{
+			Items:               params.Items,
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             endTime,
+			Count:               params.Count,
+			PlaceID:             placeID,
+			UserID:              userFromDatabase.ID,
+			CustomerName:        userFromDatabase.Name,
+			CustomerPhoneNumber: userFromDatabase.PhoneNumber,
+		}
+
+		returnedData := CreateBookingServiceResponse{
+			"10",
+			1,
+			"test.com",
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("CreateBooking", serviceRequest).Return(&returnedData, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userDataFailed)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("failed binding", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		startTimeString := "08:00:00"
+		startTime, _ := time.Parse(util.TimeLayout, startTimeString)
+		endTimeString := "09:00:00"
+		endTime, _ := time.Parse(util.TimeLayout, endTimeString)
+		count := 10
+
+		params := CreateBookingRequestBody{
+			Items: []Item{
+				{
+					ID:    1,
+					Name:  "test item",
+					Price: 10000,
+					Qty:   1,
+				},
+			},
+			Date:      dateString,
+			StartTime: startTimeString,
+			EndTime:   endTimeString,
+			Count:     count,
+		}
+
+		payload, _ := json.Marshal(map[string]interface{}{
+			"start_time": 1,
+		})
+
+		serviceRequest := CreateBookingServiceRequest{
+			Items:               params.Items,
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             endTime,
+			Count:               params.Count,
+			PlaceID:             placeID,
+			UserID:              userFromDatabase.ID,
+			CustomerName:        userFromDatabase.Name,
+			CustomerPhoneNumber: userFromDatabase.PhoneNumber,
+		}
+
+		returnedData := CreateBookingServiceResponse{
+			"10",
+			1,
+			"test.com",
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("CreateBooking", serviceRequest).Return(&returnedData, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
+
+	t.Run("input validation error from request", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		placeID := 1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		startTimeString := "08:00:00"
+		startTime, _ := time.Parse(util.TimeLayout, startTimeString)
+		endTimeString := "09:00:00"
+		endTime, _ := time.Parse(util.TimeLayout, endTimeString)
+		count := 10
+
+		params := CreateBookingRequestBody{
+			Items: []Item{
+				{
+					ID:    1,
+					Name:  "test item",
+					Price: 10000,
+					Qty:   1,
+				},
+			},
+			Date:      "2022",
+			StartTime: "08",
+			EndTime:   "09",
+			Count:     count,
+		}
+
+		payload, _ := json.Marshal(params)
+
+		serviceRequest := CreateBookingServiceRequest{
+			Items:               params.Items,
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             endTime,
+			Count:               params.Count,
+			PlaceID:             placeID,
+			UserID:              userFromDatabase.ID,
+			CustomerName:        userFromDatabase.Name,
+			CustomerPhoneNumber: userFromDatabase.PhoneNumber,
+		}
+
+		returnedData := CreateBookingServiceResponse{
+			"10",
+			1,
+			"test.com",
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("CreateBooking", serviceRequest).Return(&returnedData, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("testFailed")
+
+		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("place id < 0", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		placeID := -1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		startTimeString := "08:00:00"
+		startTime, _ := time.Parse(util.TimeLayout, startTimeString)
+		endTimeString := "09:00:00"
+		endTime, _ := time.Parse(util.TimeLayout, endTimeString)
+		count := 10
+
+		params := CreateBookingRequestBody{
+			Items: []Item{
+				{
+					ID:    1,
+					Name:  "test item",
+					Price: 10000,
+					Qty:   1,
+				},
+			},
+			Date:      dateString,
+			StartTime: startTimeString,
+			EndTime:   endTimeString,
+			Count:     count,
+		}
+
+		payload, _ := json.Marshal(params)
+
+		serviceRequest := CreateBookingServiceRequest{
+			Items:               params.Items,
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             endTime,
+			Count:               params.Count,
+			PlaceID:             placeID,
+			UserID:              userFromDatabase.ID,
+			CustomerName:        userFromDatabase.Name,
+			CustomerPhoneNumber: userFromDatabase.PhoneNumber,
+		}
+
+		returnedData := CreateBookingServiceResponse{
+			"10",
+			1,
+			"test.com",
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("CreateBooking", serviceRequest).Return(&returnedData, errors.Wrap(ErrInputValidationError, "test error"))
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("-1")
+
+		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("internal server error from service", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		placeID := -1
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		startTimeString := "08:00:00"
+		startTime, _ := time.Parse(util.TimeLayout, startTimeString)
+		endTimeString := "09:00:00"
+		endTime, _ := time.Parse(util.TimeLayout, endTimeString)
+		count := 10
+
+		params := CreateBookingRequestBody{
+			Items: []Item{
+				{
+					ID:    1,
+					Name:  "test item",
+					Price: 10000,
+					Qty:   1,
+				},
+			},
+			Date:      dateString,
+			StartTime: startTimeString,
+			EndTime:   endTimeString,
+			Count:     count,
+		}
+
+		payload, _ := json.Marshal(params)
+
+		serviceRequest := CreateBookingServiceRequest{
+			Items:               params.Items,
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             endTime,
+			Count:               params.Count,
+			PlaceID:             placeID,
+			UserID:              userFromDatabase.ID,
+			CustomerName:        userFromDatabase.Name,
+			CustomerPhoneNumber: userFromDatabase.PhoneNumber,
+		}
+
+		returnedData := CreateBookingServiceResponse{
+			"10",
+			1,
+			"test.com",
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("CreateBooking", serviceRequest).Return(&returnedData, errors.Wrap(ErrInternalServerError, "test error"))
+
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("-1")
+
+		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
+}
+
+func TestHandler_GetTimeSlot(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		eightTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		nineTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+		timeSlots := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: eightTime,
+				EndTime:   nineTime,
+				Day:       0,
+			},
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetTimeSlots", 1, date).Return(&timeSlots, nil)
+
+		q := make(url.Values)
+		q.Set("date", dateString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("failed forbidden", func(t *testing.T) {
+		e := echo.New()
+
+		userDataFailed := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		eightTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		nineTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+		timeSlots := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: eightTime,
+				EndTime:   nineTime,
+				Day:       0,
+			},
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetTimeSlots", 1, date).Return(&timeSlots, nil)
+
+		q := make(url.Values)
+		q.Set("date", dateString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userDataFailed)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+	})
+
+	t.Run("input validation error from request", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		eightTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		nineTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+		timeSlots := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: eightTime,
+				EndTime:   nineTime,
+				Day:       0,
+			},
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetTimeSlots", 1, date).Return(&timeSlots, nil)
+
+		q := make(url.Values)
+		q.Set("date", "08")
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("test")
+
+		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("input validation error from service", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		eightTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		nineTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+		timeSlots := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: eightTime,
+				EndTime:   nineTime,
+				Day:       0,
+			},
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetTimeSlots", 1, date).Return(&timeSlots, errors.Wrap(ErrInputValidationError, "test error"))
+
+		q := make(url.Values)
+		q.Set("date", dateString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("internal server error from service", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userFromDatabase := user.Model{
+			ID:              1,
+			PhoneNumber:     "0812",
+			Name:            "rafi",
+			Status:          util.StatusCustomer,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		dateString := "2022-03-29"
+		date, _ := time.Parse(util.DateLayout, dateString)
+		eightTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		nineTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+		timeSlots := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: eightTime,
+				EndTime:   nineTime,
+				Day:       0,
+			},
+		}
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("GetTimeSlots", 1, date).Return(&timeSlots, errors.Wrap(ErrInternalServerError, "test error"))
+
+		q := make(url.Values)
+		q.Set("date", dateString)
+		req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromFirebase", &userData)
+		ctx.Set("userFromDatabase", &userFromDatabase)
+		ctx.SetPath("/booking/:placeID")
+		ctx.SetParamNames("placeID")
+		ctx.SetParamValues("1")
+
+		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
 }
 
 func TestHandler_GetDetailSuccess(t *testing.T) {
@@ -189,13 +1904,6 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
-
-func (m *MockService) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
-	args := m.Called(localID)
-	myBookingsOngoing := args.Get(0).(*[]Booking)
-	return myBookingsOngoing, args.Error(1)
-}
-
 func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 	userData := firebaseauth.UserDataFromToken{
 		Kind: "",
@@ -230,7 +1938,7 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.Set("userData", &userData)
+	c.Set("userFromFirebase", &userData)
 	c.SetPath("/api/v1/booking/ongoing")
 
 	// Setting up service
@@ -252,7 +1960,7 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    "10:00",
 			Status:     0,
 			TotalPrice: 10000,
-		}, 
+		},
 		{
 			ID:         2,
 			PlaceID:    3,
@@ -318,7 +2026,7 @@ func TestService_GetMyBookingsOngoingWithEmptyLocalID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.Set("userData", &userData)
+	c.Set("userFromFirebase", &userData)
 	c.SetPath("/api/v1/booking/ongoing")
 
 	// Setup service
@@ -345,13 +2053,6 @@ func TestService_GetMyBookingsOngoingWithEmptyLocalID(t *testing.T) {
 	assert.NoError(t, h.GetMyBookingsOngoing(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
-}
-
-func (m *MockService) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error) {
-	args := m.Called(params)
-	myBookingsPrevious := args.Get(0).(*List)
-	pagination := args.Get(1).(util.Pagination)
-	return myBookingsPrevious, &pagination, args.Error(2)
 }
 
 func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
@@ -393,7 +2094,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.Set("userData", &userData)
+	c.Set("userFromFirebase", &userData)
 
 	// Setup service
 	mockService := new(MockService)
@@ -421,7 +2122,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			}, 
+			},
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -451,7 +2152,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"bookings":     myBookingsPrevious.Bookings,
+			"bookings":   myBookingsPrevious.Bookings,
 			"pagination": pagination,
 		},
 	}
@@ -496,7 +2197,6 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithValidationErrorLimitPage
 			},
 		},
 	}
-	
 	// Setup echo
 	e := echo.New()
 	q := make(url.Values)
@@ -505,7 +2205,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithValidationErrorLimitPage
 	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.Set("userData", &userData)
+	c.Set("userFromFirebase", &userData)
 
 	// Setup service
 	mockService := new(MockService)
@@ -568,7 +2268,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.Set("userData", &userData)
+	c.Set("userFromFirebase", &userData)
 
 	// Setup service
 	mockService := new(MockService)
@@ -596,7 +2296,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			}, 
+			},
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -626,7 +2326,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"bookings":     myBookingsPrevious.Bookings,
+			"bookings":   myBookingsPrevious.Bookings,
 			"pagination": pagination,
 		},
 	}

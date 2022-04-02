@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"net/http"
@@ -18,11 +19,12 @@ const (
 // AuthMiddleware struct for middleware auth
 type AuthMiddleware struct {
 	firebaseAuth firebaseauth.Repo
+	userRepo     user.Repo
 }
 
 // NewAuthMiddleware for creating AuthMiddleware instance
-func NewAuthMiddleware(firebaseAuth firebaseauth.Repo) AuthMiddleware {
-	return AuthMiddleware{firebaseAuth: firebaseAuth}
+func NewAuthMiddleware(firebaseAuth firebaseauth.Repo, userRepo user.Repo) AuthMiddleware {
+	return AuthMiddleware{firebaseAuth: firebaseAuth, userRepo: userRepo}
 }
 
 // AuthMiddleware function for handling auth middleware
@@ -53,7 +55,7 @@ func (a AuthMiddleware) AuthMiddleware() echo.MiddlewareFunc {
 						})
 					}
 
-					userData, err := a.firebaseAuth.GetUserDataFromToken(authHeader[1])
+					userFromFirebase, err := a.firebaseAuth.GetUserDataFromToken(authHeader[1])
 					if err != nil {
 						if errors.Cause(err) == firebaseauth.ErrInputValidation {
 							err, _ := util.ErrorUnwrap(err)
@@ -70,7 +72,17 @@ func (a AuthMiddleware) AuthMiddleware() echo.MiddlewareFunc {
 						})
 					}
 
-					ctx.Set("userData", userData)
+					userFromDatabase, err := a.userRepo.GetUserIDByLocalID(userFromFirebase.Users[0].LocalID)
+					if err != nil && errors.Cause(err) != user.ErrNotFound {
+						logrus.Error("[failed to get data from user repo] ", err.Error())
+						return ctx.JSON(http.StatusInternalServerError, util.APIResponse{
+							Status:  http.StatusInternalServerError,
+							Message: "internal server error",
+						})
+					}
+
+					ctx.Set("userFromFirebase", userFromFirebase)
+					ctx.Set("userFromDatabase", userFromDatabase)
 					return next(ctx)
 				}
 			}
@@ -85,23 +97,29 @@ func (a AuthMiddleware) AuthMiddleware() echo.MiddlewareFunc {
 	}
 }
 
-// ParseUserData is used to get the user data from middleware context
-func ParseUserData(ctx echo.Context, status int) (*firebaseauth.UserDataFromToken, error) {
-	userData := (ctx.Get("userData")).(*firebaseauth.UserDataFromToken)
-	switch status {
-	case util.StatusCustomer:
-		if userData.Users[0].ProviderUserInfo[0].ProviderID == "phone" {
-			return userData, nil
-		}
+// ParseUserData is used to get the user data from firebase from middleware context
+func ParseUserData(ctx echo.Context, status int) (*firebaseauth.UserDataFromToken, *user.Model, error) {
+	userFromFirebase := (ctx.Get("userFromFirebase")).(*firebaseauth.UserDataFromToken)
 
-		return nil, errors.Wrap(ErrForbidden, "user is not customer")
-	case util.StatusBusinessAdmin:
-		if userData.Users[0].ProviderUserInfo[0].ProviderID == "password" {
-			return userData, nil
-		}
-
-		return nil, errors.Wrap(ErrForbidden, "user is not business admin")
+	var userFromDatabase *user.Model
+	if ctx.Get("userFromDatabase") != nil {
+		userFromDatabase = (ctx.Get("userFromDatabase")).(*user.Model)
 	}
 
-	return nil, errors.Wrap(ErrInputValidationError, "status must be 0 or 1")
+	switch status {
+	case util.StatusCustomer:
+		if userFromFirebase.Users[0].ProviderUserInfo[0].ProviderID == "phone" {
+			return userFromFirebase, userFromDatabase, nil
+		}
+
+		return nil, nil, errors.Wrap(ErrForbidden, "user is not customer")
+	case util.StatusBusinessAdmin:
+		if userFromFirebase.Users[0].ProviderUserInfo[0].ProviderID == "password" {
+			return userFromFirebase, userFromDatabase, nil
+		}
+
+		return nil, nil, errors.Wrap(ErrForbidden, "user is not business admin")
+	}
+
+	return nil, nil, errors.Wrap(ErrInputValidationError, "status must be 0 or 1")
 }
