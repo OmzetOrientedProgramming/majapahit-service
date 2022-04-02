@@ -11,8 +11,20 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
+// NewRepo used to initialize repo
+func NewRepo(db *sqlx.DB) Repo {
+	return &repo{
+		db: db,
+	}
+}
+
+type repo struct {
+	db *sqlx.DB
+}
+
 // Repo interface for defining function that must have by repo
 type Repo interface {
+	GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, error)
 	GetBookingData(params GetBookingDataParams) (*[]DataForCheckAvailableSchedule, error)
 	GetTimeSlotsData(placeID int, selectedDate ...time.Time) (*[]TimeSlot, error)
 	GetPlaceCapacity(placeID int) (*PlaceOpenHourAndCapacity, error)
@@ -29,15 +41,36 @@ type Repo interface {
 	InsertXenditInformation(params XenditInformation) (bool, error)
 }
 
-type repo struct {
-	db *sqlx.DB
-}
+func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, error) {
+	var listCustomerBooking ListBooking
+	listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
+	listCustomerBooking.TotalCount = 0
 
-// NewRepo used to initialize repo
-func NewRepo(db *sqlx.DB) Repo {
-	return &repo{
-		db: db,
+	query := "SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 ORDER BY b.date DESC LIMIT $3 OFFSET $4"
+	err := r.db.Select(&listCustomerBooking.CustomerBookings, query, params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
+			listCustomerBooking.TotalCount = 0
+			return &listCustomerBooking, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
+
+	query = "SELECT COUNT(id) FROM bookings WHERE place_id = $1"
+	err = r.db.Get(&listCustomerBooking.TotalCount, query, params.PlaceID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
+			listCustomerBooking.TotalCount = 0
+			return &listCustomerBooking, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &listCustomerBooking, nil
 }
 
 func (r repo) InsertXenditInformation(params XenditInformation) (bool, error) {
@@ -266,7 +299,6 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-	
 
 	return &bookingList, nil
 }

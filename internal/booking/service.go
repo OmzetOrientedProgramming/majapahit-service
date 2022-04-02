@@ -13,6 +13,7 @@ import (
 
 // Service interface for define function in service
 type Service interface {
+	GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, *util.Pagination, error)
 	GetAvailableTime(params GetAvailableTimeParams) (*[]AvailableTimeResponse, error)
 	GetAvailableDate(params GetAvailableDateParams) (*[]AvailableDateResponse, error)
 	CreateBooking(params CreateBookingServiceRequest) (*CreateBookingServiceResponse, error)
@@ -34,6 +35,42 @@ func NewService(repo Repo, xendit xendit.Service) Service {
 		repo:   repo,
 		xendit: xendit,
 	}
+}
+
+func (s service) GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, *util.Pagination, error) {
+	var errorList []string
+
+	if params.State < 0 || params.State > 4 {
+		params.State = 0
+	}
+
+	if params.Page == 0 {
+		params.Page = util.DefaultPage
+	}
+
+	if params.Limit == 0 {
+		params.Limit = util.DefaultLimit
+	}
+
+	if params.Limit > util.MaxLimit {
+		errorList = append(errorList, "limit should be 1 - 100")
+	}
+
+	if params.Path == "" {
+		errorList = append(errorList, "path is required for pagination")
+	}
+
+	if len(errorList) > 0 {
+		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	listCustomerBooking, err := s.repo.GetListCustomerBookingWithPagination(params)
+	if err != nil {
+		return nil, nil, err
+	}
+	pagination := util.GeneratePagination(listCustomerBooking.TotalCount, params.Limit, params.Page, params.Path)
+
+	return listCustomerBooking, &pagination, err
 }
 
 func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBookingServiceResponse, error) {

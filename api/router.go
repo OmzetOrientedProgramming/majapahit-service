@@ -62,7 +62,8 @@ func (r *Routes) Init() {
 		businessAdminRoutes := v1.Group("/business-admin")
 		{
 			// Booking
-			bookingRoutes := businessAdminRoutes.Group("/booking")
+			bookingRoutes := businessAdminRoutes.Group("/:placeID/booking")
+			bookingRoutes.GET("", r.bookingHandler.GetListCustomerBookingWithPagination)
 			bookingRoutes.GET("/:bookingID", r.bookingHandler.GetDetail)
 			bookingRoutes.PATCH("/:bookingID/confirmation", r.bookingHandler.UpdateBookingStatus)
 		}

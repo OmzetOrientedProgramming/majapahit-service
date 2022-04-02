@@ -1,8 +1,9 @@
 package util
 
 import (
-	"github.com/xendit/xendit-go"
 	"regexp"
+
+	"github.com/xendit/xendit-go"
 )
 
 const (
