@@ -3,14 +3,15 @@ package booking
 import (
 	"database/sql"
 	"database/sql/driver"
+	"regexp"
+	"testing"
+	"time"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
-	"regexp"
-	"testing"
-	"time"
 )
 
 func TestRepo_GetBookingData(t *testing.T) {
@@ -698,6 +699,52 @@ func TestRepo_GetTicketPriceWrapperInternalServerError(t *testing.T) {
 	assert.Nil(t, ticketPriceWrapperRetrieved)
 }
 
+func TestRepo_UpdateBookingStatusSuccess(t *testing.T) {
+	bookingID := 1
+	newStatus := 2
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE bookings SET status = $2 WHERE id= $1")).
+		WithArgs(bookingID, newStatus).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = repoMock.UpdateBookingStatus(bookingID, newStatus)
+	assert.Nil(t, err)
+}
+
+func TestRepo_UpdateBookingStatusInternalServerError(t *testing.T) {
+	bookingID := 1
+	newStatus := 2
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE bookings SET status = $2 WHERE id= $1")).
+		WithArgs(bookingID, newStatus).
+		WillReturnError(sql.ErrTxDone)
+
+	err = repoMock.UpdateBookingStatus(bookingID, newStatus)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
 func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 	localID := "abc"
 	myBookingsOngoingExpected := []Booking{
@@ -735,6 +782,7 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
+
 	rows := mock.
 		NewRows([]string{"id", "place_id", "place_name", "place_image", "date", "start_time", "end_time", "status", "total_price"}).
 		AddRow(

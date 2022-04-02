@@ -64,6 +64,7 @@ func (r *Routes) Init() {
 			// Booking
 			bookingRoutes := businessAdminRoutes.Group("/booking")
 			bookingRoutes.GET("/:bookingID", r.bookingHandler.GetDetail)
+			bookingRoutes.PATCH("/:bookingID/confirmation", r.bookingHandler.UpdateBookingStatus)
 		}
 
 		// Auth module

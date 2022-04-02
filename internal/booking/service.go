@@ -18,6 +18,7 @@ type Service interface {
 	CreateBooking(params CreateBookingServiceRequest) (*CreateBookingServiceResponse, error)
 	GetTimeSlots(placeID int, selectedDate time.Time) (*[]TimeSlot, error)
 	GetDetail(bookingID int) (*Detail, error)
+	UpdateBookingStatus(bookingID int, newStatus int) error
 	GetMyBookingsOngoing(localID string) (*[]Booking, error)
 	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error)
 }
@@ -443,7 +444,7 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 		return nil, err
 	}
 
-	totalPriceTicket := ticketPriceWrapper.Price * float64(bookingDetail.Capacity)
+	totalPriceTicket := ticketPriceWrapper.Price
 	totalPrice := totalPriceTicket + bookingDetail.TotalPriceItem
 
 	bookingDetail.TotalPriceTicket = totalPriceTicket
@@ -455,6 +456,29 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 	}
 
 	return bookingDetail, nil
+}
+
+func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
+	errorList := []string{}
+
+	if bookingID <= 0 {
+		errorList = append(errorList, "bookingID must be above 0")
+	}
+
+	if newStatus < 0 {
+		errorMessage := fmt.Sprintf("there are no status: %d", newStatus)
+		errorList = append(errorList, errorMessage)
+	}
+
+	if len(errorList) > 0 {
+		return errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	err := s.repo.UpdateBookingStatus(bookingID, newStatus)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *service) GetMyBookingsOngoing(localID string) (*[]Booking, error) {

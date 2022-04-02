@@ -23,6 +23,7 @@ type Repo interface {
 	GetDetail(int) (*Detail, error)
 	GetItemWrapper(int) (*ItemsWrapper, error)
 	GetTicketPriceWrapper(int) (*TicketPriceWrapper, error)
+	UpdateBookingStatus(int, int) error
 	GetMyBookingsOngoing(localID string) (*[]Booking, error)
 	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error)
 }
@@ -222,6 +223,15 @@ func (r *repo) GetTicketPriceWrapper(bookingID int) (*TicketPriceWrapper, error)
 	}
 
 	return &ticketPrice, nil
+}
+
+func (r *repo) UpdateBookingStatus(bookingID int, newStatus int) error {
+	query := "UPDATE bookings SET status = $2 WHERE id= $1"
+	_, err := r.db.Exec(query, bookingID, newStatus)
+	if err != nil {
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+	return nil
 }
 
 func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {

@@ -1,14 +1,15 @@
 package booking
 
 import (
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 // Handler for defining handler struct
@@ -383,6 +384,58 @@ func (h *Handler) GetDetail(c echo.Context) error {
 	})
 }
 
+// UpdateBookingStatus will update booking status
+func (h *Handler) UpdateBookingStatus(c echo.Context) error {
+	errorList := []string{}
+
+	bookingIDString := c.Param("bookingID")
+	bookingID, err := strconv.Atoi(bookingIDString)
+	if err != nil {
+		errorList = append(errorList, "bookingID must be number")
+	}
+
+	if len(errorList) != 0 {
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
+	}
+
+	var req UpdateBookingStatusRequest
+	if err = c.Bind(&req); err != nil {
+		logrus.Error("[error while binding update booking status request]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "cannot process request",
+		})
+	}
+
+	err = h.service.UpdateBookingStatus(bookingID, req.Status)
+
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
+
+		logrus.Error("[error while accessing booking service]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "Success update status",
+	})
+}
+
 // GetMyBookingsOngoing will retrieve information related to a customer booking history
 func (h *Handler) GetMyBookingsOngoing(c echo.Context) error {
 	errorList := []string{}
@@ -462,6 +515,7 @@ func (h *Handler) GetMyBookingsPreviousWithPagination(c echo.Context) error {
 	params.Page = page
 
 	myBookingsOngoing, pagination, err := h.service.GetMyBookingsPreviousWithPagination(localID, params)
+
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
 			errList, errMessage := util.ErrorUnwrap(err)

@@ -94,6 +94,11 @@ func (x *MockXenditService) GetDisbursement(ID string) (*xendit2.Disbursement, e
 	return args.Get(0).(*xendit2.Disbursement), args.Error(1)
 }
 
+func (m *MockRepository) UpdateBookingStatus(bookingID int, newStatus int) error {
+	args := m.Called(bookingID, newStatus)
+	return args.Error(0)
+}
+
 func TestService_GetDetailSuccess(t *testing.T) {
 	bookingID := 1
 	createdAtRow := time.Date(2021, time.Month(10), 26, 13, 0, 0, 0, time.UTC).Format(time.RFC3339)
@@ -140,7 +145,7 @@ func TestService_GetDetailSuccess(t *testing.T) {
 	bookingDetailResult, err := mockService.GetDetail(bookingID)
 	mockRepo.AssertExpectations(t)
 
-	totalTicketPrice := ticketPriceWrapper.Price * float64(bookingDetail.Capacity)
+	totalTicketPrice := ticketPriceWrapper.Price
 	totalPrice := totalTicketPrice + bookingDetail.TotalPriceItem
 
 	bookingDetail.TotalPriceTicket = totalTicketPrice
@@ -233,6 +238,70 @@ func TestService_GetDetailWrongInput(t *testing.T) {
 
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	assert.Nil(t, bookingDetail)
+}
+
+func TestService_UpdateBookingStatusSuccess(t *testing.T) {
+	bookingID := 1
+	newStatus := 2
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+	mockRepo.On("UpdateBookingStatus", bookingID, newStatus).Return(nil)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Nil(t, err)
+}
+
+func TestService_UpdateBookingStatusWithBookingIDBelowOne(t *testing.T) {
+	bookingID := 0
+	newStatus := 1
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
+
+func TestService_UpdateBookingStatusWithNewStatusBelowZero(t *testing.T) {
+	bookingID := 1
+	newStatus := -1
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
+
+func TestService_UpdateBookingStatusFailedCalledUpdateBookingStatus(t *testing.T) {
+	bookingID := 1
+	newStatus := 2
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	mockRepo.On("UpdateBookingStatus", bookingID, newStatus).Return(ErrInternalServerError)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+
 }
 
 func (m *MockRepository) GetMyBookingsOngoing(localID string) (*[]Booking, error) {

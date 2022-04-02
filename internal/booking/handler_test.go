@@ -4,13 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
-	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,6 +11,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
+	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
 type MockService struct {
@@ -50,6 +51,10 @@ func (m *MockService) GetDetail(bookingID int) (*Detail, error) {
 	return bookingDetail, args.Error(1)
 }
 
+func (m *MockService) UpdateBookingStatus(bookingID int, newStatus int) error {
+	args := m.Called(bookingID, newStatus)
+	return args.Error(0)
+}
 func (m *MockService) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 	args := m.Called(localID)
 	myBookingsOngoing := args.Get(0).(*[]Booking)
@@ -1766,9 +1771,9 @@ func TestHandler_GetDetailSuccess(t *testing.T) {
 		EndTime:          "20:00",
 		Capacity:         10,
 		Status:           1,
-		TotalPrice:       500000.0,
+		TotalPrice:       415000.0,
 		TotalPriceItem:   400000.0,
-		TotalPriceTicket: 100000.0,
+		TotalPriceTicket: 15000.0,
 		CreatedAt:        createdAtRow,
 		Items: []ItemDetail{
 			{
@@ -1887,7 +1892,6 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 	mockService := new(MockService)
 	h := NewHandler(mockService)
 
-	// Expectation
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusBadRequest,
 		Message: "input validation error",
@@ -1901,6 +1905,202 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 	// Tes
 	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_UpdateBookingStatusSuccess(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": 2,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("1")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	bookingID := 1
+	newStatus := 2
+
+	// Expectation
+	mockService.On("UpdateBookingStatus", bookingID, newStatus).Return(nil)
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "Success update status",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	if assert.NoError(t, h.UpdateBookingStatus(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_UpdateBookingStatusWithBookingIDString(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": 2,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("satu")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"bookingID must be number",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.UpdateBookingStatus(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_UpdateBookingStatusBindingError(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": "halo halo bandung",
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("1")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "cannot process request",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.UpdateBookingStatus(c))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_UpdateBookingStatusWithBookingIDBelowOne(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": 2,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("0")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	bookingID := 0
+	newStatus := 2
+
+	// Expectation
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"bookingID must be above 0"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+
+	mockService.On("UpdateBookingStatus", bookingID, newStatus).Return(errorFromService)
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.UpdateBookingStatus(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+
+}
+
+func TestHandler_UpdateBookingStatusWithInternalServerError(t *testing.T) {
+	// Setting up echo
+	e := echo.New()
+
+	payload, _ := json.Marshal(map[string]interface{}{
+		"status": 2,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/booking/:bookingID/confirmation")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("10")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+	// Define input and output
+	bookingID := 10
+	newStatus := 2
+
+	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("UpdateBookingStatus", bookingID, newStatus).Return(errorFromService)
+
+	// Tes
+	assert.NoError(t, h.UpdateBookingStatus(c))
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
@@ -1991,7 +2191,6 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
 }
-
 func TestService_GetMyBookingsOngoingWithEmptyLocalID(t *testing.T) {
 	userData := firebaseauth.UserDataFromToken{
 		Kind: "",
