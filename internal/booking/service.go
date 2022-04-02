@@ -444,7 +444,7 @@ func (s *service) GetDetail(bookingID int) (*Detail, error) {
 		return nil, err
 	}
 
-	totalPriceTicket := ticketPriceWrapper.Price * float64(bookingDetail.Capacity)
+	totalPriceTicket := ticketPriceWrapper.Price
 	totalPrice := totalPriceTicket + bookingDetail.TotalPriceItem
 
 	bookingDetail.TotalPriceTicket = totalPriceTicket

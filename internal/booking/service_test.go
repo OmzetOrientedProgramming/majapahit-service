@@ -145,7 +145,7 @@ func TestService_GetDetailSuccess(t *testing.T) {
 	bookingDetailResult, err := mockService.GetDetail(bookingID)
 	mockRepo.AssertExpectations(t)
 
-	totalTicketPrice := ticketPriceWrapper.Price * float64(bookingDetail.Capacity)
+	totalTicketPrice := ticketPriceWrapper.Price
 	totalPrice := totalTicketPrice + bookingDetail.TotalPriceItem
 
 	bookingDetail.TotalPriceTicket = totalTicketPrice

@@ -1771,9 +1771,9 @@ func TestHandler_GetDetailSuccess(t *testing.T) {
 		EndTime:          "20:00",
 		Capacity:         10,
 		Status:           1,
-		TotalPrice:       500000.0,
+		TotalPrice:       415000.0,
 		TotalPriceItem:   400000.0,
-		TotalPriceTicket: 100000.0,
+		TotalPriceTicket: 15000.0,
 		CreatedAt:        createdAtRow,
 		Items: []ItemDetail{
 			{
