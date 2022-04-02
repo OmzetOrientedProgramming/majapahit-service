@@ -134,7 +134,7 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 
 		// create xendit invoices
 		invoiceParams := xendit.CreateInvoiceParams{
-			BookingID:           bookingID.ID,
+			PlaceID:             params.PlaceID,
 			Items:               xenditItems,
 			Description:         fmt.Sprintf("order from %s", params.CustomerName),
 			CustomerName:        params.CustomerName,
@@ -142,6 +142,16 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 		}
 
 		invoice, err := s.xendit.CreateInvoice(invoiceParams)
+		if err != nil {
+			return nil, err
+		}
+
+		xenditInformationParams := XenditInformation{
+			XenditID:    invoice.ID,
+			InvoicesURL: invoice.InvoiceURL,
+			BookingID:   bookingID.ID,
+		}
+		_, err = s.repo.InsertXenditInformation(xenditInformationParams)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +165,7 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 
 	// create xendit invoices
 	invoiceParams := xendit.CreateInvoiceParams{
-		BookingID:           bookingID.ID,
+		PlaceID:             params.PlaceID,
 		Items:               nil,
 		Description:         fmt.Sprintf("order from %s", params.CustomerName),
 		CustomerName:        params.CustomerName,
@@ -163,6 +173,16 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 	}
 
 	invoice, err := s.xendit.CreateInvoice(invoiceParams)
+	if err != nil {
+		return nil, err
+	}
+
+	xenditInformationParams := XenditInformation{
+		XenditID:    invoice.ID,
+		InvoicesURL: invoice.InvoiceURL,
+		BookingID:   bookingID.ID,
+	}
+	_, err = s.repo.InsertXenditInformation(xenditInformationParams)
 	if err != nil {
 		return nil, err
 	}

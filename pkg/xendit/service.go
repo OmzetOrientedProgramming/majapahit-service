@@ -40,7 +40,7 @@ func (x service) CreateInvoice(params CreateInvoiceParams) (*xendit.Invoice, err
 	}
 
 	invoiceParams := &invoice.CreateParams{
-		ExternalID:  strconv.Itoa(params.BookingID),
+		ExternalID:  strconv.Itoa(params.PlaceID),
 		Description: params.Description,
 		Customer: xendit.InvoiceCustomer{
 			GivenNames:   params.CustomerName,

@@ -218,3 +218,10 @@ type ItemDetail struct {
 type UpdateBookingStatusRequest struct {
 	Status int `json:"status"`
 }
+
+// XenditInformation for inserting Xendit information to bookings table
+type XenditInformation struct {
+	XenditID    string `db:"xendit_id"`
+	InvoicesURL string `db:"invoices_url"`
+	BookingID   int    `db:"booking_id"`
+}

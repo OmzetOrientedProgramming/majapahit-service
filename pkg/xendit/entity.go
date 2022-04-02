@@ -12,7 +12,7 @@ type CreateDisbursementParams struct {
 
 // CreateInvoiceParams for create invoices params
 type CreateInvoiceParams struct {
-	BookingID           int    `json:"booking_id"`
+	PlaceID             int    `json:"place_id"`
 	Items               []Item `json:"items"`
 	Description         string `json:"description"`
 	CustomerName        string `json:"customer_name"`
