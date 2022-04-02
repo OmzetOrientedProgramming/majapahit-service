@@ -517,7 +517,7 @@ func TestHandler_Register(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.Set("userData", &userData)
+		c.Set("userFromFirebase", &userData)
 
 		assert.NoError(t, mockHandler.Register(c))
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -548,7 +548,7 @@ func TestHandler_Register(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer token")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.Set("userData", &userData)
+		c.Set("userFromFirebase", &userData)
 
 		assert.NoError(t, mockHandler.Register(c))
 		assert.Equal(t, http.StatusCreated, rec.Code)
@@ -578,7 +578,7 @@ func TestHandler_Register(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer token")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.Set("userData", &userData)
+		c.Set("userFromFirebase", &userData)
 
 		assert.NoError(t, mockHandler.Register(c))
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -636,7 +636,7 @@ func TestHandler_Register(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer token")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.Set("userData", &userDataFailed)
+		c.Set("userFromFirebase", &userDataFailed)
 
 		assert.NoError(t, mockHandler.Register(c))
 		assert.Equal(t, http.StatusForbidden, rec.Code)
@@ -664,7 +664,7 @@ func TestHandler_Register(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.Set("userData", &userData)
+		c.Set("userFromFirebase", &userData)
 
 		assert.NoError(t, mockHandler.Register(c))
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)

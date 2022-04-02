@@ -18,22 +18,22 @@ type Routes struct {
 	catalogHandler           *item.Handler
 	placeHandler             *place.Handler
 	authHandler              *auth.Handler
-	bookingHandler           *booking.Handler
 	businessadminauthHandler *businessadminauth.Handler
 	authMiddleware           middleware.AuthMiddleware
+	bookingHandler           *booking.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, bookingHandler *booking.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
 		authHandler:              authHandler,
 		catalogHandler:           catalogHandler,
 		placeHandler:             placeHandler,
-		bookingHandler:           bookingHandler,
 		businessadminauthHandler: businessadminauthHandler,
 		authMiddleware:           authMiddleware,
+		bookingHandler:           bookingHandler,
 	}
 }
 
@@ -54,6 +54,8 @@ func (r *Routes) Init() {
 			catalogRoutes := placeRoutes.Group("/:placeID/catalog")
 			catalogRoutes.GET("", r.catalogHandler.GetListItemWithPagination)
 			catalogRoutes.GET("/:itemID", r.catalogHandler.GetItemByID)
+
+			placeRoutes.GET("/:placeID/time-slot", r.bookingHandler.GetTimeSlots, r.authMiddleware.AuthMiddleware())
 		}
 
 		// Business Admin Module
@@ -78,6 +80,9 @@ func (r *Routes) Init() {
 		// Booking module
 		bookingRoutes := v1.Group("/booking", r.authMiddleware.AuthMiddleware())
 		{
+			bookingRoutes.POST("/:placeID", r.bookingHandler.CreateBooking)
+			bookingRoutes.GET("/time/:placeID", r.bookingHandler.GetAvailableTime)
+			bookingRoutes.GET("/date/:placeID", r.bookingHandler.GetAvailableDate)
 			bookingRoutes.GET("/ongoing", r.bookingHandler.GetMyBookingsOngoing)
 			bookingRoutes.GET("/previous", r.bookingHandler.GetMyBookingsPreviousWithPagination)
 		}

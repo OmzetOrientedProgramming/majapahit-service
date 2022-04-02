@@ -2,6 +2,7 @@ package booking
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"regexp"
 	"testing"
 	"time"
@@ -10,7 +11,485 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
+
+func TestRepo_GetBookingData(t *testing.T) {
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	repoMock := NewRepo(sqlxDB)
+
+	t.Run("success", func(t *testing.T) {
+		params := GetBookingDataParams{
+			PlaceID:   0,
+			StartDate: time.Time{},
+			EndDate:   time.Time{},
+			StartTime: time.Time{},
+		}
+
+		query := `SELECT id, date, start_time, end_time, capacity 
+				FROM bookings 
+				WHERE place_id = $1
+				AND status= $2
+				AND date >= $3 
+				AND date <= $4`
+
+		rows := mock.
+			NewRows([]string{"id", "date", "start_time", "end_time", "capacity"}).
+			AddRow(1, time.Now(), time.Now(), time.Now(), 10)
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(params.PlaceID, util.BookingBelumMembayar, params.StartDate, params.EndDate).
+			WillReturnRows(rows)
+
+		bookingData, err := repoMock.GetBookingData(params)
+		assert.NotNil(t, bookingData)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		params := GetBookingDataParams{
+			PlaceID:   0,
+			StartDate: time.Time{},
+			EndDate:   time.Time{},
+			StartTime: time.Time{},
+		}
+
+		query := `SELECT id, date, start_time, end_time, capacity 
+				FROM bookings 
+				WHERE place_id = $1
+				AND status= $2
+				AND date >= $3 
+				AND date <= $4`
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(params.PlaceID, util.BookingBelumMembayar, params.StartDate, params.EndDate).
+			WillReturnError(ErrInternalServerError)
+
+		bookingData, err := repoMock.GetBookingData(params)
+		assert.Nil(t, bookingData)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_GetTimeSlotsData(t *testing.T) {
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	repoMock := NewRepo(sqlxDB)
+
+	t.Run("success", func(t *testing.T) {
+		placeID := 1
+		selectedDate := time.Now()
+
+		query := `SELECT id, start_time, end_time, day
+				FROM time_slots 
+				WHERE place_id = $1 
+				AND (day = $2)
+				ORDER BY day, start_time`
+
+		rows := mock.
+			NewRows([]string{"id", "start_time", "end_time", "day"}).
+			AddRow(1, time.Now(), time.Now(), 1)
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(placeID, int(selectedDate.Weekday())).
+			WillReturnRows(rows)
+
+		timeSlot, err := repoMock.GetTimeSlotsData(placeID, selectedDate)
+		assert.NotNil(t, timeSlot)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		placeID := 1
+		selectedDate := time.Now()
+
+		query := `SELECT id, start_time, end_time, day
+				FROM time_slots 
+				WHERE place_id = $1 
+				AND day = $2
+				ORDER BY start_time`
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(placeID, int(selectedDate.Weekday())).
+			WillReturnError(ErrInternalServerError)
+
+		timeSlotsData, err := repoMock.GetTimeSlotsData(placeID, selectedDate)
+		assert.Nil(t, timeSlotsData)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_GetPlaceCapacity(t *testing.T) {
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	repoMock := NewRepo(sqlxDB)
+
+	t.Run("success", func(t *testing.T) {
+		placeID := 1
+		placeCapacity := 10
+		openHour, _ := time.Parse(util.TimeLayout, "08:00:00")
+
+		query := `SELECT capacity, open_hour FROM places WHERE id = $1`
+
+		rows := mock.
+			NewRows([]string{"capacity", "open_hour"}).
+			AddRow(placeCapacity, openHour)
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(placeID).
+			WillReturnRows(rows)
+
+		placeCapacityRes, err := repoMock.GetPlaceCapacity(placeID)
+		assert.Equal(t, &PlaceOpenHourAndCapacity{
+			OpenHour: openHour,
+			Capacity: placeCapacity,
+		}, placeCapacityRes)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		placeID := 1
+
+		query := `SELECT capacity FROM places WHERE id = $1`
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(placeID).
+			WillReturnError(ErrInternalServerError)
+
+		_, err := repoMock.GetPlaceCapacity(placeID)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_CheckedItem(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		input := []CheckedItemParams{
+			{
+				ID:      1,
+				PlaceID: 1,
+			},
+			{
+				ID:      2,
+				PlaceID: 1,
+			},
+		}
+		rows := mock.NewRows([]string{"id", "place_id"}).AddRow("1", "1").AddRow("2", "1")
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, place_id FROM items WHERE place_id = $1 AND (id = $2 OR id = $3)")).WithArgs(1, 1, 2).WillReturnRows(rows)
+
+		item, isMatch, err := repo.CheckedItem(input)
+		assert.Nil(t, err)
+		assert.True(t, isMatch)
+		assert.Equal(t, &input, item)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		input := []CheckedItemParams{
+			{
+				ID:      1,
+				PlaceID: 1,
+			},
+			{
+				ID:      2,
+				PlaceID: 1,
+			},
+		}
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, place_id FROM items WHERE place_id = $1 AND (id = $2 OR id = $3)")).WithArgs(1, 1, 2).WillReturnError(ErrInternalServerError)
+
+		item, isMatch, err := repo.CheckedItem(input)
+		assert.NotNil(t, err)
+		assert.Nil(t, item)
+		assert.False(t, isMatch)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed item not match", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		input := []CheckedItemParams{
+			{
+				ID:      1,
+				PlaceID: 1,
+			},
+			{
+				ID:      2,
+				PlaceID: 1,
+			},
+		}
+
+		rows := mock.NewRows([]string{"id", "place_id"}).AddRow("1", "1")
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, place_id FROM items WHERE place_id = $1 AND (id = $2 OR id = $3)")).WithArgs(1, 1, 2).WillReturnRows(rows)
+
+		item, isMatch, err := repo.CheckedItem(input)
+		assert.NotNil(t, err)
+		assert.NotNil(t, item)
+		assert.False(t, isMatch)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	})
+}
+
+func TestRepo_CreateBooking(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		date, _ := time.Parse(util.DateLayout, "2022-01-01")
+		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		endTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+		booking := CreateBookingParams{
+			UserID:     1,
+			PlaceID:    1,
+			Date:       date,
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Capacity:   10,
+			Status:     1,
+			TotalPrice: 10000,
+		}
+
+		rows := mock.NewRows([]string{"id"}).AddRow("1")
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO 
+					bookings (user_id, place_id, date, start_time, end_time, capacity, status, total_price)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				RETURNING id`)).
+			WithArgs(booking.UserID, booking.PlaceID, booking.Date, booking.StartTime, booking.EndTime, booking.Capacity, booking.Status, booking.TotalPrice).
+			WillReturnRows(rows)
+
+		res, err := repo.CreateBooking(booking)
+		assert.NotNil(t, res)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, res.ID)
+	})
+
+	t.Run("failed", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		date, _ := time.Parse(util.DateLayout, "2022-01-01")
+		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		endTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+		booking := CreateBookingParams{
+			UserID:     1,
+			PlaceID:    1,
+			Date:       date,
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Capacity:   10,
+			Status:     1,
+			TotalPrice: 10000,
+		}
+
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO 
+					bookings (user_id, place_id, date, start_time, end_time, capacity, status, total_price)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				RETURNING id`)).
+			WithArgs(booking.UserID, booking.PlaceID, booking.Date, booking.StartTime, booking.EndTime, booking.Capacity, booking.Status, booking.TotalPrice).
+			WillReturnError(ErrInternalServerError)
+
+		res, err := repo.CreateBooking(booking)
+		assert.Nil(t, res)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_CreateBookingItems(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		input := []CreateBookingItemsParams{
+			{
+				BookingID:  3,
+				ItemID:     1,
+				TotalPrice: 20000,
+				Qty:        2,
+			},
+			{
+				BookingID:  4,
+				ItemID:     1,
+				TotalPrice: 20000,
+				Qty:        2,
+			},
+			{
+				BookingID:  5,
+				ItemID:     1,
+				TotalPrice: 20000,
+				Qty:        2,
+			},
+		}
+
+		query := `INSERT INTO 
+					booking_items (item_id, booking_id, qty, total_price)
+				VALUES ($1, $2, $3, $4) , ($5, $6, $7, $8) , ($9, $10, $11, $12) `
+		mock.ExpectExec(regexp.QuoteMeta(query)).
+			WithArgs(input[0].ItemID, input[0].BookingID, input[0].Qty, input[0].TotalPrice,
+				input[1].ItemID, input[1].BookingID, input[1].Qty, input[1].TotalPrice,
+				input[2].ItemID, input[2].BookingID, input[2].Qty, input[2].TotalPrice).
+			WillReturnResult(driver.ResultNoRows)
+
+		res, err := repo.CreateBookingItems(input)
+		assert.NotNil(t, res)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(60000), res.TotalPrice)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		input := []CreateBookingItemsParams{
+			{
+				BookingID:  3,
+				ItemID:     1,
+				TotalPrice: 20000,
+				Qty:        2,
+			},
+			{
+				BookingID:  4,
+				ItemID:     1,
+				TotalPrice: 20000,
+				Qty:        2,
+			},
+			{
+				BookingID:  5,
+				ItemID:     1,
+				TotalPrice: 20000,
+				Qty:        2,
+			},
+		}
+
+		query := `INSERT INTO 
+					booking_items (item_id, booking_id, qty, total_price)
+				VALUES ($1, $2, $3, $4) , ($5, $6, $7, $8) , ($9, $10, $11, $12) `
+		mock.ExpectExec(regexp.QuoteMeta(query)).
+			WithArgs(input[0].ItemID, input[0].BookingID, input[0].Qty, input[0].TotalPrice,
+				input[1].ItemID, input[1].BookingID, input[1].Qty, input[1].TotalPrice,
+				input[2].ItemID, input[2].BookingID, input[2].Qty, input[2].TotalPrice).
+			WillReturnError(ErrInternalServerError)
+
+		res, err := repo.CreateBookingItems(input)
+		assert.Nil(t, res)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_UpdateTotalPrice(t *testing.T) {
+	t.Run("failed internal server error", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		input := UpdateTotalPriceParams{
+			BookingID:  1,
+			TotalPrice: 100000,
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta("UPDATE bookings SET total_price = $1, updated_at = NOW() WHERE id = $2")).
+			WithArgs(input.TotalPrice, input.BookingID).
+			WillReturnError(ErrInternalServerError)
+
+		res, err := repo.UpdateTotalPrice(input)
+		assert.False(t, res)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		repo := NewRepo(sqlxDB)
+
+		input := UpdateTotalPriceParams{
+			BookingID:  1,
+			TotalPrice: 100000,
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta("UPDATE bookings SET total_price = $1, updated_at = NOW() WHERE id = $2")).
+			WithArgs(input.TotalPrice, input.BookingID).
+			WillReturnResult(driver.ResultNoRows)
+
+		res, err := repo.UpdateTotalPrice(input)
+		assert.True(t, res)
+		assert.Nil(t, err)
+	})
+}
 
 func TestRepo_GetDetailSuccess(t *testing.T) {
 	bookingID := 1

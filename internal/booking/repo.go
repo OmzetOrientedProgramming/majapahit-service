@@ -2,13 +2,24 @@ package booking
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
-// Repo will contain all the function that can be used by repo
+// Repo interface for defining function that must have by repo
 type Repo interface {
+	GetBookingData(params GetBookingDataParams) (*[]DataForCheckAvailableSchedule, error)
+	GetTimeSlotsData(placeID int, selectedDate ...time.Time) (*[]TimeSlot, error)
+	GetPlaceCapacity(placeID int) (*PlaceOpenHourAndCapacity, error)
+	CheckedItem(ids []CheckedItemParams) (*[]CheckedItemParams, bool, error)
+	CreateBookingItems(items []CreateBookingItemsParams) (*CreateBookingItemsResponse, error)
+	CreateBooking(booking CreateBookingParams) (*CreateBookingResponse, error)
+	UpdateTotalPrice(params UpdateTotalPriceParams) (bool, error)
 	GetDetail(int) (*Detail, error)
 	GetItemWrapper(int) (*ItemsWrapper, error)
 	GetTicketPriceWrapper(int) (*TicketPriceWrapper, error)
@@ -26,6 +37,153 @@ func NewRepo(db *sqlx.DB) Repo {
 	return &repo{
 		db: db,
 	}
+}
+
+func (r repo) CheckedItem(ids []CheckedItemParams) (*[]CheckedItemParams, bool, error) {
+	var itemsFromDatabase []CheckedItemParams
+	query := "SELECT id, place_id FROM items WHERE place_id = $1"
+
+	counter := 2
+	var arguments []interface{}
+	arguments = append(arguments, ids[0].PlaceID) // need to validate if all place id is the same, will do on service
+
+	var additionalQuery []string
+	for _, id := range ids {
+		additionalQuery = append(additionalQuery, fmt.Sprintf("id = $%d", counter))
+		arguments = append(arguments, id.ID)
+		counter++
+	}
+
+	query += fmt.Sprintf(" AND (%s)", strings.Join(additionalQuery, " OR "))
+
+	err := r.db.Select(&itemsFromDatabase, query, arguments...)
+	if err != nil {
+		return nil, false, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	if len(ids) != len(itemsFromDatabase) {
+		return &itemsFromDatabase, false, errors.Wrap(ErrInputValidationError, "items not found")
+
+	}
+
+	return &itemsFromDatabase, true, nil
+}
+
+func (r repo) CreateBookingItems(items []CreateBookingItemsParams) (*CreateBookingItemsResponse, error) {
+	query := `INSERT INTO 
+					booking_items (item_id, booking_id, qty, total_price)
+				VALUES`
+
+	counter := 1
+	var totalPrice float64
+	var itemDataArgs []interface{}
+	var itemsDataQuery []string
+	for _, item := range items {
+		itemsDataQuery = append(itemsDataQuery, fmt.Sprintf(" ($%d, $%d, $%d, $%d) ", counter, counter+1, counter+2, counter+3))
+		itemDataArgs = append(itemDataArgs, item.ItemID)
+		itemDataArgs = append(itemDataArgs, item.BookingID)
+		itemDataArgs = append(itemDataArgs, item.Qty)
+		itemDataArgs = append(itemDataArgs, item.TotalPrice)
+		counter += 4
+		totalPrice += item.TotalPrice
+	}
+
+	query += strings.Join(itemsDataQuery, ",")
+
+	_, err := r.db.Exec(query, itemDataArgs...)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &CreateBookingItemsResponse{TotalPrice: totalPrice}, nil
+}
+
+func (r repo) CreateBooking(booking CreateBookingParams) (*CreateBookingResponse, error) {
+	var bookingID CreateBookingResponse
+
+	query := `INSERT INTO 
+					bookings (user_id, place_id, date, start_time, end_time, capacity, status, total_price)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				RETURNING id
+				`
+
+	err := r.db.QueryRow(query, booking.UserID, booking.PlaceID, booking.Date, booking.StartTime, booking.EndTime, booking.Capacity, booking.Status, booking.TotalPrice).Scan(&bookingID.ID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &bookingID, nil
+}
+
+func (r repo) UpdateTotalPrice(params UpdateTotalPriceParams) (bool, error) {
+	query := `UPDATE bookings SET total_price = $1, updated_at = NOW() WHERE id = $2`
+
+	_, err := r.db.Exec(query, params.TotalPrice, params.BookingID)
+	if err != nil {
+		return false, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return true, nil
+}
+
+func (r repo) GetBookingData(params GetBookingDataParams) (*[]DataForCheckAvailableSchedule, error) {
+	var bookingsData []DataForCheckAvailableSchedule
+
+	query := `SELECT id, date, start_time, end_time, capacity 
+				FROM bookings 
+				WHERE place_id = $1
+				AND status= $2
+				AND date >= $3 
+				AND date <= $4`
+	err := r.db.Select(&bookingsData, query, params.PlaceID, util.BookingBelumMembayar, params.StartDate, params.EndDate)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &bookingsData, nil
+}
+
+func (r repo) GetTimeSlotsData(placeID int, selectedDates ...time.Time) (*[]TimeSlot, error) {
+	var timeSlots []TimeSlot
+
+	query := `SELECT id, start_time, end_time, day
+				FROM time_slots 
+				WHERE place_id = $1 
+				`
+
+	counter := 2
+	var arguments []interface{}
+	arguments = append(arguments, placeID)
+
+	var additionalQuery []string
+	for _, selectedDate := range selectedDates {
+		additionalQuery = append(additionalQuery, fmt.Sprintf("day = $%d", counter))
+		arguments = append(arguments, int(selectedDate.Weekday()))
+		counter++
+	}
+
+	query += fmt.Sprintf("AND (%s)", strings.Join(additionalQuery, " OR "))
+	query += " ORDER BY day, start_time"
+
+	err := r.db.Select(&timeSlots, query, arguments...)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &timeSlots, nil
+}
+
+func (r repo) GetPlaceCapacity(placeID int) (*PlaceOpenHourAndCapacity, error) {
+	var placeData PlaceOpenHourAndCapacity
+
+	query := `SELECT capacity, open_hour FROM places WHERE id = $1`
+
+	err := r.db.Get(&placeData, query, placeID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &placeData, nil
 }
 
 func (r *repo) GetDetail(bookingID int) (*Detail, error) {

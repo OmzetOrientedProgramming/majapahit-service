@@ -153,7 +153,7 @@ func (h *Handler) VerifyOTP(c echo.Context) error {
 
 // Register for handling Register endpoint
 func (h *Handler) Register(c echo.Context) error {
-	userData, err := middleware.ParseUserData(c, util.StatusCustomer)
+	userData, _, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
 			errs, message := util.ErrorUnwrap(err)
