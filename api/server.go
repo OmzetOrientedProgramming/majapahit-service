@@ -1,12 +1,14 @@
 package api
 
 import (
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"net/http"
 	"os"
 
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
+	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
+
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/booking"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 
@@ -48,6 +50,10 @@ var (
 	authService      auth.Service
 	authHandler      *auth.Handler
 
+	bookingRepo    booking.Repo
+	bookingService booking.Service
+	bookingHandler *booking.Handler
+
 	businessadminauthRepo    businessadminauth.Repo
 	businessadminauthService businessadminauth.Service
 	businessadminauthHandler *businessadminauth.Handler
@@ -74,6 +80,11 @@ func (s Server) Init() {
 	placeService = place.NewService(placeRepo)
 	placeHandler = place.NewHandler(placeService)
 
+	// Booking Module
+	bookingRepo = booking.NewRepo(db)
+	bookingService = booking.NewService(bookingRepo)
+	bookingHandler = booking.NewHandler(bookingService)
+
 	// BusinessAdminAuth module
 	businessadminauthRepo = businessadminauth.NewRepo(db)
 	businessadminauthService = businessadminauth.NewService(businessadminauthRepo)
@@ -92,7 +103,7 @@ func (s Server) Init() {
 	authHandler = auth.NewHandler(authService)
 
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware)
+	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, bookingHandler, authHandler, businessadminauthHandler, authMiddleware)
 	r.Init()
 }
 
