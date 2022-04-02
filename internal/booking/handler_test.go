@@ -2,8 +2,11 @@ package booking
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
@@ -183,4 +187,458 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+
+func (m *MockService) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
+	args := m.Called(localID)
+	myBookingsOngoing := args.Get(0).(*[]Booking)
+	return myBookingsOngoing, args.Error(1)
+}
+
+func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	// Setting up echo router
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("userData", &userData)
+	c.SetPath("/api/v1/booking/ongoing")
+
+	// Setting up service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setting up Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	// Setting up input and output
+	myBookingsOngoing := []Booking{
+		{
+			ID:         1,
+			PlaceID:    2,
+			PlaceName:  "test_place_name",
+			PlaceImage: "test_place_image",
+			Date:       "2022-04-10",
+			StartTime:  "08:00",
+			EndTime:    "10:00",
+			Status:     0,
+			TotalPrice: 10000,
+		}, 
+		{
+			ID:         2,
+			PlaceID:    3,
+			PlaceName:  "test_place_name",
+			PlaceImage: "test_place_image",
+			Date:       "2022-04-11",
+			StartTime:  "09:00",
+			EndTime:    "11:00",
+			Status:     0,
+			TotalPrice: 20000,
+		},
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    myBookingsOngoing,
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("GetMyBookingsOngoing", userData.Users[0].LocalID).Return(&myBookingsOngoing, nil)
+
+	// Test Fields
+	if assert.NoError(t, h.GetMyBookingsOngoing(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestService_GetMyBookingsOngoingWithEmptyLocalID(t *testing.T) {
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	// Setting up echo router
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("userData", &userData)
+	c.SetPath("/api/v1/booking/ongoing")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input
+	localID := ""
+
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"localID cannot be empty"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var myBookingsOngoing []Booking
+	mockService.On("GetMyBookingsOngoing", localID).Return(&myBookingsOngoing, errorFromService)
+
+	// Test
+	assert.NoError(t, h.GetMyBookingsOngoing(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func (m *MockService) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error) {
+	args := m.Called(params)
+	myBookingsPrevious := args.Get(0).(*List)
+	pagination := args.Get(1).(util.Pagination)
+	return myBookingsPrevious, &pagination, args.Error(2)
+}
+
+func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("userData", &userData)
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	// Define input and output
+	params := BookingsListRequest{
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/v1/booking/previous",
+	}
+
+	myBookingsPrevious := List{
+		Bookings: []Booking{
+			{
+				ID:         1,
+				PlaceID:    2,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-10",
+				StartTime:  "08:00",
+				EndTime:    "10:00",
+				Status:     0,
+				TotalPrice: 10000,
+			}, 
+			{
+				ID:         2,
+				PlaceID:    3,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-11",
+				StartTime:  "09:00",
+				EndTime:    "11:00",
+				Status:     0,
+				TotalPrice: 20000,
+			},
+		},
+		TotalCount: 2,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"bookings":     myBookingsPrevious.Bookings,
+			"pagination": pagination,
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("GetMyBookingsPreviousWithPagination", params).Return(&myBookingsPrevious, pagination, nil)
+
+	// Tes
+	if assert.NoError(t, h.GetMyBookingsPreviousWithPagination(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetMyBookingsPreviousWithPaginationWithValidationErrorLimitPageNotInt(t *testing.T) {
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+	
+	// Setup echo
+	e := echo.New()
+	q := make(url.Values)
+	q.Set("limit", "testerror")
+	q.Set("page", "testerror")
+	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("userData", &userData)
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"limit should be positive integer",
+			"page should be positive integer",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	assert.NoError(t, h.GetMyBookingsPreviousWithPagination(c))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) {
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("userData", &userData)
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	// Define input and output
+	params := BookingsListRequest{
+		Limit: 0,
+		Page:  0,
+		Path:  "/api/v1/booking/previous",
+	}
+
+	myBookingsPrevious := List{
+		Bookings: []Booking{
+			{
+				ID:         1,
+				PlaceID:    2,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-10",
+				StartTime:  "08:00",
+				EndTime:    "10:00",
+				Status:     0,
+				TotalPrice: 10000,
+			}, 
+			{
+				ID:         2,
+				PlaceID:    3,
+				PlaceName:  "test_place_name",
+				PlaceImage: "test_place_image",
+				Date:       "2022-04-11",
+				StartTime:  "09:00",
+				EndTime:    "11:00",
+				Status:     0,
+				TotalPrice: 20000,
+			},
+		},
+		TotalCount: 2,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/booking/previous?limit=10&page=1", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"bookings":     myBookingsPrevious.Bookings,
+			"pagination": pagination,
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("GetMyBookingsPreviousWithPagination", params).Return(&myBookingsPrevious, pagination, nil)
+
+	// Tes
+	if assert.NoError(t, h.GetMyBookingsPreviousWithPagination(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
 }

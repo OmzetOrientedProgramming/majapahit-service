@@ -1,5 +1,31 @@
 package booking
 
+// Booking contains customer booking information
+type Booking struct {
+	ID         int    `json:"id"`
+	PlaceID    int    `json:"place_id" db:"place_id"`
+	PlaceName  string `json:"place_name" db:"place_name"`
+	PlaceImage string `json:"place_image" db:"place_image"`
+	Date       string `json:"date"`
+	StartTime  string `json:"start_time" db:"start_time"`
+	EndTime    string `json:"end_time" db:"end_time"`
+	Status     int    `json:"status"`
+	TotalPrice int    `json:"total_price" db:"total_price"`
+}
+
+// List contains list of customer booking information
+type List struct {
+	Bookings 		[]Booking	`json:"bookings"`
+	TotalCount	int 			`json:"total_count"`
+}
+
+// BookingsListRequest contains request params for BookingList
+type BookingsListRequest struct {
+	Limit int    `json:"limit"`
+	Page  int    `json:"page"`
+	Path  string `json:"path"`
+}
+
 // Detail contain required information about booking
 type Detail struct {
 	ID               int          `json:"id"`
