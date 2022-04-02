@@ -16,6 +16,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
+	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
@@ -67,7 +69,7 @@ func (m *MockService) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 }
 
 func (m *MockService) GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error) {
-	args := m.Called(params)
+	args := m.Called(localID, params)
 	myBookingsPrevious := args.Get(0).(*List)
 	pagination := args.Get(1).(util.Pagination)
 	return myBookingsPrevious, &pagination, args.Error(2)
@@ -354,7 +356,7 @@ func TestHandler_GetListCustomerBookingWithPaginationLimitError(t *testing.T) {
 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
-	var listCustomerBooking List
+	var listCustomerBooking ListBooking
 	var pagination util.Pagination
 	mockService.On("GetListCustomerBookingWithPagination", params).Return(&listCustomerBooking, pagination, errorFromService)
 
@@ -403,7 +405,7 @@ func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *test
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
-	var listCustomerBooking List
+	var listCustomerBooking ListBooking
 	var pagination util.Pagination
 	mockService.On("GetListCustomerBookingWithPagination", params).Return(&listCustomerBooking, pagination, internalServerError)
 
@@ -2505,7 +2507,7 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    "10:00",
 			Status:     0,
 			TotalPrice: 10000,
-		},
+		}, 
 		{
 			ID:         2,
 			PlaceID:    3,
@@ -2666,7 +2668,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			},
+			}, 
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -2692,6 +2694,8 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 		TotalPage:   1,
 	}
 
+	localID := ""
+
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusOK,
 		Message: "success",
@@ -2704,7 +2708,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
-	mockService.On("GetMyBookingsPreviousWithPagination", params).Return(&myBookingsPrevious, pagination, nil)
+	mockService.On("GetMyBookingsPreviousWithPagination", localID, params).Return(&myBookingsPrevious, pagination, nil)
 
 	// Tes
 	if assert.NoError(t, h.GetMyBookingsPreviousWithPagination(c)) {
@@ -2741,6 +2745,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithValidationErrorLimitPage
 			},
 		},
 	}
+	
 	// Setup echo
 	e := echo.New()
 	q := make(url.Values)
@@ -2840,7 +2845,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			},
+			}, 
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -2866,6 +2871,8 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 		TotalPage:   1,
 	}
 
+	localID := ""
+
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusOK,
 		Message: "success",
@@ -2878,7 +2885,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Excpectation
-	mockService.On("GetMyBookingsPreviousWithPagination", params).Return(&myBookingsPrevious, pagination, nil)
+	mockService.On("GetMyBookingsPreviousWithPagination", localID, params).Return(&myBookingsPrevious, pagination, nil)
 
 	// Tes
 	if assert.NoError(t, h.GetMyBookingsPreviousWithPagination(c)) {

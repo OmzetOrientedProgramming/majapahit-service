@@ -20,11 +20,11 @@ type Routes struct {
 	authHandler              *auth.Handler
 	businessadminauthHandler *businessadminauth.Handler
 	authMiddleware           middleware.AuthMiddleware
-	bookingHandler   *booking.Handler
+	bookingHandler           *booking.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, customerBookingHandler *booking.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
@@ -33,7 +33,7 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandle
 		placeHandler:             placeHandler,
 		businessadminauthHandler: businessadminauthHandler,
 		authMiddleware:           authMiddleware,
-		bookingHandler:   		bookingHandler,
+		bookingHandler:           bookingHandler,
 	}
 }
 
@@ -54,6 +54,18 @@ func (r *Routes) Init() {
 			catalogRoutes := placeRoutes.Group("/:placeID/catalog")
 			catalogRoutes.GET("", r.catalogHandler.GetListItemWithPagination)
 			catalogRoutes.GET("/:itemID", r.catalogHandler.GetItemByID)
+
+			placeRoutes.GET("/:placeID/time-slot", r.bookingHandler.GetTimeSlots, r.authMiddleware.AuthMiddleware())
+		}
+
+		// Business Admin Module
+		businessAdminRoutes := v1.Group("/business-admin")
+		{
+			// Booking
+			bookingRoutes := businessAdminRoutes.Group("/:placeID/booking")
+			bookingRoutes.GET("", r.bookingHandler.GetListCustomerBookingWithPagination)
+			bookingRoutes.GET("/:bookingID", r.bookingHandler.GetDetail)
+			bookingRoutes.PATCH("/:bookingID/confirmation", r.bookingHandler.UpdateBookingStatus)
 		}
 
 		// Auth module
@@ -66,11 +78,14 @@ func (r *Routes) Init() {
 			authRoutes.POST("/business-admin/register", r.businessadminauthHandler.RegisterBusinessAdmin)
 		}
 
-		// Business Admin module
-		businessAdminRoutes := v1.Group("/business-admin")
+		// Booking module
+		bookingRoutes := v1.Group("/booking", r.authMiddleware.AuthMiddleware())
 		{
-			customerBookingRoutes := businessAdminRoutes.Group("/:placeID/booking")
-			customerBookingRoutes.GET("", r.bookingHandler.GetListCustomerBookingWithPagination)
+			bookingRoutes.POST("/:placeID", r.bookingHandler.CreateBooking)
+			bookingRoutes.GET("/time/:placeID", r.bookingHandler.GetAvailableTime)
+			bookingRoutes.GET("/date/:placeID", r.bookingHandler.GetAvailableDate)
+			bookingRoutes.GET("/ongoing", r.bookingHandler.GetMyBookingsOngoing)
+			bookingRoutes.GET("/previous", r.bookingHandler.GetMyBookingsPreviousWithPagination)
 		}
 	}
 }

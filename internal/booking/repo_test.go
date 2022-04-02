@@ -11,6 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
 func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
@@ -66,7 +67,7 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 			listCustomerBookingExpected.CustomerBookings[1].Date,
 			listCustomerBookingExpected.CustomerBookings[1].StartTime,
 			listCustomerBookingExpected.CustomerBookings[1].EndTime)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 ORDER BY b.date DESC LIMIT $3 OFFSET $4")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
@@ -100,7 +101,7 @@ func TestRepo_GetListCustomerBookingWithPaginationError(t *testing.T) {
 	// Expectation
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 ORDER BY b.date DESC LIMIT $3 OFFSET $4")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
 
@@ -132,7 +133,7 @@ func TestRepo_GetListCustomerBookingWithPaginationCountError(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
 		AddRow("1", "test name", 1, "test date", "test start time", "test end time")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 ORDER BY b.date DESC LIMIT $3 OFFSET $4")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM bookings WHERE place_id = $1")).
@@ -168,7 +169,7 @@ func TestRepo_GetListCustomerBookingWithPaginationEmpty(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 ORDER BY b.date DESC LIMIT $3 OFFSET $4")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
@@ -206,7 +207,7 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
 		AddRow("1", "test name", 1, "test date", "test start time", "test end time")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 LIMIT $3 OFFSET $4 ORDER BY b.date DESC")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 ORDER BY b.date DESC LIMIT $3 OFFSET $4")).
 		WithArgs(params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM bookings WHERE place_id = $1")).
@@ -1019,7 +1020,8 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
+		WHERE users.firebase_local_id = $1 AND bookings.status <= 2
+		ORDER BY bookings.date asc, bookings.start_time asc
 	`)).
 		WithArgs(localID).
 		WillReturnRows(rows)
@@ -1053,7 +1055,8 @@ func TestRepo_GetMyBookingsOngoingEmpty(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
+		WHERE users.firebase_local_id = $1 AND bookings.status <= 2
+		ORDER BY bookings.date asc, bookings.start_time asc
 	`)).
 		WithArgs(localID).
 		WillReturnRows(rows)
@@ -1084,7 +1087,8 @@ func TestRepo_GetMyBookingsOngoingInternalServerError(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time > now()
+		WHERE users.firebase_local_id = $1 AND bookings.status <= 2
+		ORDER BY bookings.date asc, bookings.start_time asc
 	`)).
 		WithArgs(localID).
 		WillReturnError(sql.ErrTxDone)
@@ -1108,7 +1112,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			},
+			}, 
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -1168,8 +1172,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
@@ -1180,7 +1184,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
 	`)).
 		WithArgs(localID).
 		WillReturnRows(rows)
@@ -1218,8 +1222,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmpty(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
@@ -1259,8 +1263,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmptyWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
@@ -1269,7 +1273,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmptyWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
 	`)).
 		WillReturnError(sql.ErrNoRows)
 
@@ -1302,8 +1306,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationError(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
@@ -1338,8 +1342,8 @@ func TestRepo_GetMyBookingsPreviousWithPaginationErrorWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now() 
-		ORDER BY bookings.end_time DESC LIMIT $2 OFFSET $3
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
+		ORDER BY bookings.date desc, bookings.end_time desc LIMIT $2 OFFSET $3
 	`)).
 		WithArgs(localID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
@@ -1348,7 +1352,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationErrorWhenCount(t *testing.T) {
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
-		WHERE users.firebase_local_id = $1 AND bookings.end_time <= now()
+		WHERE users.firebase_local_id = $1 AND bookings.status > 2
 	`)).
 		WillReturnError(sql.ErrConnDone)
 

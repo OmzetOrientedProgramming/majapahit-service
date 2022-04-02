@@ -11,7 +11,7 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
-// Service will contain all the function that can be used by service
+// Service interface for define function in service
 type Service interface {
 	GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, *util.Pagination, error)
 	GetAvailableTime(params GetAvailableTimeParams) (*[]AvailableTimeResponse, error)

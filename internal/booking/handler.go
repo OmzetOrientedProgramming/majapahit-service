@@ -12,17 +12,16 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
-// Handler struct for item package
+// Handler for defining handler struct
 type Handler struct {
 	service Service
 }
 
-// NewHandler is used to initialize Handler
+// NewHandler for initialize handler struct
 func NewHandler(service Service) *Handler {
-	return &Handler{
-		service: service,
-	}
+	return &Handler{service: service}
 }
+
 
 // GetListCustomerBookingWithPagination is a handler for API request for get customer bookings
 func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {

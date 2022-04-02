@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	xendit2 "github.com/xendit/xendit-go"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
@@ -149,7 +150,8 @@ func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
 
 	// Expectation
 	mockRepo.On("GetListCustomerBookingWithPagination", params).Return(listCustomerBookingExpected, nil)
@@ -197,7 +199,8 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
 
 	paramsDefault := ListRequest{
 		Limit:   10,
@@ -230,7 +233,8 @@ func TestService_GetListCustomerBookingWithPaginationFailedLimitExceedMaxLimit(t
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
 
 	// Test
 	listCustomerBookingResult, _, err := mockService.GetListCustomerBookingWithPagination(params)
@@ -252,7 +256,8 @@ func TestService_GetListCustomerBookingWithPaginationError(t *testing.T) {
 
 	// Mock DB
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
 
 	mockRepo.On("GetListCustomerBookingWithPagination", params).Return(listCustomerBooking, ErrInternalServerError)
 
@@ -275,7 +280,8 @@ func TestService_GetListCustomerBookingWithPaginationFailedURLIsEmpty(t *testing
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
 
 	// Test
 	listCustomerBookingResult, _, err := mockService.GetListCustomerBookingWithPagination(params)

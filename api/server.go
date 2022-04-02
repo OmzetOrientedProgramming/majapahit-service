@@ -19,6 +19,7 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/database/postgres"
 	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
 )
 
 // Server struct to for the server dependency
@@ -56,9 +57,11 @@ var (
 	businessadminauthService businessadminauth.Service
 	businessadminauthHandler *businessadminauth.Handler
 
-	bookingRepo   	booking.Repo
+	bookingRepo    booking.Repo
 	bookingService booking.Service
 	bookingHandler *booking.Handler
+
+	userRepo user.Repo
 )
 
 // Init all dependency
@@ -93,19 +96,19 @@ func (s Server) Init() {
 	checkupHandler = checkup.NewHandler(checkUpService)
 
 	// Auth module
+	userRepo = user.NewRepo(db)
 	authRepo = auth.NewRepo(db)
 	firebaseAuthRepo = firebaseauth.NewRepo(os.Getenv("IDENTITY_TOOLKIT_URL"), os.Getenv("SECURE_TOKEN_URL"), os.Getenv("FIREBASE_API_KEY"))
-	authMiddleware = middleware.NewAuthMiddleware(firebaseAuthRepo)
+	authMiddleware = middleware.NewAuthMiddleware(firebaseAuthRepo, userRepo)
 	authService = auth.NewService(authRepo, firebaseAuthRepo)
 	authHandler = auth.NewHandler(authService)
 
-	// Booking module
+	// Booking Module
 	bookingRepo = booking.NewRepo(db)
 	xenCli := client.New(os.Getenv("XENDIT_TOKEN"))
 	xenditService := xendit.NewXenditClient(xenCli)
 	bookingService = booking.NewService(bookingRepo, xenditService)
 	bookingHandler = booking.NewHandler(bookingService)
-
 
 	// Start routing
 	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler)
