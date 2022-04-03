@@ -59,10 +59,10 @@ func (r *Routes) Init() {
 		}
 
 		// Business Admin Module
-		businessAdminRoutes := v1.Group("/business-admin")
+		businessAdminRoutes := v1.Group("/business-admin", r.authMiddleware.AuthMiddleware())
 		{
 			// Booking
-			bookingRoutes := businessAdminRoutes.Group("/:placeID/booking")
+			bookingRoutes := businessAdminRoutes.Group("/booking")
 			bookingRoutes.GET("", r.bookingHandler.GetListCustomerBookingWithPagination)
 			bookingRoutes.GET("/:bookingID", r.bookingHandler.GetDetail)
 			bookingRoutes.PATCH("/:bookingID/confirmation", r.bookingHandler.UpdateBookingStatus)
