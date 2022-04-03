@@ -146,11 +146,11 @@ func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	}
 
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "api/v1/testing",
-		State:   1,
-		PlaceID: 1,
+		Limit:  10,
+		Page:   1,
+		Path:   "api/v1/testing",
+		State:  1,
+		UserID: 1,
 	}
 
 	// Init mock repository and mock service
@@ -195,11 +195,11 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 	}
 
 	params := ListRequest{
-		Limit:   0,
-		Page:    0,
-		Path:    "api/v1/testing",
-		State:   -1,
-		PlaceID: 1,
+		Limit:  0,
+		Page:   0,
+		Path:   "api/v1/testing",
+		State:  -1,
+		UserID: 1,
 	}
 
 	// Init mock repository and mock service
@@ -208,11 +208,11 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 	mockService := NewService(mockRepo, xenditService)
 
 	paramsDefault := ListRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "api/v1/testing",
-		State:   0,
-		PlaceID: 1,
+		Limit:  10,
+		Page:   1,
+		Path:   "api/v1/testing",
+		State:  0,
+		UserID: 1,
 	}
 
 	// Expectation
@@ -252,11 +252,11 @@ func TestService_GetListCustomerBookingWithPaginationError(t *testing.T) {
 	listCustomerBooking := ListBooking{}
 
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/testing",
-		State:   1,
-		PlaceID: 1,
+		Limit:  10,
+		Page:   1,
+		Path:   "/api/testing",
+		State:  1,
+		UserID: 1,
 	}
 
 	// Mock DB

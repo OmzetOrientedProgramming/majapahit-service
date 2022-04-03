@@ -25,15 +25,22 @@ func NewHandler(service Service) *Handler {
 // GetListCustomerBookingWithPagination is a handler for API request for get customer bookings
 func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 	errorList := []string{}
-	placeIDString := c.Param("placeID")
 	stateString := c.QueryParam("state")
 	limitString := c.QueryParam("limit")
 	pageString := c.QueryParam("page")
 
-	placeID, err := strconv.Atoi(placeIDString)
+	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
 	if err != nil {
-		errorList = append(errorList, "incorrect place id")
+		if errors.Cause(err) == middleware.ErrForbidden {
+			errs, message := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusForbidden, util.APIResponse{
+				Status:  http.StatusForbidden,
+				Message: message,
+				Errors:  errs,
+			})
+		}
 	}
+	userID := user.ID
 
 	state, err := strconv.Atoi(stateString)
 	if err != nil {
@@ -71,8 +78,8 @@ func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 	}
 
 	params := ListRequest{}
-	params.Path = "/api/v1/business-admin/" + placeIDString + "/booking"
-	params.PlaceID = placeID
+	params.Path = "/api/v1/business-admin/booking"
+	params.UserID = userID
 	params.State = state
 	params.Limit = limit
 	params.Page = page
