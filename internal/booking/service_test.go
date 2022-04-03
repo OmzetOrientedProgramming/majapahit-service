@@ -150,7 +150,7 @@ func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 		Page:    1,
 		Path:    "api/v1/testing",
 		State:   1,
-		PlaceID: 1,
+		UserID: 1,
 	}
 
 	// Init mock repository and mock service
@@ -199,7 +199,7 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 		Page:    0,
 		Path:    "api/v1/testing",
 		State:   -1,
-		PlaceID: 1,
+		UserID: 1,
 	}
 
 	// Init mock repository and mock service
@@ -212,7 +212,7 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 		Page:    1,
 		Path:    "api/v1/testing",
 		State:   0,
-		PlaceID: 1,
+		UserID: 1,
 	}
 
 	// Expectation
@@ -256,7 +256,7 @@ func TestService_GetListCustomerBookingWithPaginationError(t *testing.T) {
 		Page:    1,
 		Path:    "/api/testing",
 		State:   1,
-		PlaceID: 1,
+		UserID: 1,
 	}
 
 	// Mock DB

@@ -79,6 +79,45 @@ func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	// Setup echo
 	e := echo.New()
 
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
 	// import "net/url"
 	q := make(url.Values)
 	q.Set("state", "1")
@@ -87,9 +126,8 @@ func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/booking?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
-	ctx.SetPath("/:placeID/booking")
-	ctx.SetParamNames("placeID")
-	ctx.SetParamValues("1")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
 
 	mockService := new(MockService)
 	h := NewHandler(mockService)
@@ -97,9 +135,9 @@ func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	params := ListRequest{
 		Limit:   10,
 		Page:    1,
-		Path:    "/api/v1/business-admin/1/booking",
+		Path:    "/api/v1/business-admin/booking",
 		State:   1,
-		PlaceID: 1,
+		UserID: userModel.ID,
 	}
 
 	// Setup Env
@@ -130,10 +168,10 @@ func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	pagination := util.Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstURL:    fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
-		LastURL:     fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
-		NextURL:     fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousURL: fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		FirstURL:    fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
 		TotalPage:   1,
 	}
 
@@ -158,47 +196,48 @@ func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	}
 }
 
-func TestHandler_GetListCustromerBookingWithPaginationPlaceIDError(t *testing.T) {
-	// Setup echo
-	e := echo.New()
-
-	// import "net/url"
-	q := make(url.Values)
-	q.Set("state", "1")
-	q.Set("limit", "10")
-	q.Set("page", "1")
-	req := httptest.NewRequest(http.MethodGet, "/booking?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	ctx := e.NewContext(req, rec)
-	ctx.SetPath("/:placeID/booking")
-	ctx.SetParamNames("placeID")
-	ctx.SetParamValues("test")
-
-	mockService := new(MockService)
-	h := NewHandler(mockService)
-
-	// Setup Env
-	t.Setenv("BASE_URL", "localhost:8080")
-
-	expectedResponse := util.APIResponse{
-		Status:  http.StatusBadRequest,
-		Message: "input validation error",
-		Errors: []string{
-			"incorrect place id",
-		},
-	}
-
-	expectedResponseJSON, _ := json.Marshal(expectedResponse)
-
-	// Tes
-	assert.NoError(t, h.GetListCustomerBookingWithPagination(ctx))
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
-}
-
 func TestHandler_GetListItemWithPaginationStateAndLimitAndPageAreNotInt(t *testing.T) {
 	// Setup echo
 	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
 
 	// import "net/url"
 	q := make(url.Values)
@@ -208,9 +247,8 @@ func TestHandler_GetListItemWithPaginationStateAndLimitAndPageAreNotInt(t *testi
 	req := httptest.NewRequest(http.MethodGet, "/booking?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
-	ctx.SetPath("/:placeID/booking")
-	ctx.SetParamNames("placeID")
-	ctx.SetParamValues("1")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
 
 	mockService := new(MockService)
 	h := NewHandler(mockService)
@@ -240,14 +278,52 @@ func TestHandler_GetListCustomerBookingWithPaginationWithStateLimitPageAreEmpty(
 	// Setup echo
 	e := echo.New()
 
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
 	// import "net/url"
 	q := make(url.Values)
 	req := httptest.NewRequest(http.MethodGet, "/booking?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
-	ctx.SetPath("/:placeID/booking")
-	ctx.SetParamNames("placeID")
-	ctx.SetParamValues("1")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
 
 	mockService := new(MockService)
 	h := NewHandler(mockService)
@@ -255,9 +331,9 @@ func TestHandler_GetListCustomerBookingWithPaginationWithStateLimitPageAreEmpty(
 	params := ListRequest{
 		Limit:   0,
 		Page:    0,
-		Path:    "/api/v1/business-admin/1/booking",
+		Path:    "/api/v1/business-admin/booking",
 		State:   0,
-		PlaceID: 1,
+		UserID: 1,
 	}
 
 	// Setup Env
@@ -288,10 +364,10 @@ func TestHandler_GetListCustomerBookingWithPaginationWithStateLimitPageAreEmpty(
 	pagination := util.Pagination{
 		Limit:       10,
 		Page:        1,
-		FirstURL:    fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
-		LastURL:     fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
-		NextURL:     fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousURL: fmt.Sprintf("%s/api/v1/business-admin/1/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		FirstURL:    fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/business-admin/booking?state=1&limit=10&page=1", os.Getenv("BASE_URL")),
 		TotalPage:   1,
 	}
 
@@ -320,6 +396,45 @@ func TestHandler_GetListCustomerBookingWithPaginationLimitError(t *testing.T) {
 	// Setup echo
 	e := echo.New()
 
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
 	// import "net/url"
 	q := make(url.Values)
 	q.Set("state", "0")
@@ -328,9 +443,8 @@ func TestHandler_GetListCustomerBookingWithPaginationLimitError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/booking?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
-	ctx.SetPath("/:placeID/booking")
-	ctx.SetParamNames("placeID")
-	ctx.SetParamValues("1")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
 
 	mockService := new(MockService)
 	h := NewHandler(mockService)
@@ -341,9 +455,9 @@ func TestHandler_GetListCustomerBookingWithPaginationLimitError(t *testing.T) {
 	params := ListRequest{
 		Limit:   110,
 		Page:    1,
-		Path:    "/api/v1/business-admin/1/booking",
+		Path:    "/api/v1/business-admin/booking",
 		State:   0,
-		PlaceID: 1,
+		UserID: 1,
 	}
 
 	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"limit should be 1 - 100"}, ","))
@@ -370,6 +484,45 @@ func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *test
 	// Setup echo
 	e := echo.New()
 
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
 	// import "net/url"
 	q := make(url.Values)
 	q.Set("state", "0")
@@ -378,9 +531,8 @@ func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *test
 	req := httptest.NewRequest(http.MethodGet, "/booking?"+q.Encode(), nil)
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
-	ctx.SetPath("/:placeID/booking")
-	ctx.SetParamNames("placeID")
-	ctx.SetParamValues("1")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
 
 	mockService := new(MockService)
 	h := NewHandler(mockService)
@@ -391,9 +543,9 @@ func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *test
 	params := ListRequest{
 		Limit:   110,
 		Page:    1,
-		Path:    "/api/v1/business-admin/1/booking",
+		Path:    "/api/v1/business-admin/booking",
 		State:   0,
-		PlaceID: 1,
+		UserID: 1,
 	}
 
 	internalServerError := errors.Wrap(ErrInternalServerError, "test")
@@ -413,6 +565,84 @@ func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *test
 	assert.NoError(t, h.GetListCustomerBookingWithPagination(ctx))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListCustomerBookingWithPaginationParseUserDataError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("state", "0")
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/booking?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	params := ListRequest{
+		Limit:   110,
+		Page:    1,
+		Path:    "/api/v1/business-admin/booking",
+		State:   0,
+		UserID: 1,
+	}
+
+	// Excpectation
+	var listCustomerBooking ListBooking
+	var pagination util.Pagination
+	mockService.On("GetListCustomerBookingWithPagination", params).Return(&listCustomerBooking, pagination, nil)
+
+	// Tes
+	assert.NoError(t, h.GetListCustomerBookingWithPagination(ctx))
+	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
 func TestHandler_GetAvailableTime(t *testing.T) {
