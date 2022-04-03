@@ -20,11 +20,11 @@ type ListBooking struct {
 
 // ListRequest consists of request data from client
 type ListRequest struct {
-	Limit   int    `json:"limit"`
-	Page    int    `json:"page"`
-	State   int    `json:"state"`
+	Limit  int    `json:"limit"`
+	Page   int    `json:"page"`
+	State  int    `json:"state"`
 	UserID int    `json:"user_id"`
-	Path    string `json:"path"`
+	Path   string `json:"path"`
 }
 
 // DataForCheckAvailableSchedule for checking schedule in db

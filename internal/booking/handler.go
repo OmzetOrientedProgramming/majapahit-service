@@ -1,7 +1,6 @@
 package booking
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -86,8 +85,7 @@ func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 	params.Page = page
 
 	listCustomerBooking, pagination, err := h.service.GetListCustomerBookingWithPagination(params)
-	fmt.Println("userID: ", params.UserID)
-	fmt.Println("params: ", params)
+
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
 			errList, errMessage := util.ErrorUnwrap(err)

@@ -38,8 +38,8 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 	}
 
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
+		Limit:  10,
+		Page:   1,
 		UserID: 1,
 	}
 
@@ -89,9 +89,9 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 
 func TestRepo_GetListCustomerBookingWithPaginationError(t *testing.T) {
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
-		State:   1,
+		Limit:  10,
+		Page:   1,
+		State:  1,
 		UserID: 1,
 	}
 
@@ -122,9 +122,9 @@ func TestRepo_GetListCustomerBookingWithPaginationError(t *testing.T) {
 
 func TestRepo_GetListCustomerBookingWithPaginationCountError(t *testing.T) {
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
-		State:   1,
+		Limit:  10,
+		Page:   1,
+		State:  1,
 		UserID: 1,
 	}
 
@@ -165,9 +165,9 @@ func TestRepo_GetListCustomerBookingWithPaginationEmpty(t *testing.T) {
 	}
 
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
-		State:   1,
+		Limit:  10,
+		Page:   1,
+		State:  1,
 		UserID: 1,
 	}
 
@@ -204,9 +204,9 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	}
 
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
-		State:   1,
+		Limit:  10,
+		Page:   1,
+		State:  1,
 		UserID: 1,
 	}
 

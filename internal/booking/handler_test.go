@@ -133,10 +133,10 @@ func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	h := NewHandler(mockService)
 
 	params := ListRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/v1/business-admin/booking",
-		State:   1,
+		Limit:  10,
+		Page:   1,
+		Path:   "/api/v1/business-admin/booking",
+		State:  1,
 		UserID: userModel.ID,
 	}
 
@@ -329,10 +329,10 @@ func TestHandler_GetListCustomerBookingWithPaginationWithStateLimitPageAreEmpty(
 	h := NewHandler(mockService)
 
 	params := ListRequest{
-		Limit:   0,
-		Page:    0,
-		Path:    "/api/v1/business-admin/booking",
-		State:   0,
+		Limit:  0,
+		Page:   0,
+		Path:   "/api/v1/business-admin/booking",
+		State:  0,
 		UserID: 1,
 	}
 
@@ -453,10 +453,10 @@ func TestHandler_GetListCustomerBookingWithPaginationLimitError(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	params := ListRequest{
-		Limit:   110,
-		Page:    1,
-		Path:    "/api/v1/business-admin/booking",
-		State:   0,
+		Limit:  110,
+		Page:   1,
+		Path:   "/api/v1/business-admin/booking",
+		State:  0,
 		UserID: 1,
 	}
 
@@ -541,10 +541,10 @@ func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *test
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	params := ListRequest{
-		Limit:   110,
-		Page:    1,
-		Path:    "/api/v1/business-admin/booking",
-		State:   0,
+		Limit:  110,
+		Page:   1,
+		Path:   "/api/v1/business-admin/booking",
+		State:  0,
 		UserID: 1,
 	}
 
@@ -628,10 +628,10 @@ func TestHandler_GetListCustomerBookingWithPaginationParseUserDataError(t *testi
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	params := ListRequest{
-		Limit:   110,
-		Page:    1,
-		Path:    "/api/v1/business-admin/booking",
-		State:   0,
+		Limit:  110,
+		Page:   1,
+		Path:   "/api/v1/business-admin/booking",
+		State:  0,
 		UserID: 1,
 	}
 
