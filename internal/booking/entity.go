@@ -23,7 +23,7 @@ type ListRequest struct {
 	Limit   int    `json:"limit"`
 	Page    int    `json:"page"`
 	State   int    `json:"state"`
-	PlaceID int    `json:"place_id"`
+	UserID int    `json:"user_id"`
 	Path    string `json:"path"`
 }
 

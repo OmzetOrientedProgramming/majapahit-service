@@ -46,8 +46,11 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBoo
 	listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
 	listCustomerBooking.TotalCount = 0
 
-	query := "SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time FROM bookings b, users u WHERE b.place_id = $1 AND u.id = b.user_id AND b.status = $2 ORDER BY b.date DESC LIMIT $3 OFFSET $4"
-	err := r.db.Select(&listCustomerBooking.CustomerBookings, query, params.PlaceID, params.State, params.Limit, (params.Page-1)*params.Limit)
+	query := `SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
+			FROM bookings b, users u, places p 
+			WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
+			ORDER BY b.date DESC LIMIT $3 OFFSET $4`
+	err := r.db.Select(&listCustomerBooking.CustomerBookings, query, params.UserID, params.State, params.Limit, (params.Page-1)*params.Limit)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -58,8 +61,8 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBoo
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	query = "SELECT COUNT(id) FROM bookings WHERE place_id = $1"
-	err = r.db.Get(&listCustomerBooking.TotalCount, query, params.PlaceID)
+	query = "SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1"
+	err = r.db.Get(&listCustomerBooking.TotalCount, query, params.UserID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
