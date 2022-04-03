@@ -887,13 +887,13 @@ func TestService_checkAvailable(t *testing.T) {
 
 		expectedOutput := map[string]map[string]int{
 			"2022-03-29": {
-				"08:00:00 - 09:00:00": 0,
-				"09:00:00 - 10:00:00": 10,
+				"09:00:00": 0,
+				"10:00:00": 10,
 			},
 			"2022-03-30": {
-				"08:00:00 - 09:00:00": 0,
-				"09:00:00 - 10:00:00": 0,
-				"10:00:00 - 11:00:00": 0,
+				"09:00:00": 0,
+				"10:00:00": 0,
+				"11:00:00": 0,
 			},
 		}
 
@@ -1741,7 +1741,44 @@ func TestService_CreateBooking(t *testing.T) {
 			BookingID:   1,
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
 		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(true, nil)
@@ -1980,7 +2017,44 @@ func TestService_CreateBooking(t *testing.T) {
 			TotalPrice: 0,
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, errors.Wrap(ErrInternalServerError, "test error"))
 
 		resp, err := service.CreateBooking(input)
@@ -2062,7 +2136,44 @@ func TestService_CreateBooking(t *testing.T) {
 			},
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, errors.Wrap(ErrInternalServerError, "test error"))
 
@@ -2150,7 +2261,44 @@ func TestService_CreateBooking(t *testing.T) {
 			TotalPrice: 40000,
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
 		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(false, errors.Wrap(ErrInternalServerError, "test error"))
@@ -2266,7 +2414,44 @@ func TestService_CreateBooking(t *testing.T) {
 			ExternalID: "1",
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
 		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(true, nil)
@@ -2384,9 +2569,46 @@ func TestService_CreateBooking(t *testing.T) {
 			ExternalID: "1",
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		xenditInformation := XenditInformation{XenditID: "testID1", InvoicesURL: "test123.com", BookingID: 1}
 
 		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
 		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(true, nil)
@@ -2448,8 +2670,45 @@ func TestService_CreateBooking(t *testing.T) {
 			ExternalID: "1",
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		xenditInformation := XenditInformation{XenditID: "testID1", InvoicesURL: "test123.com", BookingID: 1}
 
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, nil)
 		mockRepo.On("InsertXenditInformation", xenditInformation).Return(true, nil)
@@ -2512,8 +2771,45 @@ func TestService_CreateBooking(t *testing.T) {
 			ExternalID: "1",
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
 		xenditInformation := XenditInformation{XenditID: "testID1", InvoicesURL: "test123.com", BookingID: 1}
 
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, nil)
 		mockRepo.On("InsertXenditInformation", xenditInformation).Return(false, errors.Wrap(ErrInternalServerError, "test error"))
@@ -2574,6 +2870,43 @@ func TestService_CreateBooking(t *testing.T) {
 			ExternalID: "1",
 		}
 
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 100,
+		}
+
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
 		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, errors.Wrap(ErrInternalServerError, "test error"))
 
@@ -2584,6 +2917,256 @@ func TestService_CreateBooking(t *testing.T) {
 		assert.Nil(t, resp)
 		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	})
+
+	t.Run("failed when called get available time service", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXenditService := new(MockXenditService)
+
+		service := NewService(mockRepo, mockXenditService)
+
+		date, _ := time.Parse(util.DateLayout, "2022-02-02")
+		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+
+		input := CreateBookingServiceRequest{
+			Items: []Item{
+				{
+					ID:    4,
+					Name:  "Test Item 1",
+					Price: 10000,
+					Qty:   2,
+				},
+				{
+					ID:    5,
+					Name:  "Test Item 2",
+					Price: 10000,
+					Qty:   2,
+				},
+			},
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             EndTime,
+			Count:               10,
+			PlaceID:             1,
+			UserID:              1,
+			CustomerName:        "Rafi Muhammad",
+			CustomerPhoneNumber: "081291264758",
+		}
+
+		items := []CheckedItemParams{
+			{
+				ID:      4,
+				PlaceID: 1,
+			},
+			{
+				ID:      5,
+				PlaceID: 1,
+			},
+		}
+
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, errors.Wrap(ErrInternalServerError, "test error"))
+
+		resp, err := service.CreateBooking(input)
+		mockRepo.AssertExpectations(t)
+		mockXenditService.AssertExpectations(t)
+
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed when called get available time service", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXenditService := new(MockXenditService)
+
+		service := NewService(mockRepo, mockXenditService)
+
+		date, _ := time.Parse(util.DateLayout, "2022-02-02")
+		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+
+		input := CreateBookingServiceRequest{
+			Items: []Item{
+				{
+					ID:    4,
+					Name:  "Test Item 1",
+					Price: 10000,
+					Qty:   2,
+				},
+				{
+					ID:    5,
+					Name:  "Test Item 2",
+					Price: 10000,
+					Qty:   2,
+				},
+			},
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             EndTime,
+			Count:               10,
+			PlaceID:             1,
+			UserID:              1,
+			CustomerName:        "Rafi Muhammad",
+			CustomerPhoneNumber: "081291264758",
+		}
+
+		items := []CheckedItemParams{
+			{
+				ID:      4,
+				PlaceID: 1,
+			},
+			{
+				ID:      5,
+				PlaceID: 1,
+			},
+		}
+
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, errors.Wrap(ErrInternalServerError, "test error"))
+
+		resp, err := service.CreateBooking(input)
+		mockRepo.AssertExpectations(t)
+		mockXenditService.AssertExpectations(t)
+
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed when get available time result not match", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXenditService := new(MockXenditService)
+
+		service := NewService(mockRepo, mockXenditService)
+
+		date, _ := time.Parse(util.DateLayout, "2022-02-02")
+		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
+		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
+
+		input := CreateBookingServiceRequest{
+			Items: []Item{
+				{
+					ID:    4,
+					Name:  "Test Item 1",
+					Price: 10000,
+					Qty:   2,
+				},
+				{
+					ID:    5,
+					Name:  "Test Item 2",
+					Price: 10000,
+					Qty:   2,
+				},
+			},
+			Date:                date,
+			StartTime:           startTime,
+			EndTime:             EndTime,
+			Count:               10,
+			PlaceID:             1,
+			UserID:              1,
+			CustomerName:        "Rafi Muhammad",
+			CustomerPhoneNumber: "081291264758",
+		}
+
+		items := []CheckedItemParams{
+			{
+				ID:      4,
+				PlaceID: 1,
+			},
+			{
+				ID:      5,
+				PlaceID: 1,
+			},
+		}
+
+		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
+		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
+
+		repoParams := GetBookingDataParams{
+			PlaceID:   input.PlaceID,
+			StartDate: input.Date,
+			EndDate:   midnight,
+			StartTime: input.StartTime,
+		}
+
+		getBookingData := []DataForCheckAvailableSchedule{
+			{
+				ID:        1,
+				Date:      input.Date,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Capacity:  input.Count,
+			},
+		}
+
+		timeSlotsData := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: input.StartTime,
+				EndTime:   input.EndTime,
+				Day:       int(input.Date.Weekday()),
+			},
+		}
+
+		placeIDAndCapacity := PlaceOpenHourAndCapacity{
+			OpenHour: input.StartTime,
+			Capacity: 0,
+		}
+
+		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
+		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
+		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
+		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
+
+		resp, err := service.CreateBooking(input)
+		mockRepo.AssertExpectations(t)
+
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	})
+
 }
 
 func TestService_GetTimeSlots(t *testing.T) {

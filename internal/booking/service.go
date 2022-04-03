@@ -2,6 +2,7 @@ package booking
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -114,6 +115,30 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Selected date time validation
+	getAvaialableTimeParams := GetAvailableTimeParams{
+		PlaceID:      params.PlaceID,
+		SelectedDate: params.Date,
+		StartTime:    params.StartTime,
+		BookedSlot:   params.Count,
+	}
+
+	availableTime, err := s.GetAvailableTime(getAvaialableTimeParams)
+	if err != nil {
+		return nil, err
+	}
+
+	isExist := false
+	for _, i := range *availableTime {
+		if i.Time == params.EndTime.Format(util.TimeLayout) {
+			isExist = true
+		}
+	}
+
+	if !isExist {
+		return nil, errors.Wrap(ErrInputValidationError, "selected date time is not available for booking")
 	}
 
 	// Create booking
@@ -400,15 +425,20 @@ func (s service) checkAvailableSchedule(bookings map[string]map[string]int, star
 	for key, val := range bookings {
 		availableBookings[key] = make(map[string]int)
 
-		for _, timeSlot := range timeSlots {
+		for index, timeSlot := range timeSlots {
 			timeKey := fmt.Sprintf("%s - %s", timeSlot.StartTime.Format(util.TimeLayout), timeSlot.EndTime.Format(util.TimeLayout))
 			oneSecond := time.Duration(1) * time.Second
 
-			if timeSlot.StartTime.Add(oneSecond).After(startTime) {
-				capacityOfBookingGivenTime := val[timeKey]
+			capacityOfBookingGivenTime := val[timeKey]
+			endTimeOnly := fmt.Sprintf("%s", timeSlot.EndTime.Format(util.TimeLayout))
+			if index == 0 && timeSlot.StartTime.Add(oneSecond).After(startTime) && capacityOfBookingGivenTime+bookingSlot <= placeCapacity {
+				availableBookings[key][endTimeOnly] = val[timeKey]
+				continue
+			}
 
-				if capacityOfBookingGivenTime+bookingSlot <= placeCapacity {
-					availableBookings[key][timeKey] = val[timeKey]
+			if timeSlot.StartTime.Add(oneSecond).After(startTime) {
+				if capacityOfBookingGivenTime+bookingSlot <= placeCapacity && (timeSlots[index-1].EndTime.Equal(timeSlot.StartTime) || timeSlot.StartTime.Equal(startTime)) {
+					availableBookings[key][endTimeOnly] = val[timeKey]
 				} else {
 					if isCheckedDate {
 						continue
@@ -436,6 +466,10 @@ func (s service) formatAvailableTimeData(data map[string]map[string]int, selecte
 		availableTimes = append(availableTimes, availableTime)
 	}
 
+	sort.Slice(availableTimes[:], func(i, j int) bool {
+		return availableTimes[i].Time < availableTimes[j].Time
+	})
+
 	return availableTimes
 }
 
@@ -455,6 +489,10 @@ func (s service) formatAvailableDateData(data map[string]map[string]int) []Avail
 
 		availableDates = append(availableDates, availableDate)
 	}
+
+	sort.Slice(availableDates[:], func(i, j int) bool {
+		return availableDates[i].Date < availableDates[j].Date
+	})
 
 	return availableDates
 }
