@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -184,16 +184,13 @@ func TestService_Login(t *testing.T) {
 	}
 
 	t.Run("success", func(t *testing.T) {
-		expectedToken := "asdfasf"
-
 		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(&expectedBusinessAdmin, nil)
 
-		actualBusinessAdmin, actualToken, err := mockService.Login(mockEmail, "mockpass", mockRecaptchaToken)
-		mockRepo.AssertExpectations(t)
+		actualAccessToken, actualRefreshToken, err := mockService.Login(mockEmail, "mockpass", mockRecaptchaToken)
 
 		assert.NoError(t, err)
-		assert.Equal(t, expectedBusinessAdmin.ID, actualBusinessAdmin.ID)
-		assert.Equal(t, expectedToken, actualToken)
+		assert.Equal(t, "string", actualAccessToken)
+		assert.Equal(t, "asdfasf", actualRefreshToken)
 	})
 
 	t.Run("invalid email address", func(t *testing.T) {
@@ -222,9 +219,18 @@ func TestService_Login(t *testing.T) {
 		assert.True(t, errors.Is(err, ErrUnauthorized))
 	})
 
-	t.Run("non ok response code", func(t *testing.T) {
+	t.Run("error while creating request", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockService := NewService(mockRepo, mockAPIKey, "https://wrongurl")
+
+		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(&expectedBusinessAdmin, nil)
+		_, _, err := mockService.Login(mockEmail, "mockpass", mockRecaptchaToken)
+		assert.True(t, errors.Is(err, ErrInternalServerError))
+	})
+
+	t.Run("non ok response code", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockService := NewService(mockRepo, mockAPIKey, mockIdentityToolkitURL+"status=failed")
 
 		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(&expectedBusinessAdmin, nil)
 		_, _, err := mockService.Login(mockEmail, "mockpass", mockRecaptchaToken)
