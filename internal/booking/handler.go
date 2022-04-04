@@ -633,3 +633,40 @@ func (h *Handler) GetMyBookingsPreviousWithPagination(c echo.Context) error {
 		},
 	})
 }
+
+// XenditInvoicesCallback for handling xendit invoices callback
+func (h Handler) XenditInvoicesCallback(c echo.Context) error {
+	var params XenditInvoicesCallback
+
+	err := c.Bind(&params)
+	if err != nil {
+		logrus.Error("[error binding request]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+	}
+
+	err = h.service.UpdateBookingStatusByXendit(params)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError || errors.Cause(err) == ErrNotFound {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
+		}
+
+		logrus.Error("[error while accessing booking service]", err.Error())
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+	}
+
+	return c.JSON(http.StatusCreated, util.APIResponse{
+		Status:  http.StatusCreated,
+		Message: "success",
+	})
+}

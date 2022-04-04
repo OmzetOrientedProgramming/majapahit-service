@@ -182,15 +182,16 @@ type CreateBookingRequestBody struct {
 
 // Booking contains customer booking information
 type Booking struct {
-	ID         int    `json:"id"`
-	PlaceID    int    `json:"place_id" db:"place_id"`
-	PlaceName  string `json:"place_name" db:"place_name"`
-	PlaceImage string `json:"place_image" db:"place_image"`
-	Date       string `json:"date"`
-	StartTime  string `json:"start_time" db:"start_time"`
-	EndTime    string `json:"end_time" db:"end_time"`
-	Status     int    `json:"status"`
-	TotalPrice int    `json:"total_price" db:"total_price"`
+	ID           int    `json:"id"`
+	PlaceID      int    `json:"place_id" db:"place_id"`
+	PlaceName    string `json:"place_name" db:"place_name"`
+	PlaceImage   string `json:"place_image" db:"place_image"`
+	Date         string `json:"date"`
+	StartTime    string `json:"start_time" db:"start_time"`
+	EndTime      string `json:"end_time" db:"end_time"`
+	Status       int    `json:"status"`
+	TotalPrice   int    `json:"total_price" db:"total_price"`
+	BookingPrice int    `json:"booking_price"`
 }
 
 // List contains list of customer booking information
@@ -249,4 +250,11 @@ type XenditInformation struct {
 	XenditID    string `db:"xendit_id"`
 	InvoicesURL string `db:"invoices_url"`
 	BookingID   int    `db:"booking_id"`
+}
+
+// XenditInvoicesCallback for getting callback data from xendit
+type XenditInvoicesCallback struct {
+	ID         string `json:"id"`
+	ExternalID string `json:"external_id"`
+	Status     string `json:"status"`
 }

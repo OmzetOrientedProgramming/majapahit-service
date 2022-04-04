@@ -262,15 +262,15 @@ func TestRepo_GetBookingData(t *testing.T) {
 		query := `SELECT id, date, start_time, end_time, capacity 
 				FROM bookings 
 				WHERE place_id = $1
-				AND status= $2
-				AND date >= $3 
-				AND date <= $4`
+				AND (status = $2 or status = $3)
+				AND date >= $4 
+				AND date <= $5`
 
 		rows := mock.
 			NewRows([]string{"id", "date", "start_time", "end_time", "capacity"}).
 			AddRow(1, time.Now(), time.Now(), time.Now(), 10)
 		mock.ExpectQuery(regexp.QuoteMeta(query)).
-			WithArgs(params.PlaceID, util.BookingBelumMembayar, params.StartDate, params.EndDate).
+			WithArgs(params.PlaceID, util.BookingBelumMembayar, util.BookingBerhasil, params.StartDate, params.EndDate).
 			WillReturnRows(rows)
 
 		bookingData, err := repoMock.GetBookingData(params)
@@ -1380,4 +1380,181 @@ func TestRepo_GetMyBookingsPreviousWithPaginationErrorWhenCount(t *testing.T) {
 	myBookingsPreviousRetrieve, err := repoMock.GetMyBookingsPreviousWithPagination(localID, params)
 	assert.Nil(t, myBookingsPreviousRetrieve)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
+func TestRepo_UpdateBookingStatusByXenditID(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		// Expectation
+		repoMock := NewRepo(sqlxDB)
+
+		query := "UPDATE bookings SET status = $2 WHERE xendit_id= $1"
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs("1", 1).WillReturnResult(driver.ResultNoRows)
+
+		err = repoMock.UpdateBookingStatusByXenditID("1", 1)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		// Expectation
+		repoMock := NewRepo(sqlxDB)
+
+		query := "UPDATE bookings SET status = $2 WHERE xendit_id= $1"
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs("1", 1).WillReturnError(ErrInternalServerError)
+
+		err = repoMock.UpdateBookingStatusByXenditID("1", 1)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed no rows", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		// Expectation
+		repoMock := NewRepo(sqlxDB)
+
+		query := "UPDATE bookings SET status = $2 WHERE xendit_id= $1"
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs("1", 1).WillReturnError(sql.ErrNoRows)
+
+		err = repoMock.UpdateBookingStatusByXenditID("1", 1)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrNotFound, errors.Cause(err))
+	})
+}
+
+func TestRepo_InsertXenditInformation(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		// Expectation
+		params := XenditInformation{
+			XenditID:    "1",
+			InvoicesURL: "test.com",
+			BookingID:   1,
+		}
+		repoMock := NewRepo(sqlxDB)
+
+		query := "UPDATE bookings SET xendit_id = $1, invoices_url = $2 WHERE id = $3"
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).
+			WithArgs(params.XenditID, params.InvoicesURL, params.BookingID).
+			WillReturnResult(driver.ResultNoRows)
+
+		isOk, err := repoMock.InsertXenditInformation(params)
+		assert.Nil(t, err)
+		assert.True(t, isOk)
+	})
+
+	t.Run("error internal server", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+		// Expectation
+		params := XenditInformation{
+			XenditID:    "1",
+			InvoicesURL: "test.com",
+			BookingID:   1,
+		}
+		repoMock := NewRepo(sqlxDB)
+
+		query := "UPDATE bookings SET xendit_id = $1, invoices_url = $2 WHERE id = $3"
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).
+			WithArgs(params.XenditID, params.InvoicesURL, params.BookingID).
+			WillReturnError(ErrInternalServerError)
+
+		isOk, err := repoMock.InsertXenditInformation(params)
+		assert.NotNil(t, err)
+		assert.False(t, isOk)
+	})
+}
+
+func TestRepo_GetPlaceBookingPrice(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		newRepo := NewRepo(sqlxDB)
+
+		query := `SELECT COALESCE (booking_price, 0) FROM places WHERE id  = $1`
+
+		rows := mock.NewRows([]string{"booking_price"})
+		rows.AddRow(10000.0)
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnRows(rows)
+
+		resp, err := newRepo.GetPlaceBookingPrice(1)
+		assert.Nil(t, err)
+		assert.Equal(t, 10000.0, resp)
+	})
+
+	t.Run("failed no sql rows", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		newRepo := NewRepo(sqlxDB)
+
+		query := `SELECT COALESCE (booking_price, 0) FROM places WHERE id  = $1`
+
+		rows := mock.NewRows([]string{"booking_price"})
+		rows.AddRow(10000.0)
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnError(sql.ErrNoRows)
+
+		resp, err := newRepo.GetPlaceBookingPrice(1)
+		assert.Equal(t, ErrNotFound, errors.Cause(err))
+		assert.Equal(t, 0.0, resp)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		newRepo := NewRepo(sqlxDB)
+
+		query := `SELECT COALESCE (booking_price, 0) FROM places WHERE id  = $1`
+
+		rows := mock.NewRows([]string{"booking_price"})
+		rows.AddRow(10000.0)
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnError(ErrInternalServerError)
+
+		resp, err := newRepo.GetPlaceBookingPrice(1)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+		assert.Equal(t, 0.0, resp)
+	})
 }

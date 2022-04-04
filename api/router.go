@@ -87,5 +87,14 @@ func (r *Routes) Init() {
 			bookingRoutes.GET("/ongoing", r.bookingHandler.GetMyBookingsOngoing)
 			bookingRoutes.GET("/previous", r.bookingHandler.GetMyBookingsPreviousWithPagination)
 		}
+
+		// callback
+		callbackRoutes := v1.Group("/callback")
+		{
+			xenditCallbackRoutes := callbackRoutes.Group("/xendit")
+			{
+				xenditCallbackRoutes.POST("/invoices", r.bookingHandler.XenditInvoicesCallback)
+			}
+		}
 	}
 }

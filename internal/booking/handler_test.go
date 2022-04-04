@@ -75,6 +75,11 @@ func (m *MockService) GetMyBookingsPreviousWithPagination(localID string, params
 	return myBookingsPrevious, &pagination, args.Error(2)
 }
 
+func (m *MockService) UpdateBookingStatusByXendit(callback XenditInvoicesCallback) error {
+	args := m.Called(callback)
+	return args.Error(0)
+}
+
 func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	// Setup echo
 	e := echo.New()
@@ -3122,4 +3127,129 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
+}
+
+func TestHandler_XenditInvoicesCallback(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		params := XenditInvoicesCallback{
+			ID:         "1",
+			ExternalID: "10",
+			Status:     "PAID",
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusCreated,
+			Message: "success",
+		})
+
+		payload, _ := json.Marshal(params)
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("UpdateBookingStatusByXendit", params).Return(nil)
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		assert.NoError(t, mockHandler.XenditInvoicesCallback(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed binding body", func(t *testing.T) {
+		params := map[string]interface{}{
+			"id":          1,
+			"external_id": 110,
+			"status":      0,
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+
+		payload, _ := json.Marshal(params)
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		assert.NoError(t, mockHandler.XenditInvoicesCallback(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed input validation error from service", func(t *testing.T) {
+		params := XenditInvoicesCallback{
+			ID:         "1",
+			ExternalID: "10",
+			Status:     "PAID",
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  []string{"test error"},
+		})
+
+		payload, _ := json.Marshal(params)
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("UpdateBookingStatusByXendit", params).Return(errors.Wrap(ErrInputValidationError, "test error"))
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		assert.NoError(t, mockHandler.XenditInvoicesCallback(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed internal server error from service", func(t *testing.T) {
+		params := XenditInvoicesCallback{
+			ID:         "1",
+			ExternalID: "10",
+			Status:     "PAID",
+		}
+
+		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
+
+		payload, _ := json.Marshal(params)
+
+		mockService := new(MockService)
+		mockHandler := NewHandler(mockService)
+
+		mockService.On("UpdateBookingStatusByXendit", params).Return(errors.Wrap(ErrInternalServerError, "test error"))
+
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		assert.NoError(t, mockHandler.XenditInvoicesCallback(ctx))
+		mockService.AssertExpectations(t)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
 }
