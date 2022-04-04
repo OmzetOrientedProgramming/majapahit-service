@@ -41,7 +41,7 @@ func NewService(repo Repo, xendit xendit.Service) Service {
 func (s service) GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, *util.Pagination, error) {
 	var errorList []string
 
-	if params.State < 0 || params.State > 4 {
+	if params.State < 0 || params.State > 5 {
 		params.State = 0
 	}
 
