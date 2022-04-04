@@ -69,7 +69,7 @@ func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, erro
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-	
+
 	err = r.db.Select(&listItem.PlaceInfo, query3, params.PlaceID)
 	if err != nil {
 		if err == sql.ErrNoRows {

@@ -21,9 +21,7 @@ type repo struct {
 // Repo will contain all the function that can be used by repo
 type Repo interface {
 	CheckPhoneNumber(phoneNumber string) (bool, error)
-
 	CreateCustomer(customer Customer) (*Customer, error)
-
 	GetCustomerByPhoneNumber(phoneNumber string) (*Customer, error)
 }
 

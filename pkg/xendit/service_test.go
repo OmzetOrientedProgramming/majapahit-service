@@ -14,7 +14,7 @@ import (
 func TestService_CreateInvoiceSuccess(t *testing.T) {
 	_ = godotenv.Load("../../.env")
 	params := CreateInvoiceParams{
-		BookingID: 1,
+		PlaceID: 1,
 		Items: []Item{
 			{
 				Name:  "test item",
@@ -30,12 +30,14 @@ func TestService_CreateInvoiceSuccess(t *testing.T) {
 		Description:         "test description",
 		CustomerName:        "test customer name",
 		CustomerPhoneNumber: "+628123456712",
+		BookingFee:          50000,
 	}
 
 	totalAmountExpected := 0.0
 	for _, item := range params.Items {
 		totalAmountExpected += item.Price * float64(item.Qty)
 	}
+	totalAmountExpected += params.BookingFee
 
 	for _, xenditFee := range util.XenditFeesDefault {
 		totalAmountExpected += xenditFee.Value
@@ -50,24 +52,19 @@ func TestService_CreateInvoiceSuccess(t *testing.T) {
 	assert.Equal(t, params.CustomerName, resp.Customer.GivenNames)
 	assert.Equal(t, params.CustomerPhoneNumber, resp.Customer.MobileNumber)
 	assert.Equal(t, params.Description, resp.Description)
-	assert.Equal(t, strconv.Itoa(params.BookingID), resp.ExternalID)
+	assert.Equal(t, strconv.Itoa(params.PlaceID), resp.ExternalID)
 
 	for i := 0; i < len(resp.Items); i++ {
 		assert.Equal(t, params.Items[i].Name, resp.Items[i].Name)
 		assert.Equal(t, params.Items[i].Price, resp.Items[i].Price)
 		assert.Equal(t, params.Items[i].Qty, resp.Items[i].Quantity)
 	}
-
-	for i := 0; i < len(resp.Fees); i++ {
-		assert.Equal(t, util.XenditFeesDefault[i].Value, resp.Fees[i].Value)
-		assert.Equal(t, util.XenditFeesDefault[i].Type, resp.Fees[i].Type)
-	}
 }
 
 func TestService_CreateInvoiceFailed(t *testing.T) {
 	_ = godotenv.Load("../../.env")
 	params := CreateInvoiceParams{
-		BookingID: 1,
+		PlaceID: 1,
 		Items: []Item{
 			{
 				Name:  "test item",
@@ -137,7 +134,7 @@ func TestService_GetInvoiceSuccess(t *testing.T) {
 	_ = godotenv.Load("../../.env")
 
 	params := CreateInvoiceParams{
-		BookingID: 1,
+		PlaceID: 1,
 		Items: []Item{
 			{
 				Name:  "test item",
@@ -175,7 +172,7 @@ func TestService_GetInvoiceSuccess(t *testing.T) {
 	assert.Equal(t, params.CustomerName, resp.Customer.GivenNames)
 	assert.Equal(t, params.CustomerPhoneNumber, resp.Customer.MobileNumber)
 	assert.Equal(t, params.Description, resp.Description)
-	assert.Equal(t, strconv.Itoa(params.BookingID), resp.ExternalID)
+	assert.Equal(t, strconv.Itoa(params.PlaceID), resp.ExternalID)
 
 	for i := 0; i < len(resp.Items); i++ {
 		assert.Equal(t, params.Items[i].Name, resp.Items[i].Name)
@@ -183,10 +180,6 @@ func TestService_GetInvoiceSuccess(t *testing.T) {
 		assert.Equal(t, params.Items[i].Qty, resp.Items[i].Quantity)
 	}
 
-	for i := 0; i < len(resp.Fees); i++ {
-		assert.Equal(t, util.XenditFeesDefault[i].Value, resp.Fees[i].Value)
-		assert.Equal(t, util.XenditFeesDefault[i].Type, resp.Fees[i].Type)
-	}
 }
 
 func TestService_GetInvoiceFailed(t *testing.T) {
