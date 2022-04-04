@@ -39,6 +39,12 @@ func (x service) CreateInvoice(params CreateInvoiceParams) (*xendit.Invoice, err
 		})
 	}
 
+	withBookingFee := util.XenditFeesDefault
+	withBookingFee = append(withBookingFee, xendit.InvoiceFee{
+		Type:  "Booking Fee",
+		Value: params.BookingFee,
+	})
+
 	invoiceParams := &invoice.CreateParams{
 		ExternalID:  strconv.Itoa(params.PlaceID),
 		Description: params.Description,
@@ -48,7 +54,7 @@ func (x service) CreateInvoice(params CreateInvoiceParams) (*xendit.Invoice, err
 		},
 		PaymentMethods:  util.DefaultPaymentMethod,
 		Items:           xenditItems,
-		Fees:            util.XenditFeesDefault,
+		Fees:            withBookingFee,
 		InvoiceDuration: util.InvoiceDuration,
 		CustomerNotificationPreference: xendit.InvoiceCustomerNotificationPreference{
 			InvoiceCreated:  util.SMSNotification,

@@ -8,4 +8,7 @@ var (
 
 	// ErrInputValidationError is used if there is input validation error of client given data
 	ErrInputValidationError = errors.New("input validation error")
+
+	// ErrNotFound is used if resource not found
+	ErrNotFound = errors.New("not found")
 )

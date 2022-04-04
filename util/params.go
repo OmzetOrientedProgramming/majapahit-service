@@ -72,10 +72,6 @@ var (
 	// XenditFeesDefault Default params for additional invoices in xendit
 	XenditFeesDefault = []xendit.InvoiceFee{
 		{
-			Type:  "Booking Fee",
-			Value: 15000,
-		},
-		{
 			Type:  "PlatformFee",
 			Value: 3000,
 		},
@@ -86,4 +82,10 @@ var (
 
 	// SMSNotification for xendit default notification
 	SMSNotification = []string{"sms"}
+
+	// XenditStatusPaid for xendit status paid
+	XenditStatusPaid = "PAID"
+
+	// XenditStatusExpired for xendit status expired
+	XenditStatusExpired = "EXPIRED"
 )

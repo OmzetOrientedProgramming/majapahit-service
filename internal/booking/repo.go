@@ -39,6 +39,8 @@ type Repo interface {
 	GetMyBookingsOngoing(localID string) (*[]Booking, error)
 	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, error)
 	InsertXenditInformation(params XenditInformation) (bool, error)
+	UpdateBookingStatusByXenditID(string, int) error
+	GetPlaceBookingPrice(placeID int) (float64, error)
 }
 
 func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, error) {
@@ -180,10 +182,10 @@ func (r repo) GetBookingData(params GetBookingDataParams) (*[]DataForCheckAvaila
 	query := `SELECT id, date, start_time, end_time, capacity 
 				FROM bookings 
 				WHERE place_id = $1
-				AND status= $2
-				AND date >= $3 
-				AND date <= $4`
-	err := r.db.Select(&bookingsData, query, params.PlaceID, util.BookingBelumMembayar, params.StartDate, params.EndDate)
+				AND (status = $2 or status = $3)
+				AND date >= $4 
+				AND date <= $5`
+	err := r.db.Select(&bookingsData, query, params.PlaceID, util.BookingBelumMembayar, util.BookingBerhasil, params.StartDate, params.EndDate)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
@@ -234,6 +236,23 @@ func (r repo) GetPlaceCapacity(placeID int) (*PlaceOpenHourAndCapacity, error) {
 	return &placeData, nil
 }
 
+func (r repo) GetPlaceBookingPrice(placeID int) (float64, error) {
+	var bookingPrice float64
+
+	query := `SELECT COALESCE (booking_price, 0) FROM places WHERE id  = $1`
+
+	err := r.db.Get(&bookingPrice, query, placeID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0.0, errors.Wrap(ErrNotFound, fmt.Sprintf("place with id = %d not found", placeID))
+		}
+
+		return 0.0, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return bookingPrice, nil
+}
+
 func (r *repo) GetDetail(bookingID int) (*Detail, error) {
 	var bookingDetail Detail
 
@@ -279,6 +298,19 @@ func (r *repo) UpdateBookingStatus(bookingID int, newStatus int) error {
 	if err != nil {
 		return errors.Wrap(ErrInternalServerError, err.Error())
 	}
+	return nil
+}
+
+func (r *repo) UpdateBookingStatusByXenditID(xenditID string, newStatus int) error {
+	query := "UPDATE bookings SET status = $2 WHERE xendit_id= $1"
+	_, err := r.db.Exec(query, xenditID, newStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.Wrap(ErrNotFound, fmt.Sprintf("data with xendit_id = %s is not found", xenditID))
+		}
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
 	return nil
 }
 

@@ -23,6 +23,7 @@ type Service interface {
 	UpdateBookingStatus(bookingID int, newStatus int) error
 	GetMyBookingsOngoing(localID string) (*[]Booking, error)
 	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error)
+	UpdateBookingStatusByXendit(callback XenditInvoicesCallback) error
 }
 
 type service struct {
@@ -159,6 +160,11 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 		return nil, err
 	}
 
+	bookingPrice, err := s.repo.GetPlaceBookingPrice(params.PlaceID)
+	if err != nil {
+		return nil, err
+	}
+
 	if checkedItems != nil && isMatch {
 		// convert items to booking items & xendit items instance
 		var bookingItems []CreateBookingItemsParams
@@ -201,6 +207,7 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 			Description:         fmt.Sprintf("order from %s", params.CustomerName),
 			CustomerName:        params.CustomerName,
 			CustomerPhoneNumber: params.CustomerPhoneNumber,
+			BookingFee:          bookingPrice,
 		}
 
 		invoice, err := s.xendit.CreateInvoice(invoiceParams)
@@ -232,6 +239,7 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 		Description:         fmt.Sprintf("order from %s", params.CustomerName),
 		CustomerName:        params.CustomerName,
 		CustomerPhoneNumber: params.CustomerPhoneNumber,
+		BookingFee:          bookingPrice,
 	}
 
 	invoice, err := s.xendit.CreateInvoice(invoiceParams)
@@ -428,6 +436,12 @@ func (s service) checkAvailableSchedule(bookings map[string]map[string]int, star
 		for index, timeSlot := range timeSlots {
 			timeKey := fmt.Sprintf("%s - %s", timeSlot.StartTime.Format(util.TimeLayout), timeSlot.EndTime.Format(util.TimeLayout))
 			oneSecond := time.Duration(1) * time.Second
+			date, _ := time.Parse(util.DateLayout, key)
+			day := int(date.Weekday())
+
+			if day != timeSlot.Day {
+				continue
+			}
 
 			capacityOfBookingGivenTime := val[timeKey]
 			endTimeOnly := fmt.Sprintf("%s", timeSlot.EndTime.Format(util.TimeLayout))
@@ -573,6 +587,31 @@ func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *service) UpdateBookingStatusByXendit(callback XenditInvoicesCallback) error {
+	var errorList []string
+
+	var status int
+	switch callback.Status {
+	case util.XenditStatusPaid:
+		status = util.BookingBerhasil
+	case util.XenditStatusExpired:
+		status = util.BookingGagal
+	default:
+		errorList = append(errorList, fmt.Sprintf("callback status %s is unknown", callback.Status))
+	}
+
+	if len(errorList) > 0 {
+		return errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	err := s.repo.UpdateBookingStatusByXenditID(callback.ID, status)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
