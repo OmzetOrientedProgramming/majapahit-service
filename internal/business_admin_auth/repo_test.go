@@ -662,4 +662,31 @@ func Test_repo_GetBusinessAdminByEmail(t *testing.T) {
 		assert.True(t, errors.Is(err, ErrInternalServerError))
 		assert.Nil(t, actual)
 	})
+
+	t.Run("user does not exist on database", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE email = $1")).
+			WithArgs("notexistent@email.com").
+			WillReturnError(sql.ErrNoRows)
+
+		actual, err := repoMock.GetBusinessAdminByEmail("notexistent@email.com")
+		assert.True(t, errors.Is(err, ErrNotFound))
+		assert.Nil(t, actual)
+	})
+
+	t.Run("business admin does not exist on database", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "phone_number", "name", "status"}).
+			AddRow(1, "081223901234", "Bambang", 1)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE email = $1")).
+			WithArgs("notexistent@email.com").
+			WillReturnRows(rows)
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM business_owners WHERE user_id = $1")).
+			WithArgs(1).
+			WillReturnError(sql.ErrNoRows)
+
+		actual, err := repoMock.GetBusinessAdminByEmail("notexistent@email.com")
+		assert.True(t, errors.Is(err, ErrNotFound))
+		assert.Nil(t, actual)
+	})
 }
