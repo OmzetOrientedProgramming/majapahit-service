@@ -80,6 +80,7 @@ func (r *Routes) Init() {
 			authRoutes.POST("/register", r.authHandler.Register, r.authMiddleware.AuthMiddleware())
 
 			authRoutes.POST("/business-admin/register", r.businessadminauthHandler.RegisterBusinessAdmin)
+			authRoutes.POST("/business-admin/login", r.businessadminauthHandler.Login)
 		}
 
 		// Booking module
