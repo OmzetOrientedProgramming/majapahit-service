@@ -16,9 +16,9 @@ type MockService struct {
 	mock.Mock
 }
 
-func (m *MockService) Login(email, password, recaptchaToken string) (*BusinessAdmin, string, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *MockService) Login(email, password, recaptchaToken string) (string, string, error) {
+	args := m.Called(email, password, recaptchaToken)
+	return args.String(0), args.String(1), args.Error(2)
 }
 
 func (m *MockService) RegisterBusinessAdmin(request RegisterBusinessAdminRequest) (*LoginCredential, error) {

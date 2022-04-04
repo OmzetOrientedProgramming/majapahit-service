@@ -27,7 +27,7 @@ func NewService(repo Repo, firebaseAPIKey, identityToolkitURL string) Service {
 // Service is used to define the methods in it
 type Service interface {
 	RegisterBusinessAdmin(request RegisterBusinessAdminRequest) (*LoginCredential, error)
-	Login(email, password, recaptchaToken string) (*BusinessAdmin, string, error)
+	Login(email, password, recaptchaToken string) (string, string, error)
 }
 
 // service is a struct of service
@@ -112,23 +112,23 @@ func (s service) RegisterBusinessAdmin(request RegisterBusinessAdminRequest) (*L
 }
 
 // Login as a business admin
-func (s service) Login(email, password, recaptchaToken string) (*BusinessAdmin, string, error) {
+func (s service) Login(email, password, recaptchaToken string) (string, string, error) {
 	if _, err := mail.ParseAddress(email); err != nil {
-		return nil, "", fmt.Errorf("invalid email address: %w", ErrInputValidationError)
+		return "", "", fmt.Errorf("invalid email address: %w", ErrInputValidationError)
 	}
 
 	if password == "" {
-		return nil, "", fmt.Errorf("password cannot be empty: %w", ErrInputValidationError)
+		return "", "", fmt.Errorf("password cannot be empty: %w", ErrInputValidationError)
 	}
 
 	businessAdmin, err := s.repo.GetBusinessAdminByEmail(email)
 	if err != nil {
-		return nil, "", err
+		return "", "", err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(businessAdmin.Password), []byte(password)); err != nil {
 		logrus.Errorf("[error while comparing password] %v", err)
-		return nil, "", fmt.Errorf("password is incorrect: %w", ErrUnauthorized)
+		return "", "", fmt.Errorf("password is incorrect: %w", ErrUnauthorized)
 	}
 
 	apiURL := fmt.Sprintf("%s/v1/accounts:signInWithPassword?key=%s", s.identityToolkitURL, s.firebaseAPIKey)
@@ -143,16 +143,16 @@ func (s service) Login(email, password, recaptchaToken string) (*BusinessAdmin, 
 	resp, err := http.Post(apiURL, echo.MIMEApplicationJSON, bytes.NewBuffer(jsonData))
 	if err != nil {
 		logrus.Error("[error while creating request] ", err.Error())
-		return nil, "", fmt.Errorf("failed to create request: %w", ErrInternalServerError)
+		return "", "", fmt.Errorf("failed to create request: %w", ErrInternalServerError)
 	}
 
 	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
 		logrus.Error("[non ok status response] ", resp.StatusCode)
-		return nil, "", fmt.Errorf("non ok response code: %w", ErrInternalServerError)
+		return "", "", fmt.Errorf("non ok response code: %w", ErrInternalServerError)
 	}
 
 	var jsonResponse map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&jsonResponse)
 
-	return businessAdmin, jsonResponse["refreshToken"].(string), nil
+	return jsonResponse["idToken"].(string), jsonResponse["refreshToken"].(string), nil
 }

@@ -1,12 +1,11 @@
 package businessadminauth
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
+	"net/http"
 )
 
 // Handler is a struct to define Handler
@@ -60,4 +59,9 @@ func (h *Handler) RegisterBusinessAdmin(c echo.Context) error {
 		Message: "success",
 		Data:    result,
 	})
+}
+
+// Login is the main media to bind requests, process it and return its response
+func (h *Handler) Login(c echo.Context) error {
+	return nil
 }
