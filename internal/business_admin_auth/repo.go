@@ -509,14 +509,20 @@ func (r repo) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
 	var userModel auth.UserModel
 	query := "SELECT * FROM users WHERE email = $1"
 	if err := r.db.Get(&userModel, query, email); err != nil {
-		logrus.Error("[error while accessing user model]", err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found: %w", ErrNotFound)
+		}
+		logrus.Error("[error while accessing user model] ", err.Error())
 		return nil, fmt.Errorf("cannot access user table: %w", ErrInternalServerError)
 	}
 
 	var businessAdminModel BusinessAdminModel
 	query = "SELECT * FROM business_owners WHERE user_id = $1"
 	if err := r.db.Get(&businessAdminModel, query, userModel.ID); err != nil {
-		logrus.Error("[error while accessing user model]", err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("business admin not found: %w", ErrNotFound)
+		}
+		logrus.Error("[error while accessing user model] ", err.Error())
 		return nil, fmt.Errorf("cannot access business owner table: %w", ErrInternalServerError)
 	}
 
