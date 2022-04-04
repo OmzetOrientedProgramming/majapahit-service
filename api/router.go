@@ -4,6 +4,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/booking"
+	businessadmin "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin"
 	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
@@ -21,10 +22,11 @@ type Routes struct {
 	businessadminauthHandler *businessadminauth.Handler
 	authMiddleware           middleware.AuthMiddleware
 	bookingHandler           *booking.Handler
+	businessadminHandler     *businessadmin.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler, businessadminHandler *businessadmin.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
@@ -34,6 +36,7 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandle
 		businessadminauthHandler: businessadminauthHandler,
 		authMiddleware:           authMiddleware,
 		bookingHandler:           bookingHandler,
+		businessadminHandler:     businessadminHandler,
 	}
 }
 
@@ -60,6 +63,7 @@ func (r *Routes) Init() {
 
 		// Business Admin Module
 		businessAdminRoutes := v1.Group("/business-admin", r.authMiddleware.AuthMiddleware())
+		businessAdminRoutes.GET("/balance", r.businessadminHandler.GetBalanceDetail)
 		{
 			// Booking
 			bookingRoutes := businessAdminRoutes.Group("/booking")
