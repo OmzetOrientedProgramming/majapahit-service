@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/xendit/xendit-go/client"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/database/postgres"
+	businessadmin "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin"
 	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
@@ -60,6 +61,10 @@ var (
 	bookingRepo    booking.Repo
 	bookingService booking.Service
 	bookingHandler *booking.Handler
+
+	businessadminRepo    businessadmin.Repo
+	businessadminService businessadmin.Service
+	businessadminHandler *businessadmin.Handler
 
 	userRepo user.Repo
 )
@@ -110,8 +115,13 @@ func (s Server) Init() {
 	bookingService = booking.NewService(bookingRepo, xenditService)
 	bookingHandler = booking.NewHandler(bookingService)
 
+	// BusinessAdmin module
+	businessadminRepo = businessadmin.NewRepo(db)
+	businessadminService = businessadmin.NewService(businessadminRepo)
+	businessadminHandler = businessadmin.NewHandler(businessadminService)
+
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler)
+	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler)
 	r.Init()
 }
 
