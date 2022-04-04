@@ -1,6 +1,8 @@
 package businessadminauth
 
-import "time"
+import (
+	"time"
+)
 
 // User is a media to retrieve the user_id
 type User struct {
@@ -70,7 +72,13 @@ type BusinessAdminModel struct {
 
 // LoginRequest is a media to bind JSON request
 type LoginRequest struct {
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	AccessToken string `json:"access_token"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	CaptchaResponse string `json:"captcha_response"`
+}
+
+// LoginResponse is a media to bind JSON response
+type LoginResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }

@@ -63,5 +63,47 @@ func (h *Handler) RegisterBusinessAdmin(c echo.Context) error {
 
 // Login is the main media to bind requests, process it and return its response
 func (h *Handler) Login(c echo.Context) error {
-	return nil
+	var request LoginRequest
+	err := c.Bind(&request)
+	if err != nil {
+		logrus.Error("Error while binding login request", err.Error())
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "Terjadi kesalahan dalam memproses permintaan anda",
+		})
+	}
+
+	accessToken, refreshToken, err := h.service.Login(request.Email, request.Password, request.CaptchaResponse)
+	if err != nil {
+		if errors.Is(err, ErrInputValidationError) {
+			return c.JSON(http.StatusUnprocessableEntity, util.APIResponse{
+				Status:  http.StatusUnprocessableEntity,
+				Message: "Kredensial yang anda berikan tidak valid",
+			})
+		} else if errors.Is(err, ErrUnauthorized) {
+			return c.JSON(http.StatusUnauthorized, util.APIResponse{
+				Status:  http.StatusUnauthorized,
+				Message: "Kredensial yang anda berikan salah",
+			})
+		} else if errors.Is(err, ErrNotFound) {
+			return c.JSON(http.StatusNotFound, util.APIResponse{
+				Status:  http.StatusNotFound,
+				Message: "Akun tidak ditemukan",
+			})
+		} else {
+			return c.JSON(http.StatusInternalServerError, util.APIResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Terjadi kesalahan dalam memproses permintaan anda",
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "Login berhasil",
+		Data: LoginResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		},
+	})
 }
