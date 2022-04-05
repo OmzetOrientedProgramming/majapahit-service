@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	"math/big"
 	"net/mail"
 	"strconv"
@@ -27,6 +29,7 @@ type repo struct {
 
 // Repo is an interface to define methods in it
 type Repo interface {
+	GetBusinessAdminByEmail(email string) (*BusinessAdmin, error)
 	CreateUser(phoneNumber, name, email, password string, status int) error                     //status = 1
 	CreateBusinessAdmin(userID int, bankAccount, bankAccountName string, balance float32) error //balance = 0.0
 	CreatePlace(name, address string, capacity int, description string,
@@ -78,7 +81,7 @@ func (r repo) CreatePlace(name, address string, capacity int, description string
 	minIntervalBooking, maxIntervalBooking, minSlotBooking, maxSlotBooking int,
 	lat, long float64) error {
 
-	var sqlCommand string = `INSERT INTO places (
+	var sqlCommand = `INSERT INTO places (
 				name, address, capacity, description, user_id, interval, open_hour, close_hour, image,
 				min_interval_booking, max_interval_booking, min_slot_booking, max_slot_booking, lat, long) 
 				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
@@ -488,7 +491,7 @@ func (r repo) CompareOpenAndCloseHour(openHour, closeHour string) (bool, error) 
 // GeneratePassword returns a newly generated password
 func (r repo) GeneratePassword() string {
 	const characters string = "abcdefghijklmnopqrstuvwxyz0123456789"
-	var password string = ""
+	var password = ""
 
 	for i := 0; i < 8; i++ {
 		idx, err := rand.Int(rand.Reader, big.NewInt(36))
@@ -499,4 +502,39 @@ func (r repo) GeneratePassword() string {
 	}
 
 	return password
+}
+
+// GetBusinessAdminByEmail returns business admin by given email
+func (r repo) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
+	var userModel auth.UserModel
+	query := "SELECT * FROM users WHERE email = $1"
+	if err := r.db.Get(&userModel, query, email); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found: %w", ErrNotFound)
+		}
+		logrus.Error("[error while accessing user model] ", err.Error())
+		return nil, fmt.Errorf("cannot access user table: %w", ErrInternalServerError)
+	}
+
+	var businessAdminModel BusinessAdminModel
+	query = "SELECT * FROM business_owners WHERE user_id = $1"
+	if err := r.db.Get(&businessAdminModel, query, userModel.ID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("business admin not found: %w", ErrNotFound)
+		}
+		logrus.Error("[error while accessing user model] ", err.Error())
+		return nil, fmt.Errorf("cannot access business owner table: %w", ErrInternalServerError)
+	}
+
+	return &BusinessAdmin{
+		ID:                userModel.ID,
+		Name:              userModel.Name,
+		PhoneNumber:       userModel.PhoneNumber,
+		Email:             userModel.Email,
+		Password:          userModel.Password,
+		Status:            userModel.Status,
+		Balance:           businessAdminModel.Balance,
+		BankAccountNumber: businessAdminModel.BankAccountNumber,
+		BankAccountName:   businessAdminModel.BankAccountName,
+	}, nil
 }

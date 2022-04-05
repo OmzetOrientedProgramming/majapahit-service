@@ -1,7 +1,10 @@
 package businessadminauth
 
 import (
+	"fmt"
 	"testing"
+
+	"errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -92,7 +95,17 @@ func (m *MockRepository) CompareOpenAndCloseHour(openHour, closeHour string) (bo
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockRepository) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
+	args := m.Called(email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*BusinessAdmin), args.Error(1)
+}
+
 func TestService_RegisterBusinessAdmin(t *testing.T) {
+	mockAPIKey := "1234567890"
+	mockIdentityToolkitURL := "https://test"
 	request := RegisterBusinessAdminRequest{
 		AdminPhoneNumber:        "089782828888",
 		AdminEmail:              "sebuahemail@gmail.com",
@@ -116,7 +129,7 @@ func TestService_RegisterBusinessAdmin(t *testing.T) {
 	}
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, mockAPIKey, mockIdentityToolkitURL)
 
 	var mockEmptyErrorList []string
 	mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
@@ -147,4 +160,80 @@ func TestService_RegisterBusinessAdmin(t *testing.T) {
 	assert.NotNil(t, loginCredentialResult)
 	assert.Equal(t, request.PlaceName, loginCredentialResult.PlaceName)
 	assert.Equal(t, request.AdminEmail, loginCredentialResult.Email)
+}
+
+func TestService_Login(t *testing.T) {
+	mockAPIKey := "1234567890"
+	mockIdentityToolkitURL := "https://stoplight.io/mocks/oop-ppl/wave-api/41710619/mock/firebase"
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo, mockAPIKey, mockIdentityToolkitURL)
+	mockEmail := "mock@email.com"
+	mockPassword := "$2a$10$PTygXSgiOxD1WxRMtIa5leSqVj7R80KY.yx9XL046UPl35ztS/cxu" // plaintext: mockpass
+	mockRecaptchaToken := "asdfasdf"
+
+	expectedBusinessAdmin := BusinessAdmin{
+		ID:                1,
+		Name:              "Mock Name",
+		PhoneNumber:       "081223901234",
+		Email:             mockEmail,
+		Password:          mockPassword,
+		Status:            1,
+		Balance:           1000,
+		BankAccountNumber: "081241234123414534",
+		BankAccountName:   "BCA",
+	}
+
+	t.Run("success", func(t *testing.T) {
+		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(&expectedBusinessAdmin, nil)
+
+		actualAccessToken, actualRefreshToken, err := mockService.Login(mockEmail, "mockpass", mockRecaptchaToken)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "string", actualAccessToken)
+		assert.Equal(t, "asdfasf", actualRefreshToken)
+	})
+
+	t.Run("invalid email address", func(t *testing.T) {
+		_, _, err := mockService.Login("randomwrongemailformat", mockPassword, mockRecaptchaToken)
+		assert.True(t, errors.Is(err, ErrInputValidationError))
+	})
+
+	t.Run("empty password", func(t *testing.T) {
+		_, _, err := mockService.Login(mockEmail, "", mockRecaptchaToken)
+		assert.True(t, errors.Is(err, ErrInputValidationError))
+	})
+
+	t.Run("failed to get business admin by email", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockService := NewService(mockRepo, mockAPIKey, mockIdentityToolkitURL)
+		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(nil, ErrInternalServerError)
+
+		_, _, err := mockService.Login(mockEmail, mockPassword, mockRecaptchaToken)
+		fmt.Println(errors.Is(err, ErrInputValidationError))
+		assert.True(t, errors.Is(err, ErrInternalServerError))
+	})
+
+	t.Run("wrong password", func(t *testing.T) {
+		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(&BusinessAdmin{Password: "test"}, nil)
+		_, _, err := mockService.Login(mockEmail, "wrong password", mockRecaptchaToken)
+		assert.True(t, errors.Is(err, ErrUnauthorized))
+	})
+
+	t.Run("error while creating request", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockService := NewService(mockRepo, mockAPIKey, "https://wrongurl")
+
+		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(&expectedBusinessAdmin, nil)
+		_, _, err := mockService.Login(mockEmail, "mockpass", mockRecaptchaToken)
+		assert.True(t, errors.Is(err, ErrInternalServerError))
+	})
+
+	t.Run("non ok response code", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockService := NewService(mockRepo, mockAPIKey, mockIdentityToolkitURL+"status=failed")
+
+		mockRepo.On("GetBusinessAdminByEmail", mockEmail).Return(&expectedBusinessAdmin, nil)
+		_, _, err := mockService.Login(mockEmail, "mockpass", mockRecaptchaToken)
+		assert.True(t, errors.Is(err, ErrInternalServerError))
+	})
 }

@@ -92,7 +92,7 @@ func (s Server) Init() {
 
 	// BusinessAdminAuth module
 	businessadminauthRepo = businessadminauth.NewRepo(db)
-	businessadminauthService = businessadminauth.NewService(businessadminauthRepo)
+	businessadminauthService = businessadminauth.NewService(businessadminauthRepo, os.Getenv("FIREBASE_API_KEY"), os.Getenv("IDENTITY_TOOLKIT_URL"))
 	businessadminauthHandler = businessadminauth.NewHandler(businessadminauthService)
 
 	// Check up module
