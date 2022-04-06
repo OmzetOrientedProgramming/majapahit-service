@@ -256,7 +256,9 @@ func (r repo) GetPlaceBookingPrice(placeID int) (float64, error) {
 func (r *repo) GetDetail(bookingID int) (*Detail, error) {
 	var bookingDetail Detail
 
-	query := "SELECT id, date, start_time, end_time, capacity, status, total_price, created_at FROM bookings WHERE id = $1"
+	query := `SELECT b.id, u.name, b.date, b.start_time, b.end_time, b.capacity, b.status, b.total_price, b.created_at
+			  FROM bookings b, users u
+			  WHERE b.id = $1 AND b.user_id = u.id`
 	err := r.db.Get(&bookingDetail, query, bookingID)
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
