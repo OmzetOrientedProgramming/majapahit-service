@@ -210,6 +210,7 @@ type BookingsListRequest struct {
 // Detail contain required information about booking
 type Detail struct {
 	ID               int          `json:"id"`
+	CustomerName     string       `json:"customer_name" db:"name"`
 	Date             string       `json:"date"`
 	StartTime        string       `json:"start_time" db:"start_time"`
 	EndTime          string       `json:"end_time" db:"end_time"`
