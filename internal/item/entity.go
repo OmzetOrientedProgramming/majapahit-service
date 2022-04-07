@@ -28,5 +28,6 @@ type ListItemRequest struct {
 	Page    int    `json:"page"`
 	Path    string `json:"path"`
 	PlaceID int    `json:"place_id"`
+	UserID  int    `json:"user_id"`
 	Name    string `json:"name"`
 }

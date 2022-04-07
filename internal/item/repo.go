@@ -23,6 +23,7 @@ type repo struct {
 type Repo interface {
 	GetListItemWithPagination(params ListItemRequest) (*ListItem, error)
 	GetItemByID(placeID int, itemID int) (*Item, error)
+	GetListItemAdminWithPagination(params ListItemRequest) (*ListItem, error)
 }
 
 func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, error) {
@@ -100,4 +101,41 @@ func (r repo) GetItemByID(placeID int, itemID int) (*Item, error) {
 	}
 
 	return &item, nil
+}
+
+func (r repo) GetListItemAdminWithPagination(params ListItemRequest) (*ListItem, error) {
+	var listItem ListItem
+	listItem.Items = make([]Item, 0)
+	listItem.TotalCount = 0
+
+	query := `
+	SELECT i.id, i.name, i.image, i.price, i.description
+	FROM items i, places p
+	WHERE i.place_id = p.id AND p.user_id = $1 LIMIT $2 OFFSET $3
+	`
+
+	err := r.db.Select(&listItem.Items, query, params.UserID, params.Limit, (params.Page-1)*params.Limit)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			listItem.Items = make([]Item, 0)
+			listItem.TotalCount = 0
+			return &listItem, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	query = "SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1"
+
+	err = r.db.Get(&listItem.TotalCount, query, params.UserID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			listItem.Items = make([]Item, 0)
+			listItem.TotalCount = 0
+			return &listItem, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &listItem, nil
 }
