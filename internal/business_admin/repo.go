@@ -1,6 +1,8 @@
 package businessadmin
 
 import (
+	"database/sql"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -41,7 +43,15 @@ func (r *repo) GetLatestDisbursement(placeID int) (*DisbursementDetail, error) {
 	query := "SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND status = 1) ORDER BY date DESC LIMIT 1"
 	err := r.db.Get(&result, query, placeID)
 	if err != nil {
-		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+		if err == sql.ErrNoRows {
+			result = DisbursementDetail{
+				Date:   "-",
+				Amount: 0,
+				Status: 1,
+			}
+		} else {
+			return nil, errors.Wrap(ErrInternalServerError, err.Error())
+		}
 	}
 
 	return &result, nil

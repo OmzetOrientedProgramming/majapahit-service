@@ -48,10 +48,6 @@ func (s *service) GetBalanceDetail(userID int) (*BalanceDetail, error) {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	if latestDisbursement.Status == 1 {
-		balanceDetail.Balance = balanceDetail.Balance - latestDisbursement.Amount
-	}
-
 	balanceDetail.LatestDisbursementDate = latestDisbursement.Date
 
 	return balanceDetail, nil

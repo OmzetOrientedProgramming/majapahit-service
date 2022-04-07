@@ -54,7 +54,7 @@ func TestService_GetBalanceDetailSuccess(t *testing.T) {
 
 	var balanceDetail BalanceDetail
 	balanceDetail.LatestDisbursementDate = latestDisbursement.Date
-	balanceDetail.Balance = balance.Balance - float64(latestDisbursement.Amount)
+	balanceDetail.Balance = balance.Balance
 
 	assert.Equal(t, &balanceDetail, balanceDetailResult)
 	assert.NotNil(t, balanceDetailResult)

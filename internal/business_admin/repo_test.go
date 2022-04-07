@@ -48,6 +48,36 @@ func TestRepo_GetLatestDisbursementSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRepo_GetLatestDisbursementErrorNoRows(t *testing.T) {
+	placeID := 1
+	latestDateExpected := &DisbursementDetail{
+		Date:   "-",
+		Amount: 0,
+		Status: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND status = 1) ORDER BY date DESC LIMIT 1")).
+		WithArgs(placeID).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	latestDateRetrieved, err := repoMock.GetLatestDisbursement(placeID)
+	assert.Equal(t, latestDateExpected, latestDateRetrieved)
+	assert.NotNil(t, latestDateRetrieved)
+	assert.NoError(t, err)
+}
+
 func TestRepo_GetLatestDisbursementInternalServerError(t *testing.T) {
 	placeID := 1
 
