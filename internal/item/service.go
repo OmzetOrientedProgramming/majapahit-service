@@ -26,6 +26,8 @@ type service struct {
 
 func (s service) GetListItemWithPagination(params ListItemRequest) (*ListItem, *util.Pagination, error) {
 	var errorList []string
+	var listItem *ListItem
+	var err error
 
 	if strings.Contains(params.Name, "+") {
 		params.Name = strings.ReplaceAll(params.Name, "+", " ")
@@ -51,7 +53,11 @@ func (s service) GetListItemWithPagination(params ListItemRequest) (*ListItem, *
 		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
 	}
 
-	listItem, err := s.repo.GetListItemWithPagination(params)
+	if params.PlaceID != 0 {
+		listItem, err = s.repo.GetListItemWithPagination(params)
+	} else {
+		listItem, err = s.repo.GetListItemAdminWithPagination(params)
+	}
 
 	if err != nil {
 		return nil, nil, err

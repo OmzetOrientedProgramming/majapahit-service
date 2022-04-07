@@ -40,9 +40,9 @@ var (
 	checkUpService checkup.Service
 	checkupHandler *checkup.Handler
 
-	catalogRepo    item.Repo
-	catalogService item.Service
-	catalogHandler *item.Handler
+	itemRepo    item.Repo
+	itemService item.Service
+	itemHandler *item.Handler
 
 	placeRepo    place.Repo
 	placeService place.Service
@@ -81,9 +81,9 @@ func (s Server) Init() {
 	checkupHandler = checkup.NewHandler(checkUpService)
 
 	// Catalog Module
-	catalogRepo = item.NewRepo(db)
-	catalogService = item.NewService(catalogRepo)
-	catalogHandler = item.NewHandler(catalogService)
+	itemRepo = item.NewRepo(db)
+	itemService = item.NewService(itemRepo)
+	itemHandler = item.NewHandler(itemService)
 
 	// Place module
 	placeRepo = place.NewRepo(db)
@@ -121,7 +121,7 @@ func (s Server) Init() {
 	businessadminHandler = businessadmin.NewHandler(businessadminService)
 
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, catalogHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler)
+	r := NewRoutes(s.Router, checkupHandler, itemHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler)
 	r.Init()
 }
 

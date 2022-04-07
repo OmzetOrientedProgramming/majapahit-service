@@ -24,6 +24,12 @@ func (m *MockRepository) GetItemByID(placeID int, itemID int) (*Item, error) {
 	return &ret, args.Error(1)
 }
 
+func (m *MockRepository) GetListItemAdminWithPagination(params ListItemRequest) (*ListItem, error) {
+	args := m.Called(params)
+	ret := args.Get(0).(ListItem)
+	return &ret, args.Error(1)
+}
+
 func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
 	// Define input and output
 	listItemExpected := ListItem{
@@ -46,27 +52,49 @@ func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
 		TotalCount: 10,
 	}
 
-	params := ListItemRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/testing",
-		PlaceID: 1,
-	}
-
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo)
 
-	// Expectation
-	mockRepo.On("GetListItemWithPagination", params).Return(listItemExpected, nil)
+	t.Run("success with place id", func(t *testing.T) {
+		params := ListItemRequest{
+			Limit:   10,
+			Page:    1,
+			Path:    "/api/testing",
+			PlaceID: 1,
+			UserID:  0,
+		}
+		// Expectation
+		mockRepo.On("GetListItemWithPagination", params).Return(listItemExpected, nil)
 
-	// Test
-	listItemResult, _, err := mockService.GetListItemWithPagination(params)
-	mockRepo.AssertExpectations(t)
+		// Test
+		listItemResult, _, err := mockService.GetListItemWithPagination(params)
+		mockRepo.AssertExpectations(t)
 
-	assert.Equal(t, &listItemExpected, listItemResult)
-	assert.NotNil(t, listItemResult)
-	assert.NoError(t, err)
+		assert.Equal(t, &listItemExpected, listItemResult)
+		assert.NotNil(t, listItemResult)
+		assert.NoError(t, err)
+	})
+
+	t.Run("success with user id", func(t *testing.T) {
+		params := ListItemRequest{
+			Limit:   10,
+			Page:    1,
+			Path:    "/api/testing",
+			PlaceID: 0,
+			UserID:  1,
+		}
+		// Expectation
+		mockRepo.On("GetListItemAdminWithPagination", params).Return(listItemExpected, nil)
+
+		// Test
+		listItemResult, _, err := mockService.GetListItemWithPagination(params)
+		mockRepo.AssertExpectations(t)
+
+		assert.Equal(t, &listItemExpected, listItemResult)
+		assert.NotNil(t, listItemResult)
+		assert.NoError(t, err)
+	})
 }
 
 func TestService_GetListItemByIDWithPaginationSuccessWithParamsName(t *testing.T) {

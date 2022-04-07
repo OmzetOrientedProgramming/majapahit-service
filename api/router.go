@@ -16,7 +16,7 @@ import (
 type Routes struct {
 	Router                   *echo.Echo
 	checkUPHandler           *checkup.Handler
-	catalogHandler           *item.Handler
+	itemHandler              *item.Handler
 	placeHandler             *place.Handler
 	authHandler              *auth.Handler
 	businessadminauthHandler *businessadminauth.Handler
@@ -26,12 +26,12 @@ type Routes struct {
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, catalogHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler, businessadminHandler *businessadmin.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, itemHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler, businessadminHandler *businessadmin.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
 		authHandler:              authHandler,
-		catalogHandler:           catalogHandler,
+		itemHandler:              itemHandler,
 		placeHandler:             placeHandler,
 		businessadminauthHandler: businessadminauthHandler,
 		authMiddleware:           authMiddleware,
@@ -55,8 +55,8 @@ func (r *Routes) Init() {
 		{
 			// Catalog module
 			catalogRoutes := placeRoutes.Group("/:placeID/catalog")
-			catalogRoutes.GET("", r.catalogHandler.GetListItemWithPagination)
-			catalogRoutes.GET("/:itemID", r.catalogHandler.GetItemByID)
+			catalogRoutes.GET("", r.itemHandler.GetListItemWithPagination)
+			catalogRoutes.GET("/:itemID", r.itemHandler.GetItemByID)
 
 			placeRoutes.GET("/:placeID/time-slot", r.bookingHandler.GetTimeSlots, r.authMiddleware.AuthMiddleware())
 		}
@@ -65,11 +65,16 @@ func (r *Routes) Init() {
 		businessAdminRoutes := v1.Group("/business-admin", r.authMiddleware.AuthMiddleware())
 		businessAdminRoutes.GET("/balance", r.businessadminHandler.GetBalanceDetail)
 		{
-			// Booking
+			// Booking Module
 			bookingRoutes := businessAdminRoutes.Group("/booking")
 			bookingRoutes.GET("", r.bookingHandler.GetListCustomerBookingWithPagination)
 			bookingRoutes.GET("/:bookingID", r.bookingHandler.GetDetail)
 			bookingRoutes.PATCH("/:bookingID/confirmation", r.bookingHandler.UpdateBookingStatus)
+
+			// List Items Module
+			businessProfileRoutes := businessAdminRoutes.Group("/business-profile")
+			listItemsRoutes := businessProfileRoutes.Group("/list-items")
+			listItemsRoutes.GET("", r.itemHandler.GetListItemAdminWithPagination)
 		}
 
 		// Auth module
