@@ -2742,7 +2742,7 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    "10:00",
 			Status:     0,
 			TotalPrice: 10000,
-		},
+		}, 
 		{
 			ID:         2,
 			PlaceID:    3,
@@ -2903,7 +2903,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			},
+			}, 
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -2980,7 +2980,6 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithValidationErrorLimitPage
 			},
 		},
 	}
-
 	// Setup echo
 	e := echo.New()
 	q := make(url.Values)
@@ -3080,7 +3079,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			},
+			}, 
 			{
 				ID:         2,
 				PlaceID:    3,
