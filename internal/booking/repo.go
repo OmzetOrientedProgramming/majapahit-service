@@ -321,7 +321,7 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 	bookingList = make([]Booking, 0)
 
 	query := `
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -336,6 +336,7 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
+	
 
 	return &bookingList, nil
 }
@@ -345,7 +346,7 @@ func (r repo) GetMyBookingsPreviousWithPagination(localID string, params Booking
 	myBookingsPrevious.Bookings = make([]Booking, 0)
 
 	query := `
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 

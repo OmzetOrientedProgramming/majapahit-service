@@ -1004,6 +1004,7 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 			TotalPrice: 20000,
 		},
 	}
+	
 
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
@@ -1042,7 +1043,7 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 		)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1077,7 +1078,7 @@ func TestRepo_GetMyBookingsOngoingEmpty(t *testing.T) {
 		NewRows([]string{"id", "place_id", "place_name", "place_image", "date", "start_time", "end_time", "status", "total_price"})
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1109,7 +1110,7 @@ func TestRepo_GetMyBookingsOngoingInternalServerError(t *testing.T) {
 	repoMock := NewRepo(sqlxDB)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1138,7 +1139,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    "10:00",
 				Status:     0,
 				TotalPrice: 10000,
-			},
+			}, 
 			{
 				ID:         2,
 				PlaceID:    3,
@@ -1194,7 +1195,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 			myBookingsPreviousExpected.Bookings[1].TotalPrice,
 		)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1244,7 +1245,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmpty(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1285,7 +1286,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmptyWhenCount(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "place_id", "place_name", "place_image", "date", "start_time", "end_time", "status", "total_price"})
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1328,7 +1329,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationError(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1364,7 +1365,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationErrorWhenCount(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "place_id", "place_name", "place_image", "date", "start_time", "end_time", "status", "total_price"})
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, bookings.total_price 
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price 
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
