@@ -14,16 +14,19 @@ import (
 func TestRepo_GetDetailSuccess(t *testing.T) {
 	placeID := 1
 	placeDetailExpected := &Detail{
-		ID:           1,
-		Name:         "test_name_place",
-		Image:        "test_image_place",
-		Address:      "test_address_place",
-		Description:  "test_description_place",
-		OpenHour:     "08:00",
-		CloseHour:    "16:00",
-		BookingPrice: 15000,
-		MinSlot:      2,
-		MaxSlot:      5,
+		ID:                 1,
+		Name:               "test_name_place",
+		Image:              "test_image_place",
+		Address:            "test_address_place",
+		Description:        "test_description_place",
+		OpenHour:           "08:00",
+		CloseHour:          "16:00",
+		BookingPrice:       15000,
+		MinSlot:            2,
+		MaxSlot:            5,
+		MinIntervalBooking: 1,
+		MaxIntervalBooking: 5,
+		Capacity:           10,
 	}
 
 	// Mock DB
@@ -37,7 +40,7 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "name", "image", "address", "description", "open_hour", "close_hour", "booking_price", "min_slot_booking", "max_slot_booking"}).
+		NewRows([]string{"id", "name", "image", "address", "description", "open_hour", "close_hour", "booking_price", "min_slot_booking", "max_slot_booking", "min_interval_booking", "max_interval_booking", "capacity"}).
 		AddRow(
 			placeDetailExpected.ID,
 			placeDetailExpected.Name,
@@ -49,9 +52,14 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 			placeDetailExpected.BookingPrice,
 			placeDetailExpected.MinSlot,
 			placeDetailExpected.MaxSlot,
+			placeDetailExpected.MinIntervalBooking,
+			placeDetailExpected.MaxIntervalBooking,
+			placeDetailExpected.Capacity,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking, min_interval_booking, max_interval_booking, capacity 
+									   FROM places
+									   WHERE id = $1`)).
 		WithArgs(placeID).
 		WillReturnRows(rows)
 
@@ -76,7 +84,9 @@ func TestRepo_GetDetailInternalServerError(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, image, distance, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking FROM places WHERE id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking, min_interval_booking, max_interval_booking, capacity
+									   FROM places
+									   WHERE id = $1`)).
 		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 
