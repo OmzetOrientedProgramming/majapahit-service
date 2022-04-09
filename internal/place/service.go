@@ -31,7 +31,7 @@ func (s *service) GetDetail(placeID int) (*Detail, error) {
 	}
 
 	if len(errorList) > 0 {
-		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ";"))
 	}
 
 	placeDetail, err := s.repo.GetDetail(placeID)
@@ -75,7 +75,7 @@ func (s service) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesLi
 	}
 
 	if len(errorList) > 0 {
-		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ";"))
 	}
 
 	placeList, err := s.repo.GetPlacesListWithPagination(params)

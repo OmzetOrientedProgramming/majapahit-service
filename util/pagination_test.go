@@ -102,3 +102,44 @@ func TestGeneratePaginationTotalPageZero(t *testing.T) {
 
 	assert.Equal(t, expectedResult, trueResult)
 }
+
+func TestValidateParams(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		pageString := "10"
+		limitString := "1"
+		var expectedErrorList []string
+
+		page, limit, errorList := ValidateParams(pageString, limitString)
+
+		assert.Equal(t, 10, page)
+		assert.Equal(t, 1, limit)
+		assert.Equal(t, expectedErrorList, errorList)
+	})
+
+	t.Run("limit and page not valid", func(t *testing.T) {
+		pageString := "test"
+		limitString := "test"
+		expectedErrorList := []string{
+			"limit should be positive integer",
+			"page should be positive integer",
+		}
+
+		page, limit, errorList := ValidateParams(pageString, limitString)
+
+		assert.Equal(t, 0, page)
+		assert.Equal(t, 0, limit)
+		assert.Equal(t, expectedErrorList, errorList)
+	})
+
+	t.Run("limit and page not is not inputed", func(t *testing.T) {
+		pageString := ""
+		limitString := ""
+		var expectedErrorList []string
+
+		page, limit, errorList := ValidateParams(pageString, limitString)
+
+		assert.Equal(t, 1, page)
+		assert.Equal(t, 10, limit)
+		assert.Equal(t, expectedErrorList, errorList)
+	})
+}

@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	"math/big"
 	"net/mail"
@@ -510,20 +509,18 @@ func (r repo) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
 	query := "SELECT * FROM users WHERE email = $1"
 	if err := r.db.Get(&userModel, query, email); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("user not found: %w", ErrNotFound)
+			return nil, errors.Wrap(ErrNotFound, "user not found")
 		}
-		logrus.Error("[error while accessing user model] ", err.Error())
-		return nil, fmt.Errorf("cannot access user table: %w", ErrInternalServerError)
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	var businessAdminModel BusinessAdminModel
 	query = "SELECT * FROM business_owners WHERE user_id = $1"
 	if err := r.db.Get(&businessAdminModel, query, userModel.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("business admin not found: %w", ErrNotFound)
+			return nil, errors.Wrap(ErrNotFound, "business admin not found")
 		}
-		logrus.Error("[error while accessing user model] ", err.Error())
-		return nil, fmt.Errorf("cannot access business owner table: %w", ErrInternalServerError)
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	return &BusinessAdmin{

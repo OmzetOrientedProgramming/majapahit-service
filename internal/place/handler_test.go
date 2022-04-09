@@ -121,9 +121,10 @@ func TestHandler_GetDetailWithPlaceIdString(t *testing.T) {
 	}
 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	response := h.GetDetail(c)
+	util.ErrorHandler(response, c)
 
 	// Tes
-	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -157,8 +158,10 @@ func TestService_GetPlaceListWithPlaceIdBelowOne(t *testing.T) {
 	var placeDetail Detail
 	mockService.On("GetDetail", placeID).Return(&placeDetail, errorFromService)
 
+	response := h.GetDetail(c)
+	util.ErrorHandler(response, c)
+
 	// Test
-	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -192,8 +195,10 @@ func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
 	var placeDetail Detail
 	mockService.On("GetDetail", placeID).Return(&placeDetail, errorFromService)
 
+	response := h.GetDetail(c)
+	util.ErrorHandler(response, c)
+
 	// Tes
-	assert.NoError(t, h.GetDetail(c))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -318,8 +323,10 @@ func TestHandler_GetPlacesListWithPaginationWithParamsError(t *testing.T) {
 	var pagination util.Pagination
 	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, errorFromService)
 
+	response := h.GetPlacesListWithPagination(c)
+	util.ErrorHandler(response, c)
+
 	// Tes
-	assert.NoError(t, h.GetPlacesListWithPagination(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -361,8 +368,10 @@ func TestHandler_GetPlacesListWithPaginationWithInternalServerError(t *testing.T
 	var pagination util.Pagination
 	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, errorFromService)
 
+	response := h.GetPlacesListWithPagination(c)
+	util.ErrorHandler(response, c)
+
 	// Tes
-	assert.NoError(t, h.GetPlacesListWithPagination(c))
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -394,9 +403,10 @@ func TestHandler_GetPlacesListWithPaginationWithValidationErrorLimitPageNotInt(t
 	}
 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	response := h.GetPlacesListWithPagination(c)
+	util.ErrorHandler(response, c)
 
 	// Tes
-	assert.NoError(t, h.GetPlacesListWithPagination(c))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -420,8 +430,8 @@ func TestHandler_GetPlacesListWithPaginationWithoutParams(t *testing.T) {
 
 	// Define input and output
 	params := PlacesListRequest{
-		Limit: 0,
-		Page:  0,
+		Limit: 10,
+		Page:  1,
 		Path:  "/api/v1/place",
 	}
 

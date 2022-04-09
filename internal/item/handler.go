@@ -6,7 +6,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
@@ -36,30 +35,11 @@ func (h *Handler) GetListItemWithPagination(c echo.Context) error {
 		errorList = append(errorList, "incorrect place id")
 	}
 
-	limit, err := strconv.Atoi(limitString)
-	if err != nil {
-		if limitString == "" {
-			limit = 0
-		} else {
-			errorList = append(errorList, "limit should be positive integer")
-		}
-	}
-
-	page, err := strconv.Atoi(pageString)
-	if err != nil {
-		if pageString == "" {
-			page = 0
-		} else {
-			errorList = append(errorList, "page should be positive integer")
-		}
-	}
+	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
+	errorList = append(errorList, errorsFromValidator...)
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	params := ListItemRequest{}
@@ -72,19 +52,10 @@ func (h *Handler) GetListItemWithPagination(c echo.Context) error {
 	listItem, pagination, err := h.service.GetListItemWithPagination(params)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing catalog service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -115,20 +86,12 @@ func (h *Handler) GetItemByID(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	item, err := h.service.GetItemByID(placeID, itemID)
 	if err != nil {
-		logrus.Error("[error while accessing catalog service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -149,39 +112,15 @@ func (h *Handler) GetListItemAdminWithPagination(c echo.Context) error {
 	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 
-	limit, err := strconv.Atoi(limitString)
-	if err != nil {
-		if limitString == "" {
-			limit = 0
-		} else {
-			errorList = append(errorList, "limit should be positive integer")
-		}
-	}
-
-	page, err := strconv.Atoi(pageString)
-	if err != nil {
-		if pageString == "" {
-			page = 0
-		} else {
-			errorList = append(errorList, "page should be positive integer")
-		}
-	}
+	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
+	errorList = append(errorList, errorsFromValidator...)
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	params := ListItemRequest{}
@@ -194,19 +133,10 @@ func (h *Handler) GetListItemAdminWithPagination(c echo.Context) error {
 	listItem, pagination, err := h.service.GetListItemWithPagination(params)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing catalog service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{

@@ -155,9 +155,9 @@ func TestHandler_GetListItemWithPaginationPlaceIDError(t *testing.T) {
 	}
 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	util.ErrorHandler(h.GetListItemWithPagination(ctx), ctx)
 
 	// Tes
-	assert.NoError(t, h.GetListItemWithPagination(ctx))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -204,9 +204,9 @@ func TestHandler_GetListItemWithPaginationLimitError(t *testing.T) {
 	var listItem ListItem
 	var pagination util.Pagination
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, errorFromService)
+	util.ErrorHandler(h.GetListItemWithPagination(ctx), ctx)
 
 	// Tes
-	assert.NoError(t, h.GetListItemWithPagination(ctx))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -245,7 +245,7 @@ func TestHandler_GetListItemWithPaginationLimitAndPageAreNotInt(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetListItemWithPagination(ctx))
+	util.ErrorHandler(h.GetListItemWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -293,7 +293,7 @@ func TestHandler_GetListItemInternalServerError(t *testing.T) {
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, internalServerError)
 
 	// Tes
-	assert.NoError(t, h.GetListItemWithPagination(ctx))
+	util.ErrorHandler(h.GetListItemWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -315,8 +315,8 @@ func TestHandler_GetListItemWithPaginationWithLimitAndPageAreEmpty(t *testing.T)
 	h := NewHandler(mockService)
 
 	params := ListItemRequest{
-		Limit:   0,
-		Page:    0,
+		Limit:   10,
+		Page:    1,
 		Path:    "/api/v1/place/1/catalog",
 		PlaceID: 1,
 	}
@@ -463,7 +463,7 @@ func TestHandler_GetItemByIDPlaceIDError(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetItemByID(ctx))
+	util.ErrorHandler(h.GetItemByID(ctx), ctx)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -499,7 +499,7 @@ func TestHandler_GetItemByIDItemIDError(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetItemByID(ctx))
+	util.ErrorHandler(h.GetItemByID(ctx), ctx)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -539,7 +539,7 @@ func TestHandler_GetItemByIDInternalServerError(t *testing.T) {
 	mockService.On("GetItemByID", placeID, itemID).Return(&item, internalServerError)
 
 	// Tes
-	assert.NoError(t, h.GetItemByID(ctx))
+	util.ErrorHandler(h.GetItemByID(ctx), ctx)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -734,7 +734,7 @@ func TestHandler_GetListItemAdminWithPaginationParseUserDataError(t *testing.T) 
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, nil)
 
 	// Tes
-	assert.NoError(t, h.GetListItemAdminWithPagination(ctx))
+	util.ErrorHandler(h.GetListItemAdminWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
@@ -820,7 +820,7 @@ func TestHandler_GetListItemAdminWithPaginationLimitError(t *testing.T) {
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, errorFromService)
 
 	// Tes
-	assert.NoError(t, h.GetListItemAdminWithPagination(ctx))
+	util.ErrorHandler(h.GetListItemAdminWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -896,7 +896,7 @@ func TestHandler_GetListItemAdminWithPaginationLimitAndPageAreNotInt(t *testing.
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetListItemAdminWithPagination(ctx))
+	util.ErrorHandler(h.GetListItemAdminWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -982,7 +982,7 @@ func TestHandler_GetListItemAdminInternalServerError(t *testing.T) {
 	mockService.On("GetListItemWithPagination", params).Return(&listItem, pagination, internalServerError)
 
 	// Tes
-	assert.NoError(t, h.GetListItemAdminWithPagination(ctx))
+	util.ErrorHandler(h.GetListItemAdminWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -1042,8 +1042,8 @@ func TestHandler_GetListItemAdminWithPaginationWithLimitAndPageAreEmpty(t *testi
 	h := NewHandler(mockService)
 
 	params := ListItemRequest{
-		Limit:   0,
-		Page:    0,
+		Limit:   10,
+		Page:    1,
 		Path:    "/api/v1/business-admin/business-profile/list-items",
 		UserID:  1,
 		PlaceID: 0,

@@ -25,86 +25,35 @@ func NewHandler(service Service) *Handler {
 func (h *Handler) CheckPhoneNumber(c echo.Context) error {
 	session := c.QueryParam("session")
 	if !(session == "register" || session == "login") {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  []string{"session must be register or login"},
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidation, "session must be register or login")
 	}
 
 	var req CheckPhoneNumberRequest
 	if err := c.Bind(&req); err != nil {
-		logrus.Error("[error while binding phone number request]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, ErrInternalServer, err.Error())
 	}
 
 	exist, err := h.service.CheckPhoneNumber(req.PhoneNumber)
 	if err != nil {
-		logrus.Error("[error while binding phone number request]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot process request to check phone number",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	if session == "register" {
 		if exist {
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: "input validation error",
-				Errors:  []string{"phone number already registered"},
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidation, "phone number already registered")
 		}
-		sessionInfo, err := h.service.SendOTP(req.PhoneNumber, req.RecaptchaToken)
-		if err != nil {
-			if errors.Cause(err) == ErrInputValidation {
-				errList, errMessage := util.ErrorUnwrap(err)
-				return c.JSON(http.StatusBadRequest, util.APIResponse{
-					Status:  http.StatusBadRequest,
-					Message: errMessage,
-					Errors:  errList,
-				})
-			}
-			logrus.Error("[error while sending otp]", err.Error())
-			return c.JSON(http.StatusInternalServerError, util.APIResponse{
-				Status:  http.StatusInternalServerError,
-				Message: "cannot send otp to phone number",
-			})
+	} else if session == "login" {
+		if !exist {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidation, "phone number has not been registered")
 		}
-		return c.JSON(http.StatusOK, util.APIResponse{
-			Status:  http.StatusOK,
-			Message: "phone number is available",
-			Data: CheckPhoneNumberResponse{
-				SessionInfo: sessionInfo,
-			},
-		})
 	}
 
-	if !exist {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  []string{"phone number has not been registered"},
-		})
-	}
 	sessionInfo, err := h.service.SendOTP(req.PhoneNumber, req.RecaptchaToken)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidation {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
-		logrus.Error("[error while sending otp]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot send otp to phone number",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -120,28 +69,15 @@ func (h *Handler) CheckPhoneNumber(c echo.Context) error {
 func (h *Handler) VerifyOTP(c echo.Context) error {
 	var req VerifyOTPRequest
 	if err := c.Bind(&req); err != nil {
-		logrus.Error("[error while binding verify otp request]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, ErrInternalServer, err.Error())
 	}
 
 	resp, err := h.service.VerifyOTP(req.SessionInfo, req.OTP)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidation {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
-		logrus.Error("[error while binding verify otp request]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot process request to check phone number",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -156,22 +92,13 @@ func (h *Handler) Register(c echo.Context) error {
 	userData, _, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 
 	var req RegisterRequest
 	if err := c.Bind(&req); err != nil {
-		logrus.Error("[error while binding verify otp request] ", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, errors.Wrap(ErrInternalServer, err.Error()))
 	}
 
 	customer, err := h.service.Register(Customer{
@@ -181,18 +108,10 @@ func (h *Handler) Register(c echo.Context) error {
 	})
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidation {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 		logrus.Error("[error while calling user service] ", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusCreated, util.APIResponse{

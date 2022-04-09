@@ -274,7 +274,7 @@ func TestHandler_GetListItemWithPaginationStateAndLimitAndPageAreNotInt(t *testi
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetListCustomerBookingWithPagination(ctx))
+	util.ErrorHandler(h.GetListCustomerBookingWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -334,8 +334,8 @@ func TestHandler_GetListCustomerBookingWithPaginationWithStateLimitPageAreEmpty(
 	h := NewHandler(mockService)
 
 	params := ListRequest{
-		Limit:  0,
-		Page:   0,
+		Limit:  10,
+		Page:   1,
 		Path:   "/api/v1/business-admin/booking",
 		State:  0,
 		UserID: 1,
@@ -480,7 +480,7 @@ func TestHandler_GetListCustomerBookingWithPaginationLimitError(t *testing.T) {
 	mockService.On("GetListCustomerBookingWithPagination", params).Return(&listCustomerBooking, pagination, errorFromService)
 
 	// Tes
-	assert.NoError(t, h.GetListCustomerBookingWithPagination(ctx))
+	util.ErrorHandler(h.GetListCustomerBookingWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -567,7 +567,7 @@ func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *test
 	mockService.On("GetListCustomerBookingWithPagination", params).Return(&listCustomerBooking, pagination, internalServerError)
 
 	// Tes
-	assert.NoError(t, h.GetListCustomerBookingWithPagination(ctx))
+	util.ErrorHandler(h.GetListCustomerBookingWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -646,7 +646,7 @@ func TestHandler_GetListCustomerBookingWithPaginationParseUserDataError(t *testi
 	mockService.On("GetListCustomerBookingWithPagination", params).Return(&listCustomerBooking, pagination, nil)
 
 	// Tes
-	assert.NoError(t, h.GetListCustomerBookingWithPagination(ctx))
+	util.ErrorHandler(h.GetListCustomerBookingWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
@@ -779,7 +779,7 @@ func TestHandler_GetAvailableTime(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableTime(ctx), ctx)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
@@ -802,7 +802,7 @@ func TestHandler_GetAvailableTime(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("test")
 
-		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableTime(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 }
@@ -878,7 +878,7 @@ func TestHandler_GetAvailableTimeInternalServerError(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableTime(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -911,7 +911,7 @@ func TestHandler_GetAvailableTimeInternalServerError(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetAvailableTime(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableTime(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -1074,7 +1074,7 @@ func TestHandler_GetAvailableDate(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableDate(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -1148,7 +1148,7 @@ func TestHandler_GetAvailableDate(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableDate(ctx), ctx)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
@@ -1219,7 +1219,7 @@ func TestHandler_GetAvailableDate(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("test")
 
-		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableDate(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
@@ -1300,7 +1300,7 @@ func TestHandler_GetAvailableDate(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetAvailableDate(ctx))
+		util.ErrorHandler(mockHandler.GetAvailableDate(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -1522,7 +1522,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		util.ErrorHandler(mockHandler.CreateBooking(ctx), ctx)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
@@ -1629,7 +1629,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		util.ErrorHandler(mockHandler.CreateBooking(ctx), ctx)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 
@@ -1734,7 +1734,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("testFailed")
 
-		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		util.ErrorHandler(mockHandler.CreateBooking(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
@@ -1839,7 +1839,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("-1")
 
-		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		util.ErrorHandler(mockHandler.CreateBooking(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
@@ -1944,7 +1944,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("-1")
 
-		assert.NoError(t, mockHandler.CreateBooking(ctx))
+		util.ErrorHandler(mockHandler.CreateBooking(ctx), ctx)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 }
@@ -2098,7 +2098,7 @@ func TestHandler_GetTimeSlot(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		util.ErrorHandler(mockHandler.GetTimeSlots(ctx), ctx)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
@@ -2174,7 +2174,7 @@ func TestHandler_GetTimeSlot(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("test")
 
-		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		util.ErrorHandler(mockHandler.GetTimeSlots(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
@@ -2250,7 +2250,7 @@ func TestHandler_GetTimeSlot(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		util.ErrorHandler(mockHandler.GetTimeSlots(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
@@ -2326,7 +2326,7 @@ func TestHandler_GetTimeSlot(t *testing.T) {
 		ctx.SetParamNames("placeID")
 		ctx.SetParamValues("1")
 
-		assert.NoError(t, mockHandler.GetTimeSlots(ctx))
+		util.ErrorHandler(mockHandler.GetTimeSlots(ctx), ctx)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	})
 }
@@ -2420,7 +2420,7 @@ func TestHandler_GetDetailWithInternalServerError(t *testing.T) {
 	mockService.On("GetDetail", bookingID).Return(&bookingDetail, errorFromService)
 
 	// Tes
-	assert.NoError(t, h.GetDetail(c))
+	util.ErrorHandler(h.GetDetail(c), c)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -2455,7 +2455,7 @@ func TestBooking_GetBookingDetailWithBookingIDBelowOne(t *testing.T) {
 	mockService.On("GetDetail", bookingID).Return(&bookingDetail, errorFromService)
 
 	// Test
-	assert.NoError(t, h.GetDetail(c))
+	util.ErrorHandler(h.GetDetail(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -2485,7 +2485,7 @@ func TestHandler_GetDetailWithBookingIDString(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetDetail(c))
+	util.ErrorHandler(h.GetDetail(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -2562,7 +2562,7 @@ func TestHandler_UpdateBookingStatusWithBookingIDString(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.UpdateBookingStatus(c))
+	util.ErrorHandler(h.UpdateBookingStatus(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -2590,13 +2590,13 @@ func TestHandler_UpdateBookingStatusBindingError(t *testing.T) {
 
 	expectedResponse := util.APIResponse{
 		Status:  http.StatusInternalServerError,
-		Message: "cannot process request",
+		Message: "internal server error",
 	}
 
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.UpdateBookingStatus(c))
+	util.ErrorHandler(h.UpdateBookingStatus(c), c)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -2639,7 +2639,7 @@ func TestHandler_UpdateBookingStatusWithBookingIDBelowOne(t *testing.T) {
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.UpdateBookingStatus(c))
+	util.ErrorHandler(h.UpdateBookingStatus(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 
@@ -2681,7 +2681,7 @@ func TestHandler_UpdateBookingStatusWithInternalServerError(t *testing.T) {
 	mockService.On("UpdateBookingStatus", bookingID, newStatus).Return(errorFromService)
 
 	// Tes
-	assert.NoError(t, h.UpdateBookingStatus(c))
+	util.ErrorHandler(h.UpdateBookingStatus(c), c)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -2831,7 +2831,7 @@ func TestService_GetMyBookingsOngoingWithEmptyLocalID(t *testing.T) {
 	mockService.On("GetMyBookingsOngoing", localID).Return(&myBookingsOngoing, errorFromService)
 
 	// Test
-	assert.NoError(t, h.GetMyBookingsOngoing(c))
+	util.ErrorHandler(h.GetMyBookingsOngoing(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -3009,7 +3009,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithValidationErrorLimitPage
 	expectedResponseJSON, _ := json.Marshal(expectedResponse)
 
 	// Tes
-	assert.NoError(t, h.GetMyBookingsPreviousWithPagination(c))
+	util.ErrorHandler(h.GetMyBookingsPreviousWithPagination(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
@@ -3062,8 +3062,8 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 
 	// Define input and output
 	params := BookingsListRequest{
-		Limit: 0,
-		Page:  0,
+		Limit: 10,
+		Page:  1,
 		Path:  "/api/v1/booking/previous",
 	}
 
@@ -3183,7 +3183,7 @@ func TestHandler_XenditInvoicesCallback(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.XenditInvoicesCallback(ctx))
+		util.ErrorHandler(mockHandler.XenditInvoicesCallback(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -3215,7 +3215,7 @@ func TestHandler_XenditInvoicesCallback(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.XenditInvoicesCallback(ctx))
+		util.ErrorHandler(mockHandler.XenditInvoicesCallback(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -3246,7 +3246,7 @@ func TestHandler_XenditInvoicesCallback(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.XenditInvoicesCallback(ctx))
+		util.ErrorHandler(mockHandler.XenditInvoicesCallback(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))

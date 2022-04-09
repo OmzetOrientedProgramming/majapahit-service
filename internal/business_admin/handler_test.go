@@ -167,7 +167,7 @@ func TestHandler_GetBalanceDetailParseUserDataError(t *testing.T) {
 	mockService.On("GetBalanceDetail", userModel.ID).Return(&balanceDetail, nil)
 
 	// Tes
-	assert.NoError(t, h.GetBalanceDetail(c))
+	util.ErrorHandler(h.GetBalanceDetail(c), c)
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
@@ -236,7 +236,80 @@ func TestHandler_GetBalanceDetailInternalServerError(t *testing.T) {
 	mockService.On("GetBalanceDetail", userModel.ID).Return(&balanceDetail, internalServerError)
 
 	// Tes
-	assert.NoError(t, h.GetBalanceDetail(c))
+	util.ErrorHandler(h.GetBalanceDetail(c), c)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetBalanceDetailBadRequestFromService(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/balance")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	c.Set("userFromDatabase", &userModel)
+	c.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	internalServerError := errors.Wrap(ErrInputValidationError, "test")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"test",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	var balanceDetail BalanceDetail
+	mockService.On("GetBalanceDetail", userModel.ID).Return(&balanceDetail, internalServerError)
+
+	// Tes
+	util.ErrorHandler(h.GetBalanceDetail(c), c)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
