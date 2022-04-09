@@ -114,11 +114,11 @@ func (s service) RegisterBusinessAdmin(request RegisterBusinessAdminRequest) (*L
 // Login as a business admin
 func (s service) Login(email, password, recaptchaToken string) (string, string, error) {
 	if _, err := mail.ParseAddress(email); err != nil {
-		return "", "", fmt.Errorf("invalid email address: %w", ErrInputValidationError)
+		return "", "", errors.Wrap(ErrInputValidationError, "invalid email address")
 	}
 
 	if password == "" {
-		return "", "", fmt.Errorf("password cannot be empty: %w", ErrInputValidationError)
+		return "", "", errors.Wrap(ErrInputValidationError, "password cannot be empty")
 	}
 
 	businessAdmin, err := s.repo.GetBusinessAdminByEmail(email)
@@ -128,7 +128,7 @@ func (s service) Login(email, password, recaptchaToken string) (string, string, 
 
 	if err := bcrypt.CompareHashAndPassword([]byte(businessAdmin.Password), []byte(password)); err != nil {
 		logrus.Errorf("[error while comparing password] %v", err)
-		return "", "", fmt.Errorf("password is incorrect: %w", ErrUnauthorized)
+		return "", "", errors.Wrap(ErrUnauthorized, "wrong email/password")
 	}
 
 	apiURL := fmt.Sprintf("%s/v1/accounts:signInWithPassword?key=%s", s.identityToolkitURL, s.firebaseAPIKey)
@@ -143,12 +143,12 @@ func (s service) Login(email, password, recaptchaToken string) (string, string, 
 	resp, err := http.Post(apiURL, echo.MIMEApplicationJSON, bytes.NewBuffer(jsonData))
 	if err != nil {
 		logrus.Error("[error while creating request] ", err.Error())
-		return "", "", fmt.Errorf("failed to create request: %w", ErrInternalServerError)
+		return "", "", errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
 	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
 		logrus.Error("[non ok status response] ", resp.StatusCode)
-		return "", "", fmt.Errorf("non ok response code: %w", ErrInternalServerError)
+		return "", "", errors.Wrap(ErrInternalServerError, "non-ok status code")
 	}
 
 	var jsonResponse map[string]interface{}

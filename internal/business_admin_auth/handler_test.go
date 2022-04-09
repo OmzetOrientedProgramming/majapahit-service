@@ -3,6 +3,7 @@ package businessadminauth
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/pkg/errors"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"net/http"
 	"net/http/httptest"
@@ -126,21 +127,24 @@ func TestHandler_Login(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/v1/auth/business-admin/login")
 
-		assert.NoError(t, mockHandler.Login(e.NewContext(req, rec)))
+		util.ErrorHandler(mockHandler.Login(c), c)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
 	t.Run("input validation error from service", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusUnprocessableEntity,
-			Message: "Kredensial yang anda berikan tidak valid",
+			Message: "input validation error",
+			Errors: []string{
+				"test error",
+			},
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 		mockService.
 			On("Login", "test@gmail.com", "testpass", "test captcha response").
-			Return("test access token", "test refresh token", ErrInputValidationError)
+			Return("test access token", "test refresh token", errors.Wrap(ErrInputValidationError, "test error"))
 
 		payload, _ := json.Marshal(LoginRequest{
 			Email:           "test@gmail.com",
@@ -153,7 +157,7 @@ func TestHandler_Login(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/v1/auth/business-admin/login")
 
-		assert.NoError(t, mockHandler.Login(e.NewContext(req, rec)))
+		util.ErrorHandler(mockHandler.Login(c), c)
 		assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -161,14 +165,17 @@ func TestHandler_Login(t *testing.T) {
 	t.Run("unauthorized error from service", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusUnauthorized,
-			Message: "Kredensial yang anda berikan salah",
+			Message: "unauthorized",
+			Errors: []string{
+				"test error",
+			},
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 		mockService.
 			On("Login", "test@gmail.com", "testpass", "test captcha response").
-			Return("test access token", "test refresh token", ErrUnauthorized)
+			Return("test access token", "test refresh token", errors.Wrap(ErrUnauthorized, "test error"))
 
 		payload, _ := json.Marshal(LoginRequest{
 			Email:           "test@gmail.com",
@@ -181,7 +188,7 @@ func TestHandler_Login(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/v1/auth/business-admin/login")
 
-		assert.NoError(t, mockHandler.Login(e.NewContext(req, rec)))
+		util.ErrorHandler(mockHandler.Login(c), c)
 		assert.Equal(t, http.StatusUnauthorized, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -189,14 +196,17 @@ func TestHandler_Login(t *testing.T) {
 	t.Run("not found error from service", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusNotFound,
-			Message: "Akun tidak ditemukan",
+			Message: "not found",
+			Errors: []string{
+				"test error",
+			},
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 		mockService.
 			On("Login", "test@gmail.com", "testpass", "test captcha response").
-			Return("test access token", "test refresh token", ErrNotFound)
+			Return("test access token", "test refresh token", errors.Wrap(ErrNotFound, "test error"))
 
 		payload, _ := json.Marshal(LoginRequest{
 			Email:           "test@gmail.com",
@@ -209,7 +219,7 @@ func TestHandler_Login(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/v1/auth/business-admin/login")
 
-		assert.NoError(t, mockHandler.Login(e.NewContext(req, rec)))
+		util.ErrorHandler(mockHandler.Login(c), c)
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -217,14 +227,14 @@ func TestHandler_Login(t *testing.T) {
 	t.Run("internal server error from service", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "Terjadi kesalahan dalam memproses permintaan anda",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 		mockService.
 			On("Login", "test@gmail.com", "testpass", "test captcha response").
-			Return("test access token", "test refresh token", ErrInternalServerError)
+			Return("test access token", "test refresh token", errors.Wrap(ErrInternalServerError, "test error"))
 
 		payload, _ := json.Marshal(LoginRequest{
 			Email:           "test@gmail.com",
@@ -237,7 +247,7 @@ func TestHandler_Login(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetPath("/api/v1/auth/business-admin/login")
 
-		assert.NoError(t, mockHandler.Login(e.NewContext(req, rec)))
+		util.ErrorHandler(mockHandler.Login(c), c)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})

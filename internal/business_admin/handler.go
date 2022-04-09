@@ -5,7 +5,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
@@ -27,12 +26,7 @@ func (h *Handler) GetBalanceDetail(c echo.Context) error {
 	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 
@@ -41,18 +35,10 @@ func (h *Handler) GetBalanceDetail(c echo.Context) error {
 	balanceDetail, err := h.service.GetBalanceDetail(userID)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
-		logrus.Error("[error while calling booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{

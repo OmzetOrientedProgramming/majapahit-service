@@ -63,7 +63,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 	t.Run("phone number is not registered", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusOK,
-			Message: "phone number is available",
+			Message: "success",
 			Data: CheckPhoneNumberResponse{
 				SessionInfo: "test session token",
 			},
@@ -112,7 +112,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -141,7 +141,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -162,7 +162,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -170,7 +170,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 	t.Run("incorrect request body", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
@@ -184,7 +184,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -192,12 +192,12 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 	t.Run("error on calling service function", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot process request to check phone number",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
-		mockService.On("CheckPhoneNumber", "087748176534").Return(false, ErrInternalServer)
+		mockService.On("CheckPhoneNumber", "087748176534").Return(false, errors.Wrap(ErrInternalServer, "test error"))
 
 		payload, _ := json.Marshal(map[string]string{
 			"phone_number": "087748176534",
@@ -207,7 +207,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -232,7 +232,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -241,13 +241,13 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 	t.Run("failed to send otp", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot send otp to phone number",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 		mockService.On("CheckPhoneNumber", "087748176534").Return(false, nil)
-		mockService.On("SendOTP", "087748176534", "test token").Return("", ErrInternalServer)
+		mockService.On("SendOTP", "087748176534", "test token").Return("", errors.Wrap(ErrInternalServer, "test error"))
 
 		payload, _ := json.Marshal(map[string]string{
 			"phone_number":    "087748176534",
@@ -258,7 +258,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -283,7 +283,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -291,13 +291,13 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 	t.Run("fail to send otp when log in", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot send otp to phone number",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 		mockService.On("CheckPhoneNumber", "087748176534").Return(true, nil)
-		mockService.On("SendOTP", "087748176534", "test token").Return("", ErrInternalServer)
+		mockService.On("SendOTP", "087748176534", "test token").Return("", errors.Wrap(ErrInternalServer, "test error"))
 
 		payload, _ := json.Marshal(map[string]string{
 			"phone_number":    "087748176534",
@@ -308,7 +308,7 @@ func TestHandler_CheckPhoneNumber(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.CheckPhoneNumber(ctx))
+		util.ErrorHandler(mockHandler.CheckPhoneNumber(ctx), ctx)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -401,7 +401,7 @@ func TestHandler_VerifyOTP(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.VerifyOTP(ctx))
+		util.ErrorHandler(mockHandler.VerifyOTP(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -410,12 +410,12 @@ func TestHandler_VerifyOTP(t *testing.T) {
 	t.Run("internal error on service layer to verify otp", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot process request to check phone number",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
-		mockService.On("VerifyOTP", "test session info", "test otp").Return(&resp, ErrInternalServer)
+		mockService.On("VerifyOTP", "test session info", "test otp").Return(&resp, errors.Wrap(ErrInternalServer, "test error"))
 
 		payload, _ := json.Marshal(map[string]string{
 			"session_info": "test session info",
@@ -426,7 +426,7 @@ func TestHandler_VerifyOTP(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.VerifyOTP(ctx))
+		util.ErrorHandler(mockHandler.VerifyOTP(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -435,7 +435,7 @@ func TestHandler_VerifyOTP(t *testing.T) {
 	t.Run("error binding request", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
@@ -450,7 +450,7 @@ func TestHandler_VerifyOTP(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		assert.NoError(t, mockHandler.VerifyOTP(ctx))
+		util.ErrorHandler(mockHandler.VerifyOTP(ctx), ctx)
 		mockService.AssertExpectations(t)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
@@ -492,7 +492,7 @@ func TestHandler_Register(t *testing.T) {
 	t.Run("error binding request to struct", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
+			Message: "internal server error",
 		})
 
 		expectedCustomer := &Customer{
@@ -519,7 +519,7 @@ func TestHandler_Register(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.Set("userFromFirebase", &userData)
 
-		assert.NoError(t, mockHandler.Register(c))
+		util.ErrorHandler(mockHandler.Register(c), c)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
@@ -580,7 +580,7 @@ func TestHandler_Register(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.Set("userFromFirebase", &userData)
 
-		assert.NoError(t, mockHandler.Register(c))
+		util.ErrorHandler(mockHandler.Register(c), c)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 
@@ -638,14 +638,14 @@ func TestHandler_Register(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.Set("userFromFirebase", &userDataFailed)
 
-		assert.NoError(t, mockHandler.Register(c))
+		util.ErrorHandler(mockHandler.Register(c), c)
 		assert.Equal(t, http.StatusForbidden, rec.Code)
 	})
 
 	t.Run("error on service layer", func(t *testing.T) {
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
 			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
+			Message: "internal server error",
 		})
 
 		mockService := new(MockService)
@@ -654,7 +654,7 @@ func TestHandler_Register(t *testing.T) {
 			Name:        "customer name",
 			PhoneNumber: userData.Users[0].PhoneNumber,
 			LocalID:     userData.Users[0].LocalID,
-		}).Return(nil, ErrInternalServer)
+		}).Return(nil, errors.Wrap(ErrInternalServer, "test error"))
 
 		payload, _ := json.Marshal(map[string]string{
 			"phone_number": "08123456789",
@@ -666,7 +666,7 @@ func TestHandler_Register(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.Set("userFromFirebase", &userData)
 
-		assert.NoError(t, mockHandler.Register(c))
+		util.ErrorHandler(mockHandler.Register(c), c)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})

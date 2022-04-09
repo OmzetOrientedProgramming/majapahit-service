@@ -7,7 +7,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
@@ -32,12 +31,7 @@ func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 	userID := user.ID
@@ -51,30 +45,11 @@ func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 		}
 	}
 
-	limit, err := strconv.Atoi(limitString)
-	if err != nil {
-		if limitString == "" {
-			limit = 0
-		} else {
-			errorList = append(errorList, "limit should be positive integer")
-		}
-	}
-
-	page, err := strconv.Atoi(pageString)
-	if err != nil {
-		if pageString == "" {
-			page = 0
-		} else {
-			errorList = append(errorList, "page should be positive integer")
-		}
-	}
+	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
+	errorList = append(errorList, errorsFromValidator...)
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	params := ListRequest{}
@@ -88,19 +63,10 @@ func (h *Handler) GetListCustomerBookingWithPagination(c echo.Context) error {
 
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing customer booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -118,27 +84,22 @@ func (h Handler) GetAvailableTime(c echo.Context) error {
 	_, _, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 
 	errorList := make([]string, 0)
 
-	placeIDString := c.Param("placeID")
-	placeID, err := strconv.Atoi(placeIDString)
-	if err != nil {
-		errorList = append(errorList, "placeID must be number")
-	}
-
 	countString := c.QueryParam("count")
 	count, err := strconv.Atoi(countString)
 	if err != nil {
 		errorList = append(errorList, "count must be number")
+	}
+
+	placeIDString := c.Param("placeID")
+	placeID, err := strconv.Atoi(placeIDString)
+	if err != nil {
+		errorList = append(errorList, "placeID must be number")
 	}
 
 	dateString := c.QueryParam("date")
@@ -154,11 +115,7 @@ func (h Handler) GetAvailableTime(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	params := GetAvailableTimeParams{
@@ -171,19 +128,10 @@ func (h Handler) GetAvailableTime(c echo.Context) error {
 	resp, err := h.service.GetAvailableTime(params)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing place service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -198,12 +146,7 @@ func (h Handler) GetAvailableDate(c echo.Context) error {
 	_, _, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 
@@ -234,11 +177,7 @@ func (h Handler) GetAvailableDate(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	params := GetAvailableDateParams{
@@ -251,19 +190,10 @@ func (h Handler) GetAvailableDate(c echo.Context) error {
 	resp, err := h.service.GetAvailableDate(params)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing place service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -278,23 +208,14 @@ func (h Handler) CreateBooking(c echo.Context) error {
 	_, userFromDatabase, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 
 	var errorList []string
 	var req CreateBookingRequestBody
 	if err = c.Bind(&req); err != nil {
-		logrus.Error("[error while binding request body]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, ErrInternalServerError, err.Error())
 	}
 
 	date, err := time.Parse(util.DateLayout, req.Date)
@@ -319,11 +240,7 @@ func (h Handler) CreateBooking(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	serviceRequest := CreateBookingServiceRequest{
@@ -341,19 +258,10 @@ func (h Handler) CreateBooking(c echo.Context) error {
 	resp, err := h.service.CreateBooking(serviceRequest)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while calling booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusCreated, util.APIResponse{
@@ -368,12 +276,7 @@ func (h Handler) GetTimeSlots(c echo.Context) error {
 	_, _, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {
 		if errors.Cause(err) == middleware.ErrForbidden {
-			errs, message := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusForbidden, util.APIResponse{
-				Status:  http.StatusForbidden,
-				Message: message,
-				Errors:  errs,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
 
@@ -390,29 +293,16 @@ func (h Handler) GetTimeSlots(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	resp, err := h.service.GetTimeSlots(placeID, date)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while calling booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	var formattedResp []TimeSlotAPIResponse
@@ -443,29 +333,16 @@ func (h *Handler) GetDetail(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	bookingDetail, err := h.service.GetDetail(bookingID)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -486,39 +363,22 @@ func (h *Handler) UpdateBookingStatus(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	var req UpdateBookingStatusRequest
 	if err = c.Bind(&req); err != nil {
-		logrus.Error("[error while binding update booking status request]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "cannot process request",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, ErrInternalServerError, err.Error())
 	}
 
 	err = h.service.UpdateBookingStatus(bookingID, req.Status)
 
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -534,29 +394,17 @@ func (h *Handler) GetMyBookingsOngoing(c echo.Context) error {
 	localID := userData.Users[0].LocalID
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	myBookingsOngoing, err := h.service.GetMyBookingsOngoing(localID)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -574,30 +422,11 @@ func (h *Handler) GetMyBookingsPreviousWithPagination(c echo.Context) error {
 	limitString := c.QueryParam("limit")
 	pageString := c.QueryParam("page")
 
-	limit, err := strconv.Atoi(limitString)
-	if err != nil {
-		if limitString == "" {
-			limit = 0
-		} else {
-			errorList = append(errorList, "limit should be positive integer")
-		}
-	}
-
-	page, err := strconv.Atoi(pageString)
-	if err != nil {
-		if pageString == "" {
-			page = 0
-		} else {
-			errorList = append(errorList, "page should be positive integer")
-		}
-	}
+	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
+	errorList = append(errorList, errorsFromValidator...)
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	params := BookingsListRequest{}
@@ -606,22 +435,12 @@ func (h *Handler) GetMyBookingsPreviousWithPagination(c echo.Context) error {
 	params.Page = page
 
 	myBookingsOngoing, pagination, err := h.service.GetMyBookingsPreviousWithPagination(localID, params)
-
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -640,29 +459,16 @@ func (h Handler) XenditInvoicesCallback(c echo.Context) error {
 
 	err := c.Bind(&params)
 	if err != nil {
-		logrus.Error("[error binding request]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, ErrInternalServerError, err.Error())
 	}
 
 	err = h.service.UpdateBookingStatusByXendit(params)
 	if err != nil {
-		if errors.Cause(err) == ErrInputValidationError || errors.Cause(err) == ErrNotFound {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing booking service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusCreated, util.APIResponse{

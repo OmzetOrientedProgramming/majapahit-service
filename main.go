@@ -4,6 +4,7 @@
 package main
 
 import (
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"os"
 
 	"github.com/labstack/echo/v4/middleware"
@@ -26,6 +27,9 @@ func main() {
 	router.Pre(middleware.RemoveTrailingSlash())
 	router.Use(middleware.Logger())
 	router.Use(middleware.CORS())
+
+	// Error Handling
+	router.HTTPErrorHandler = util.ErrorHandler
 
 	s := api.NewServer(router)
 	s.Init()

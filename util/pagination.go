@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 )
 
 // Pagination struct for pagination data response
@@ -53,4 +54,32 @@ func GeneratePagination(totalCount, limit, page int, path string) Pagination {
 
 func getPaginationURL(baseURL, path string, limit, page int) string {
 	return fmt.Sprintf("%s%s?limit=%d&page=%d", baseURL, path, limit, page)
+}
+
+func ValidateParams(pageString string, limitString string) (int, int, []string) {
+	var (
+		limit, page int
+		errorList   []string
+		err         error
+	)
+
+	limit, err = strconv.Atoi(limitString)
+	if err != nil {
+		if limitString == "" {
+			limit = DefaultLimit
+		} else {
+			errorList = append(errorList, "limit should be positive integer")
+		}
+	}
+
+	page, err = strconv.Atoi(pageString)
+	if err != nil {
+		if pageString == "" {
+			page = DefaultPage
+		} else {
+			errorList = append(errorList, "page should be positive integer")
+		}
+	}
+
+	return page, limit, errorList
 }

@@ -1,13 +1,11 @@
 package place
 
 import (
-	"net/http"
-	"strconv"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
+	"net/http"
+	"strconv"
 )
 
 // Handler struct for place package
@@ -33,29 +31,16 @@ func (h *Handler) GetDetail(c echo.Context) error {
 	}
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	placeDetail, err := h.service.GetDetail(placeID)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing place service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
@@ -71,30 +56,11 @@ func (h *Handler) GetPlacesListWithPagination(c echo.Context) error {
 	limitString := c.QueryParam("limit")
 	pageString := c.QueryParam("page")
 
-	limit, err := strconv.Atoi(limitString)
-	if err != nil {
-		if limitString == "" {
-			limit = 0
-		} else {
-			errorList = append(errorList, "limit should be positive integer")
-		}
-	}
-
-	page, err := strconv.Atoi(pageString)
-	if err != nil {
-		if pageString == "" {
-			page = 0
-		} else {
-			errorList = append(errorList, "page should be positive integer")
-		}
-	}
+	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
+	errorList = append(errorList, errorsFromValidator...)
 
 	if len(errorList) != 0 {
-		return c.JSON(http.StatusBadRequest, util.APIResponse{
-			Status:  http.StatusBadRequest,
-			Message: "input validation error",
-			Errors:  errorList,
-		})
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
 	}
 
 	params := PlacesListRequest{}
@@ -105,19 +71,10 @@ func (h *Handler) GetPlacesListWithPagination(c echo.Context) error {
 	placesList, pagination, err := h.service.GetPlaceListWithPagination(params)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
-			errList, errMessage := util.ErrorUnwrap(err)
-			return c.JSON(http.StatusBadRequest, util.APIResponse{
-				Status:  http.StatusBadRequest,
-				Message: errMessage,
-				Errors:  errList,
-			})
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
 		}
 
-		logrus.Error("[error while accessing place service]", err.Error())
-		return c.JSON(http.StatusInternalServerError, util.APIResponse{
-			Status:  http.StatusInternalServerError,
-			Message: "internal server error",
-		})
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
