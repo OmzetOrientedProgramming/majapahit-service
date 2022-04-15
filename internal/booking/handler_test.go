@@ -154,17 +154,17 @@ func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 				ID:           1,
 				CustomerName: "test name 1",
 				Capacity:     10,
-				Date:         "test date 1",
-				StartTime:    "test start time 1",
-				EndTime:      "test end time 1",
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
 			},
 			{
 				ID:           2,
 				CustomerName: "test name 2",
 				Capacity:     10,
-				Date:         "test date 2",
-				StartTime:    "test start time 2",
-				EndTime:      "test end time 2",
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
 			},
 		},
 		TotalCount: 10,
@@ -350,17 +350,17 @@ func TestHandler_GetListCustomerBookingWithPaginationWithStateLimitPageAreEmpty(
 				ID:           1,
 				CustomerName: "test name 1",
 				Capacity:     10,
-				Date:         "test date 1",
-				StartTime:    "test start time 1",
-				EndTime:      "test end time 1",
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
 			},
 			{
 				ID:           2,
 				CustomerName: "test name 2",
 				Capacity:     10,
-				Date:         "test date 2",
-				StartTime:    "test start time 2",
-				EndTime:      "test end time 2",
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
 			},
 		},
 		TotalCount: 10,
@@ -1389,9 +1389,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		}
 
 		returnedData := CreateBookingServiceResponse{
-			"10",
 			1,
-			"test.com",
 		}
 
 		expectedResponseJSON, _ := json.Marshal(util.APIResponse{
@@ -1502,9 +1500,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		}
 
 		returnedData := CreateBookingServiceResponse{
-			"10",
 			1,
-			"test.com",
 		}
 
 		mockService := new(MockService)
@@ -1609,9 +1605,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		}
 
 		returnedData := CreateBookingServiceResponse{
-			"10",
 			1,
-			"test.com",
 		}
 
 		mockService := new(MockService)
@@ -1714,9 +1708,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		}
 
 		returnedData := CreateBookingServiceResponse{
-			"10",
 			1,
-			"test.com",
 		}
 
 		mockService := new(MockService)
@@ -1819,9 +1811,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		}
 
 		returnedData := CreateBookingServiceResponse{
-			"10",
 			1,
-			"test.com",
 		}
 
 		mockService := new(MockService)
@@ -1924,9 +1914,7 @@ func TestHandler_CreateBooking(t *testing.T) {
 		}
 
 		returnedData := CreateBookingServiceResponse{
-			"10",
 			1,
-			"test.com",
 		}
 
 		mockService := new(MockService)
@@ -2348,9 +2336,9 @@ func TestHandler_GetDetailSuccess(t *testing.T) {
 	createdAtRow := time.Date(2021, time.Month(10), 26, 13, 0, 0, 0, time.UTC).Format(time.RFC3339)
 	bookingDetail := Detail{
 		ID:               1,
-		Date:             "27 Oktober 2021",
-		StartTime:        "19:00",
-		EndTime:          "20:00",
+		Date:             time.Now(),
+		StartTime:        time.Now(),
+		EndTime:          time.Now(),
 		Capacity:         10,
 		Status:           1,
 		TotalPrice:       415000.0,
@@ -2737,20 +2725,20 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 			PlaceID:    2,
 			PlaceName:  "test_place_name",
 			PlaceImage: "test_place_image",
-			Date:       "2022-04-10",
-			StartTime:  "08:00",
-			EndTime:    "10:00",
+			Date:       time.Now(),
+			StartTime:  time.Now(),
+			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 10000,
-		}, 
+		},
 		{
 			ID:         2,
 			PlaceID:    3,
 			PlaceName:  "test_place_name",
 			PlaceImage: "test_place_image",
-			Date:       "2022-04-11",
-			StartTime:  "09:00",
-			EndTime:    "11:00",
+			Date:       time.Now(),
+			StartTime:  time.Now(),
+			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 20000,
 		},
@@ -2898,20 +2886,20 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 				PlaceID:    2,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-10",
-				StartTime:  "08:00",
-				EndTime:    "10:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
-			}, 
+			},
 			{
 				ID:         2,
 				PlaceID:    3,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-11",
-				StartTime:  "09:00",
-				EndTime:    "11:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
 			},
@@ -3074,20 +3062,20 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 				PlaceID:    2,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-10",
-				StartTime:  "08:00",
-				EndTime:    "10:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
-			}, 
+			},
 			{
 				ID:         2,
 				PlaceID:    3,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-11",
-				StartTime:  "09:00",
-				EndTime:    "11:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
 			},
