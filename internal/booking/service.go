@@ -70,8 +70,27 @@ func (s service) GetListCustomerBookingWithPagination(params ListRequest) (*List
 	if err != nil {
 		return nil, nil, err
 	}
-	pagination := util.GeneratePagination(listCustomerBooking.TotalCount, params.Limit, params.Page, params.Path)
 
+	// Update booking status
+	i := 0
+	for _, elem := range listCustomerBooking.CustomerBookings {
+		isUpdated, err := s.updateStatusWhenChecking(elem.ID, elem.Date.Format(util.DateLayout), elem.StartTime.Format(util.TimeLayout), elem.Status)
+		if err != nil {
+			return nil, nil, errors.Wrap(ErrInternalServerError, err.Error())
+		}
+
+		if !isUpdated {
+			// delete element from list
+			listCustomerBooking.CustomerBookings[i] = elem
+			i++
+		} else {
+			listCustomerBooking.TotalCount--
+		}
+	}
+
+	listCustomerBooking.CustomerBookings = listCustomerBooking.CustomerBookings[:i]
+
+	pagination := util.GeneratePagination(listCustomerBooking.TotalCount, params.Limit, params.Page, params.Path)
 	return listCustomerBooking, &pagination, err
 }
 
@@ -160,15 +179,9 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 		return nil, err
 	}
 
-	bookingPrice, err := s.repo.GetPlaceBookingPrice(params.PlaceID)
-	if err != nil {
-		return nil, err
-	}
-
 	if checkedItems != nil && isMatch {
 		// convert items to booking items & xendit items instance
 		var bookingItems []CreateBookingItemsParams
-		var xenditItems []xendit.Item
 
 		for _, i := range params.Items {
 			bookingItems = append(bookingItems, CreateBookingItemsParams{
@@ -176,12 +189,6 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 				ItemID:     i.ID,
 				TotalPrice: i.Price * float64(i.Qty),
 				Qty:        i.Qty,
-			})
-
-			xenditItems = append(xenditItems, xendit.Item{
-				Name:  i.Name,
-				Price: i.Price,
-				Qty:   i.Qty,
 			})
 		}
 
@@ -199,69 +206,9 @@ func (s service) CreateBooking(params CreateBookingServiceRequest) (*CreateBooki
 		if err != nil {
 			return nil, err
 		}
-
-		// create xendit invoices
-		invoiceParams := xendit.CreateInvoiceParams{
-			PlaceID:             params.PlaceID,
-			Items:               xenditItems,
-			Description:         fmt.Sprintf("order from %s", params.CustomerName),
-			CustomerName:        params.CustomerName,
-			CustomerPhoneNumber: params.CustomerPhoneNumber,
-			BookingFee:          bookingPrice,
-		}
-
-		invoice, err := s.xendit.CreateInvoice(invoiceParams)
-		if err != nil {
-			return nil, err
-		}
-
-		xenditInformationParams := XenditInformation{
-			XenditID:    invoice.ID,
-			InvoicesURL: invoice.InvoiceURL,
-			BookingID:   bookingID.ID,
-		}
-		_, err = s.repo.InsertXenditInformation(xenditInformationParams)
-		if err != nil {
-			return nil, err
-		}
-
-		return &CreateBookingServiceResponse{
-			XenditID:   invoice.ID,
-			BookingID:  bookingID.ID,
-			PaymentURL: invoice.InvoiceURL,
-		}, nil
 	}
 
-	// create xendit invoices
-	invoiceParams := xendit.CreateInvoiceParams{
-		PlaceID:             params.PlaceID,
-		Items:               nil,
-		Description:         fmt.Sprintf("order from %s", params.CustomerName),
-		CustomerName:        params.CustomerName,
-		CustomerPhoneNumber: params.CustomerPhoneNumber,
-		BookingFee:          bookingPrice,
-	}
-
-	invoice, err := s.xendit.CreateInvoice(invoiceParams)
-	if err != nil {
-		return nil, err
-	}
-
-	xenditInformationParams := XenditInformation{
-		XenditID:    invoice.ID,
-		InvoicesURL: invoice.InvoiceURL,
-		BookingID:   bookingID.ID,
-	}
-	_, err = s.repo.InsertXenditInformation(xenditInformationParams)
-	if err != nil {
-		return nil, err
-	}
-
-	return &CreateBookingServiceResponse{
-		XenditID:   invoice.ID,
-		BookingID:  bookingID.ID,
-		PaymentURL: invoice.InvoiceURL,
-	}, nil
+	return &CreateBookingServiceResponse{BookingID: bookingID.ID}, nil
 }
 
 func (s service) GetTimeSlots(placeID int, selectedDate time.Time) (*[]TimeSlot, error) {
@@ -583,6 +530,64 @@ func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
 		return errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
 	}
 
+	switch newStatus {
+	case util.BookingBelumMembayar:
+		bookingInformation, err := s.GetDetail(bookingID)
+		if err != nil {
+			return err
+		}
+
+		var xenditItems []xendit.Item
+		for _, i := range bookingInformation.Items {
+			xenditItems = append(xenditItems, xendit.Item{
+				Name:  i.Name,
+				Price: i.Price,
+				Qty:   i.Qty,
+			})
+		}
+
+		// Check Invoices Information
+		isExist, err := s.repo.GetInvoicesFromBooking(bookingID)
+		if err != nil {
+			return err
+		}
+
+		if !isExist {
+			// Create xendit invoices
+			invoiceParams := xendit.CreateInvoiceParams{
+				PlaceID:             bookingInformation.PlaceID,
+				Items:               xenditItems,
+				Description:         fmt.Sprintf("Order from %s", bookingInformation.CustomerName),
+				CustomerName:        bookingInformation.CustomerName,
+				CustomerPhoneNumber: bookingInformation.CustomerPhoneNumber,
+				BookingFee:          bookingInformation.TotalPriceTicket,
+			}
+
+			invoice, err := s.xendit.CreateInvoice(invoiceParams)
+			if err != nil {
+				return err
+			}
+
+			xenditInformationParams := XenditInformation{
+				XenditID:    invoice.ID,
+				InvoicesURL: invoice.InvoiceURL,
+				BookingID:   bookingID,
+			}
+			_, err = s.repo.InsertXenditInformation(xenditInformationParams)
+			if err != nil {
+				return err
+			}
+
+			loc, _ := time.LoadLocation("Asia/Jakarta")
+
+			xenditExpiredDateInLocalTime := invoice.ExpiryDate.In(loc)
+			err = s.repo.AddExpiredPayment(bookingID, xenditExpiredDateInLocalTime)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	err := s.repo.UpdateBookingStatus(bookingID, newStatus)
 	if err != nil {
 		return err
@@ -631,6 +636,21 @@ func (s *service) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 		return nil, err
 	}
 
+	i := 0
+	myBookingsOngoingConcrete := *myBookingsOngoing
+	for _, elem := range myBookingsOngoingConcrete {
+		isUpdated, err := s.updateStatusWhenChecking(elem.ID, elem.Date.Format(util.DateLayout), elem.StartTime.Format(util.TimeLayout), elem.Status)
+		if err != nil {
+			return nil, errors.Wrap(ErrInternalServerError, err.Error())
+		}
+
+		if !isUpdated {
+			myBookingsOngoingConcrete[i] = elem
+			i++
+		}
+	}
+
+	myBookingsOngoingConcrete = myBookingsOngoingConcrete[:i]
 	return myBookingsOngoing, nil
 }
 
@@ -665,4 +685,31 @@ func (s service) GetMyBookingsPreviousWithPagination(localID string, params Book
 	pagination := util.GeneratePagination(myBookingsPrevious.TotalCount, params.Limit, params.Page, params.Path)
 
 	return myBookingsPrevious, &pagination, err
+}
+
+func (s service) updateStatusWhenChecking(ID int, date, startTime string, status int) (bool, error) {
+	if status == util.BookingMenungguKonfirmasi {
+		loc, _ := time.LoadLocation("Asia/Jakarta")
+
+		dateBooking, err := time.ParseInLocation(util.DateLayout, date, loc)
+		if err != nil {
+			return false, errors.Wrap(ErrInternalServerError, err.Error())
+		}
+
+		timeBooking, err := time.ParseInLocation(util.TimeLayout, startTime, loc)
+		if err != nil {
+			return false, errors.Wrap(ErrInternalServerError, err.Error())
+		}
+
+		dateTimeBooking := timeBooking.AddDate(dateBooking.Year(), int(dateBooking.Month())-1, dateBooking.Day()-1)
+		if dateTimeBooking.Before(time.Now()) {
+			err := s.UpdateBookingStatus(ID, util.BookingGagal)
+			if err != nil {
+				return false, err
+			}
+
+			return true, nil
+		}
+	}
+	return false, nil
 }
