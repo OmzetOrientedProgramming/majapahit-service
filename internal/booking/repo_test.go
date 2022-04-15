@@ -21,17 +21,17 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 				ID:           1,
 				CustomerName: "test name",
 				Capacity:     10,
-				Date:         "test date",
-				StartTime:    "test start time",
-				EndTime:      "test end time",
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
 			},
 			{
 				ID:           2,
 				CustomerName: "test name",
 				Capacity:     10,
-				Date:         "test date",
-				StartTime:    "test start time",
-				EndTime:      "test end time",
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
 			},
 		},
 		TotalCount: 10,
@@ -222,7 +222,7 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
 		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
-		AddRow("1", "test name", 1, "test date", "test start time", "test end time")
+		AddRow("1", "test name", 1, time.Now(), time.Now(), time.Now())
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
 		FROM bookings b, users u, places p 
@@ -724,9 +724,9 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 	bookingDetailExpected := &Detail{
 		ID:             1,
 		CustomerName:   "test nama",
-		Date:           "27 Oktober 2021",
-		StartTime:      "19:00",
-		EndTime:        "20:00",
+		Date:           time.Now(),
+		StartTime:      time.Now(),
+		EndTime:        time.Now(),
 		Capacity:       10,
 		Status:         1,
 		TotalPriceItem: 100000.0,
@@ -757,7 +757,7 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 			bookingDetailExpected.CreatedAt,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT b.id, u.name, b.date, b.start_time, b.end_time, b.capacity, b.status, b.total_price, b.created_at
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT b.id, u.name, u.phone_number, b.place_id, b.date, b.start_time, b.end_time, b.capacity, b.status, b.total_price, b.created_at
 									   FROM bookings b, users u
 									   WHERE b.id = $1 AND b.user_id = u.id`)).
 		WithArgs(bookingID).
@@ -986,9 +986,9 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 			PlaceID:    2,
 			PlaceName:  "test_place_name",
 			PlaceImage: "test_place_image",
-			Date:       "2022-04-10",
-			StartTime:  "08:00",
-			EndTime:    "10:00",
+			Date:       time.Now(),
+			StartTime:  time.Now(),
+			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 10000,
 		},
@@ -997,14 +997,13 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 			PlaceID:    3,
 			PlaceName:  "test_place_name",
 			PlaceImage: "test_place_image",
-			Date:       "2022-04-11",
-			StartTime:  "09:00",
-			EndTime:    "11:00",
+			Date:       time.Now(),
+			StartTime:  time.Now(),
+			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 20000,
 		},
 	}
-	
 
 	// Mock DB
 	mockDB, mock, err := sqlmock.New()
@@ -1134,20 +1133,20 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				PlaceID:    2,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-10",
-				StartTime:  "08:00",
-				EndTime:    "10:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
-			}, 
+			},
 			{
 				ID:         2,
 				PlaceID:    3,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-11",
-				StartTime:  "09:00",
-				EndTime:    "11:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
 			},

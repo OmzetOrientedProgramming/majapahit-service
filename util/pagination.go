@@ -56,6 +56,7 @@ func getPaginationURL(baseURL, path string, limit, page int) string {
 	return fmt.Sprintf("%s%s?limit=%d&page=%d", baseURL, path, limit, page)
 }
 
+// ValidateParams for validating pagination params
 func ValidateParams(pageString string, limitString string) (int, int, []string) {
 	var (
 		limit, page int
