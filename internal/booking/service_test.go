@@ -92,6 +92,16 @@ func (m *MockRepository) UpdateBookingStatusByXenditID(xenditID string, status i
 	return args.Error(0)
 }
 
+func (m *MockRepository) GetInvoicesFromBooking(ID int) (bool, error) {
+	args := m.Called(ID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockRepository) AddExpiredPayment(ID int, expiredAt time.Time) error {
+	args := m.Called(ID, expiredAt)
+	return args.Error(0)
+}
+
 type MockXenditService struct {
 	mock.Mock
 }
@@ -133,26 +143,43 @@ func (m *MockRepository) GetPlaceBookingPrice(placeID int) (float64, error) {
 
 func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	// Define input and output
-	listCustomerBookingExpected := ListBooking{
+	date := time.Now()
+	startTime := time.Now().Add(time.Duration(2 * time.Hour))
+	endTime := time.Now().Add(time.Duration(3 * time.Hour))
+	listCustomerBookingOutput := ListBooking{
 		CustomerBookings: []CustomerBooking{
 			{
 				ID:           1,
 				CustomerName: "test name 1",
 				Capacity:     10,
-				Date:         "test date 1",
-				StartTime:    "test start time 1",
-				EndTime:      "test end time 1",
+				Date:         date.Add(time.Duration(-5 * time.Hour)),
+				StartTime:    startTime.Add(time.Duration(-5 * time.Hour)),
+				EndTime:      endTime.Add(time.Duration(-4 * time.Hour)),
 			},
 			{
 				ID:           2,
 				CustomerName: "test name 2",
 				Capacity:     10,
-				Date:         "test date 2",
-				StartTime:    "test start time 2",
-				EndTime:      "test end time 2",
+				Date:         date.Add(time.Duration(2 * time.Hour)),
+				StartTime:    startTime,
+				EndTime:      endTime,
 			},
 		},
-		TotalCount: 10,
+		TotalCount: 2,
+	}
+
+	listCustomerBookingExpected := ListBooking{
+		CustomerBookings: []CustomerBooking{
+			{
+				ID:           2,
+				CustomerName: "test name 2",
+				Capacity:     10,
+				Date:         date.Add(time.Duration(2 * time.Hour)),
+				StartTime:    startTime,
+				EndTime:      endTime,
+			},
+		},
+		TotalCount: 1,
 	}
 
 	params := ListRequest{
@@ -169,10 +196,12 @@ func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	mockService := NewService(mockRepo, xenditService)
 
 	// Expectation
-	mockRepo.On("GetListCustomerBookingWithPagination", params).Return(listCustomerBookingExpected, nil)
+	mockRepo.On("GetListCustomerBookingWithPagination", params).Return(listCustomerBookingOutput, nil)
+	mockRepo.On("UpdateBookingStatus", 1, util.BookingGagal).Return(nil)
 
 	// Test
 	listCustomerBookingResult, _, err := mockService.GetListCustomerBookingWithPagination(params)
+
 	mockRepo.AssertExpectations(t)
 
 	assert.Equal(t, &listCustomerBookingExpected, listCustomerBookingResult)
@@ -182,26 +211,43 @@ func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 
 func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *testing.T) {
 	// Define input and output
-	listCustomerBookingExpected := ListBooking{
+	date := time.Now().Add(time.Duration(2 * time.Hour))
+	startTime := time.Now().Add(time.Duration(2 * time.Hour))
+	endTime := time.Now().Add(time.Duration(3 * time.Hour))
+	listCustomerBookingReturned := ListBooking{
 		CustomerBookings: []CustomerBooking{
 			{
 				ID:           1,
 				CustomerName: "test name 1",
 				Capacity:     10,
-				Date:         "test date 1",
-				StartTime:    "test start time 1",
-				EndTime:      "test end time 1",
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
 			},
 			{
 				ID:           2,
 				CustomerName: "test name 2",
 				Capacity:     10,
-				Date:         "test date 2",
-				StartTime:    "test start time 2",
-				EndTime:      "test end time 2",
+				Date:         date,
+				StartTime:    startTime,
+				EndTime:      endTime,
 			},
 		},
-		TotalCount: 10,
+		TotalCount: 2,
+	}
+
+	listCustomerBookingExpected := ListBooking{
+		CustomerBookings: []CustomerBooking{
+			{
+				ID:           2,
+				CustomerName: "test name 2",
+				Capacity:     10,
+				Date:         date,
+				StartTime:    startTime,
+				EndTime:      endTime,
+			},
+		},
+		TotalCount: 1,
 	}
 
 	params := ListRequest{
@@ -226,7 +272,8 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 	}
 
 	// Expectation
-	mockRepo.On("GetListCustomerBookingWithPagination", paramsDefault).Return(listCustomerBookingExpected, nil)
+	mockRepo.On("GetListCustomerBookingWithPagination", paramsDefault).Return(listCustomerBookingReturned, nil)
+	mockRepo.On("UpdateBookingStatus", 1, util.BookingGagal).Return(nil)
 
 	// Test
 	listCustomerBookingReturn, _, err := mockService.GetListCustomerBookingWithPagination(params)
@@ -235,6 +282,66 @@ func TestService_GetListCustomerBookingWithPaginationSuccessWithDefaultParam(t *
 	assert.Equal(t, &listCustomerBookingExpected, listCustomerBookingReturn)
 	assert.NotNil(t, listCustomerBookingReturn)
 	assert.NoError(t, err)
+}
+
+func TestService_GetListCustomerBookingWithPaginationFailedUpdateStatus(t *testing.T) {
+	// Define input and output
+	date := time.Now()
+	startTime := time.Now().Add(time.Duration(2 * time.Hour))
+	endTime := time.Now().Add(time.Duration(3 * time.Hour))
+	listCustomerBookingReturned := ListBooking{
+		CustomerBookings: []CustomerBooking{
+			{
+				ID:           1,
+				CustomerName: "test name 1",
+				Capacity:     10,
+				Date:         time.Now(),
+				StartTime:    time.Now(),
+				EndTime:      time.Now(),
+			},
+			{
+				ID:           2,
+				CustomerName: "test name 2",
+				Capacity:     10,
+				Date:         date,
+				StartTime:    startTime,
+				EndTime:      endTime,
+			},
+		},
+		TotalCount: 2,
+	}
+
+	params := ListRequest{
+		Limit:  0,
+		Page:   0,
+		Path:   "api/v1/testing",
+		State:  -1,
+		UserID: 1,
+	}
+
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	paramsDefault := ListRequest{
+		Limit:  10,
+		Page:   1,
+		Path:   "api/v1/testing",
+		State:  0,
+		UserID: 1,
+	}
+
+	// Expectation
+	mockRepo.On("GetListCustomerBookingWithPagination", paramsDefault).Return(listCustomerBookingReturned, nil)
+	mockRepo.On("UpdateBookingStatus", 1, util.BookingGagal).Return(errors.Wrap(ErrInternalServerError, "test error"))
+
+	// Test
+	listCustomerBookingResult, _, err := mockService.GetListCustomerBookingWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, listCustomerBookingResult)
 }
 
 func TestService_GetListCustomerBookingWithPaginationFailedLimitExceedMaxLimit(t *testing.T) {
@@ -310,9 +417,9 @@ func TestService_GetDetailSuccess(t *testing.T) {
 	createdAtRow := time.Date(2021, time.Month(10), 26, 13, 0, 0, 0, time.UTC).Format(time.RFC3339)
 	bookingDetail := Detail{
 		ID:             1,
-		Date:           "27 Oktober 2021",
-		StartTime:      "19:00",
-		EndTime:        "20:00",
+		Date:           time.Now(),
+		StartTime:      time.Now(),
+		EndTime:        time.Now(),
 		Capacity:       10,
 		Status:         1,
 		TotalPriceItem: 100000.0,
@@ -510,17 +617,477 @@ func TestService_UpdateBookingStatusFailedCalledUpdateBookingStatus(t *testing.T
 
 }
 
+func TestService_ChangeStatusToBookingBelumMembayarFailedGetInvoices(t *testing.T) {
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	bookingID := 1
+	newStatus := util.BookingBelumMembayar
+
+	bookingDetailOutput := Detail{
+		ID:                  1,
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		PlaceID:             1,
+		Date:                time.Time{},
+		StartTime:           time.Time{},
+		EndTime:             time.Time{},
+		Capacity:            0,
+		Status:              0,
+		CreatedAt:           "",
+		TotalPrice:          0,
+		TotalPriceTicket:    0,
+		TotalPriceItem:      0,
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	ticketPriceWrapper := TicketPriceWrapper{
+		Price: 10000,
+	}
+
+	itemsWrapper := ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetailOutput, nil)
+	mockRepo.On("GetTicketPriceWrapper", bookingID).Return(ticketPriceWrapper, nil)
+	mockRepo.On("GetItemWrapper", bookingID).Return(itemsWrapper, nil)
+	mockRepo.On("GetInvoicesFromBooking", 1).Return(false, errors.Wrap(ErrInternalServerError, "test error"))
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Error(t, err, "test error")
+}
+
+func TestService_ChangeStatusToBookingBelumMembayarSuccess(t *testing.T) {
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	bookingID := 1
+	newStatus := util.BookingBelumMembayar
+
+	bookingDetailOutput := Detail{
+		ID:                  1,
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		PlaceID:             1,
+		Date:                time.Time{},
+		StartTime:           time.Time{},
+		EndTime:             time.Time{},
+		Capacity:            0,
+		Status:              0,
+		CreatedAt:           "",
+		TotalPrice:          0,
+		TotalPriceTicket:    0,
+		TotalPriceItem:      0,
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	xenditItems := []xendit.Item{
+		{
+			Name:  "test",
+			Price: 100000,
+			Qty:   1,
+		},
+	}
+
+	invoiceParams := xendit.CreateInvoiceParams{
+		PlaceID:             1,
+		Items:               xenditItems,
+		Description:         fmt.Sprint("Order from test"),
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		BookingFee:          20000,
+	}
+
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := time.Now().In(loc)
+	xenditInvoiceReturned := xendit2.Invoice{
+		ID:         "test id",
+		InvoiceURL: "test url",
+		ExpiryDate: &now,
+	}
+
+	xenditInformationParams := XenditInformation{
+		XenditID:    xenditInvoiceReturned.ID,
+		InvoicesURL: xenditInvoiceReturned.InvoiceURL,
+		BookingID:   bookingID,
+	}
+
+	ticketPriceWrapper := TicketPriceWrapper{
+		Price: 20000,
+	}
+
+	itemsWrapper := ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetailOutput, nil)
+	mockRepo.On("GetInvoicesFromBooking", 1).Return(false, nil)
+	mockRepo.On("GetTicketPriceWrapper", bookingID).Return(ticketPriceWrapper, nil)
+	mockRepo.On("GetItemWrapper", bookingID).Return(itemsWrapper, nil)
+	xenditService.On("CreateInvoice", invoiceParams).Return(&xenditInvoiceReturned, nil)
+	mockRepo.On("InsertXenditInformation", xenditInformationParams).Return(true, nil)
+	mockRepo.On("AddExpiredPayment", 1, now).Return(nil)
+	mockRepo.On("UpdateBookingStatus", 1, util.BookingBelumMembayar).Return(nil)
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Nil(t, err)
+}
+
+func TestService_ChangeStatusToBookingBelumMembayarFailedAddExpiredPayment(t *testing.T) {
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	bookingID := 1
+	newStatus := util.BookingBelumMembayar
+
+	bookingDetailOutput := Detail{
+		ID:                  1,
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		PlaceID:             1,
+		Date:                time.Time{},
+		StartTime:           time.Time{},
+		EndTime:             time.Time{},
+		Capacity:            0,
+		Status:              0,
+		CreatedAt:           "",
+		TotalPrice:          0,
+		TotalPriceTicket:    0,
+		TotalPriceItem:      0,
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	xenditItems := []xendit.Item{
+		{
+			Name:  "test",
+			Price: 100000,
+			Qty:   1,
+		},
+	}
+
+	invoiceParams := xendit.CreateInvoiceParams{
+		PlaceID:             1,
+		Items:               xenditItems,
+		Description:         fmt.Sprint("Order from test"),
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		BookingFee:          20000,
+	}
+
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := time.Now().In(loc)
+	xenditInvoiceReturned := xendit2.Invoice{
+		ID:         "test id",
+		InvoiceURL: "test url",
+		ExpiryDate: &now,
+	}
+
+	xenditInformationParams := XenditInformation{
+		XenditID:    xenditInvoiceReturned.ID,
+		InvoicesURL: xenditInvoiceReturned.InvoiceURL,
+		BookingID:   bookingID,
+	}
+
+	ticketPriceWrapper := TicketPriceWrapper{
+		Price: 20000,
+	}
+
+	itemsWrapper := ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetailOutput, nil)
+	mockRepo.On("GetInvoicesFromBooking", 1).Return(false, nil)
+	mockRepo.On("GetTicketPriceWrapper", bookingID).Return(ticketPriceWrapper, nil)
+	mockRepo.On("GetItemWrapper", bookingID).Return(itemsWrapper, nil)
+	xenditService.On("CreateInvoice", invoiceParams).Return(&xenditInvoiceReturned, nil)
+	mockRepo.On("InsertXenditInformation", xenditInformationParams).Return(true, nil)
+	mockRepo.On("AddExpiredPayment", 1, now).Return(errors.Wrap(ErrInternalServerError, "test error"))
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Error(t, err, "test error")
+}
+
+func TestService_ChangeStatusToBookingBelumMembayarFailedInsertXenditInfo(t *testing.T) {
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	bookingID := 1
+	newStatus := util.BookingBelumMembayar
+
+	bookingDetailOutput := Detail{
+		ID:                  1,
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		PlaceID:             1,
+		Date:                time.Time{},
+		StartTime:           time.Time{},
+		EndTime:             time.Time{},
+		Capacity:            0,
+		Status:              0,
+		CreatedAt:           "",
+		TotalPrice:          0,
+		TotalPriceTicket:    0,
+		TotalPriceItem:      0,
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	xenditItems := []xendit.Item{
+		{
+			Name:  "test",
+			Price: 100000,
+			Qty:   1,
+		},
+	}
+
+	invoiceParams := xendit.CreateInvoiceParams{
+		PlaceID:             1,
+		Items:               xenditItems,
+		Description:         fmt.Sprint("Order from test"),
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		BookingFee:          20000,
+	}
+
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := time.Now().In(loc)
+	xenditInvoiceReturned := xendit2.Invoice{
+		ID:         "test id",
+		InvoiceURL: "test url",
+		ExpiryDate: &now,
+	}
+
+	ticketPriceWrapper := TicketPriceWrapper{
+		Price: 20000,
+	}
+
+	itemsWrapper := ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	xenditInformationParams := XenditInformation{
+		XenditID:    xenditInvoiceReturned.ID,
+		InvoicesURL: xenditInvoiceReturned.InvoiceURL,
+		BookingID:   bookingID,
+	}
+
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetailOutput, nil)
+	mockRepo.On("GetInvoicesFromBooking", 1).Return(false, nil)
+	mockRepo.On("GetTicketPriceWrapper", bookingID).Return(ticketPriceWrapper, nil)
+	mockRepo.On("GetItemWrapper", bookingID).Return(itemsWrapper, nil)
+	xenditService.On("CreateInvoice", invoiceParams).Return(&xenditInvoiceReturned, nil)
+	mockRepo.On("InsertXenditInformation", xenditInformationParams).Return(false, errors.Wrap(ErrInternalServerError, "test error"))
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Error(t, err, "test error")
+}
+
+func TestService_ChangeStatusToBookingBelumMembayarCreateInvoices(t *testing.T) {
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	bookingID := 1
+	newStatus := util.BookingBelumMembayar
+
+	bookingDetailOutput := Detail{
+		ID:                  1,
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		PlaceID:             1,
+		Date:                time.Time{},
+		StartTime:           time.Time{},
+		EndTime:             time.Time{},
+		Capacity:            0,
+		Status:              0,
+		CreatedAt:           "",
+		TotalPrice:          0,
+		TotalPriceTicket:    0,
+		TotalPriceItem:      0,
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	xenditItems := []xendit.Item{
+		{
+			Name:  "test",
+			Price: 100000,
+			Qty:   1,
+		},
+	}
+
+	invoiceParams := xendit.CreateInvoiceParams{
+		PlaceID:             1,
+		Items:               xenditItems,
+		Description:         fmt.Sprint("Order from test"),
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		BookingFee:          20000,
+	}
+
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	now := time.Now().In(loc)
+	xenditInvoiceReturned := xendit2.Invoice{
+		ID:         "test id",
+		InvoiceURL: "test url",
+		ExpiryDate: &now,
+	}
+
+	ticketPriceWrapper := TicketPriceWrapper{
+		Price: 20000,
+	}
+
+	itemsWrapper := ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetailOutput, nil)
+	mockRepo.On("GetInvoicesFromBooking", 1).Return(false, nil)
+	mockRepo.On("GetTicketPriceWrapper", bookingID).Return(ticketPriceWrapper, nil)
+	mockRepo.On("GetItemWrapper", bookingID).Return(itemsWrapper, nil)
+	xenditService.On("CreateInvoice", invoiceParams).Return(&xenditInvoiceReturned, errors.Wrap(ErrInternalServerError, "test error"))
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Error(t, err, "test error")
+}
+
+func TestService_ChangeStatusToBookingBelumMembayarFailedGetDetail(t *testing.T) {
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	bookingID := 1
+	newStatus := util.BookingBelumMembayar
+
+	bookingDetailOutput := Detail{
+		ID:                  1,
+		CustomerName:        "test",
+		CustomerPhoneNumber: "test",
+		PlaceID:             1,
+		Date:                time.Time{},
+		StartTime:           time.Time{},
+		EndTime:             time.Time{},
+		Capacity:            0,
+		Status:              0,
+		CreatedAt:           "",
+		TotalPrice:          0,
+		TotalPriceTicket:    0,
+		TotalPriceItem:      0,
+		Items: []ItemDetail{
+			{
+				Name:  "test",
+				Image: "",
+				Qty:   1,
+				Price: 100000,
+			},
+		},
+	}
+	mockRepo.On("GetDetail", bookingID).Return(bookingDetailOutput, errors.Wrap(ErrInternalServerError, "test error"))
+
+	// Test
+	err := mockService.UpdateBookingStatus(bookingID, newStatus)
+
+	assert.Error(t, err, "test error")
+}
+
 func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
 	localID := "abc"
+	date := time.Now().Add(time.Duration(2 * time.Hour))
+	StartTime := time.Now().Add(time.Duration(2 * time.Hour))
+	EndTime := time.Now().Add(time.Duration(3 * time.Hour))
 	myBookingsOngoing := []Booking{
 		{
 			ID:         1,
 			PlaceID:    2,
 			PlaceName:  "test_place_name",
 			PlaceImage: "test_place_image",
-			Date:       "2022-04-10",
-			StartTime:  "08:00",
-			EndTime:    "10:00",
+			Date:       time.Now(),
+			StartTime:  time.Now(),
+			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 10000,
 		},
@@ -529,9 +1096,9 @@ func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
 			PlaceID:    3,
 			PlaceName:  "test_place_name",
 			PlaceImage: "test_place_image",
-			Date:       "2022-04-11",
-			StartTime:  "09:00",
-			EndTime:    "11:00",
+			Date:       date,
+			StartTime:  StartTime,
+			EndTime:    EndTime,
 			Status:     0,
 			TotalPrice: 20000,
 		},
@@ -542,6 +1109,7 @@ func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
 	mockService := NewService(mockRepo, xenditService)
 
 	mockRepo.On("GetMyBookingsOngoing", localID).Return(myBookingsOngoing, nil)
+	mockRepo.On("UpdateBookingStatus", 1, util.BookingGagal).Return(nil)
 
 	myBookingsOngoingResult, err := mockService.GetMyBookingsOngoing(localID)
 	mockRepo.AssertExpectations(t)
@@ -549,6 +1117,50 @@ func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
 	assert.Equal(t, &myBookingsOngoing, myBookingsOngoingResult)
 	assert.NotNil(t, myBookingsOngoingResult)
 	assert.NoError(t, err)
+}
+
+func TestService_GetMyBookingsOngoingFailedUpdateStatus(t *testing.T) {
+	localID := "abc"
+	date := time.Now().Add(time.Duration(2 * time.Hour))
+	StartTime := time.Now().Add(time.Duration(2 * time.Hour))
+	EndTime := time.Now().Add(time.Duration(3 * time.Hour))
+	myBookingsOngoing := []Booking{
+		{
+			ID:         1,
+			PlaceID:    2,
+			PlaceName:  "test_place_name",
+			PlaceImage: "test_place_image",
+			Date:       time.Now(),
+			StartTime:  time.Now(),
+			EndTime:    time.Now(),
+			Status:     0,
+			TotalPrice: 10000,
+		},
+		{
+			ID:         2,
+			PlaceID:    3,
+			PlaceName:  "test_place_name",
+			PlaceImage: "test_place_image",
+			Date:       date,
+			StartTime:  StartTime,
+			EndTime:    EndTime,
+			Status:     0,
+			TotalPrice: 20000,
+		},
+	}
+
+	mockRepo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	mockService := NewService(mockRepo, xenditService)
+
+	mockRepo.On("GetMyBookingsOngoing", localID).Return(myBookingsOngoing, nil)
+	mockRepo.On("UpdateBookingStatus", 1, util.BookingGagal).Return(errors.Wrap(ErrInternalServerError, "testerror"))
+
+	myBookingsOngoingResult, err := mockService.GetMyBookingsOngoing(localID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, myBookingsOngoingResult)
 }
 
 func TestService_GetMyBookingsOngoingWrongInput(t *testing.T) {
@@ -593,9 +1205,9 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				PlaceID:    2,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-10",
-				StartTime:  "08:00",
-				EndTime:    "10:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
 			},
@@ -604,9 +1216,9 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				PlaceID:    3,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-11",
-				StartTime:  "09:00",
-				EndTime:    "11:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
 			},
@@ -646,9 +1258,9 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccessWithDefaultParam(t *t
 				PlaceID:    2,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-10",
-				StartTime:  "08:00",
-				EndTime:    "10:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
 			},
@@ -657,9 +1269,9 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccessWithDefaultParam(t *t
 				PlaceID:    3,
 				PlaceName:  "test_place_name",
 				PlaceImage: "test_place_image",
-				Date:       "2022-04-11",
-				StartTime:  "09:00",
-				EndTime:    "11:00",
+				Date:       time.Now(),
+				StartTime:  time.Now(),
+				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
 			},
@@ -1722,40 +2334,6 @@ func TestService_CreateBooking(t *testing.T) {
 			TotalPrice: 40000,
 		}
 
-		xenditItems := []xendit.Item{
-			{
-				Name:  "Test Item 1",
-				Price: 10000,
-				Qty:   2,
-			},
-			{
-				Name:  "Test Item 2",
-				Price: 10000,
-				Qty:   2,
-			},
-		}
-
-		invoiceParams := xendit.CreateInvoiceParams{
-			PlaceID:             1,
-			Items:               xenditItems,
-			Description:         fmt.Sprintf("order from %s", input.CustomerName),
-			CustomerName:        input.CustomerName,
-			CustomerPhoneNumber: input.CustomerPhoneNumber,
-			BookingFee:          10000,
-		}
-
-		invoice := xendit2.Invoice{
-			ID:         "testID1",
-			InvoiceURL: "test123.com",
-			ExternalID: "1",
-		}
-
-		xenditInformation := XenditInformation{
-			XenditID:    "testID1",
-			InvoicesURL: "test123.com",
-			BookingID:   1,
-		}
-
 		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
 		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
 
@@ -1795,11 +2373,8 @@ func TestService_CreateBooking(t *testing.T) {
 		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
 		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 1).Return(10000.0, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
 		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(true, nil)
-		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, nil)
-		mockRepo.On("InsertXenditInformation", xenditInformation).Return(true, nil)
 
 		resp, err := service.CreateBooking(input)
 		mockRepo.AssertExpectations(t)
@@ -1808,8 +2383,6 @@ func TestService_CreateBooking(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, 1, resp.BookingID)
-		assert.Equal(t, "test123.com", resp.PaymentURL)
-		assert.Equal(t, "testID1", resp.XenditID)
 	})
 
 	t.Run("failed count < 0", func(t *testing.T) {
@@ -2191,7 +2764,6 @@ func TestService_CreateBooking(t *testing.T) {
 		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
 		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 2).Return(10000.0, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, errors.Wrap(ErrInternalServerError, "test error"))
 
 		resp, err := service.CreateBooking(input)
@@ -2317,329 +2889,11 @@ func TestService_CreateBooking(t *testing.T) {
 		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
 		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 2).Return(10000.0, nil)
 		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
 		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(false, errors.Wrap(ErrInternalServerError, "test error"))
 
 		resp, err := service.CreateBooking(input)
 		mockRepo.AssertExpectations(t)
-		assert.NotNil(t, err)
-		assert.Nil(t, resp)
-		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
-	})
-
-	t.Run("create invoice internal server error", func(t *testing.T) {
-		mockRepo := new(MockRepository)
-		mockXenditService := new(MockXenditService)
-
-		service := NewService(mockRepo, mockXenditService)
-
-		date, _ := time.Parse(util.DateLayout, "2022-02-02")
-		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
-		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
-
-		input := CreateBookingServiceRequest{
-			Items: []Item{
-				{
-					ID:    4,
-					Name:  "Test Item 1",
-					Price: 10000,
-					Qty:   2,
-				},
-				{
-					ID:    5,
-					Name:  "Test Item 2",
-					Price: 10000,
-					Qty:   2,
-				},
-			},
-			Date:                date,
-			StartTime:           startTime,
-			EndTime:             EndTime,
-			Count:               10,
-			PlaceID:             1,
-			UserID:              1,
-			CustomerName:        "Rafi Muhammad",
-			CustomerPhoneNumber: "081291264758",
-		}
-
-		items := []CheckedItemParams{
-			{
-				ID:      4,
-				PlaceID: 1,
-			},
-			{
-				ID:      5,
-				PlaceID: 1,
-			},
-		}
-
-		bookingParams := CreateBookingParams{
-			UserID:     input.UserID,
-			PlaceID:    input.PlaceID,
-			Date:       input.Date,
-			StartTime:  input.StartTime,
-			EndTime:    input.EndTime,
-			Capacity:   input.Count,
-			Status:     util.BookingMenungguKonfirmasi,
-			TotalPrice: 0,
-		}
-
-		bookingItemParams := []CreateBookingItemsParams{
-			{
-				BookingID:  1,
-				ItemID:     4,
-				TotalPrice: 20000,
-				Qty:        2,
-			},
-			{
-				BookingID:  1,
-				ItemID:     5,
-				TotalPrice: 20000,
-				Qty:        2,
-			},
-		}
-
-		updateTotalPrice := UpdateTotalPriceParams{
-			BookingID:  1,
-			TotalPrice: 40000,
-		}
-
-		xenditItems := []xendit.Item{
-			{
-				Name:  "Test Item 1",
-				Price: 10000,
-				Qty:   2,
-			},
-			{
-				Name:  "Test Item 2",
-				Price: 10000,
-				Qty:   2,
-			},
-		}
-
-		invoiceParams := xendit.CreateInvoiceParams{
-			PlaceID:             1,
-			Items:               xenditItems,
-			Description:         fmt.Sprintf("order from %s", input.CustomerName),
-			CustomerName:        input.CustomerName,
-			CustomerPhoneNumber: input.CustomerPhoneNumber,
-			BookingFee:          10000,
-		}
-
-		invoice := xendit2.Invoice{
-			ID:         "testID1",
-			InvoiceURL: "test123.com",
-			ExternalID: "1",
-		}
-
-		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
-		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
-
-		repoParams := GetBookingDataParams{
-			PlaceID:   input.PlaceID,
-			StartDate: input.Date,
-			EndDate:   midnight,
-			StartTime: input.StartTime,
-		}
-
-		getBookingData := []DataForCheckAvailableSchedule{
-			{
-				ID:        1,
-				Date:      input.Date,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Capacity:  input.Count,
-			},
-		}
-
-		timeSlotsData := []TimeSlot{
-			{
-				ID:        1,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Day:       int(input.Date.Weekday()),
-			},
-		}
-
-		placeIDAndCapacity := PlaceOpenHourAndCapacity{
-			OpenHour: input.StartTime,
-			Capacity: 100,
-		}
-
-		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
-		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
-		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
-		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
-		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 1).Return(10000.0, nil)
-		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
-		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(true, nil)
-		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, errors.Wrap(ErrInternalServerError, "test error"))
-
-		resp, err := service.CreateBooking(input)
-		mockRepo.AssertExpectations(t)
-		mockXenditService.AssertExpectations(t)
-		assert.NotNil(t, err)
-		assert.Nil(t, resp)
-		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
-	})
-
-	t.Run("xendit information internal server error", func(t *testing.T) {
-		mockRepo := new(MockRepository)
-		mockXenditService := new(MockXenditService)
-
-		service := NewService(mockRepo, mockXenditService)
-
-		date, _ := time.Parse(util.DateLayout, "2022-02-02")
-		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
-		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
-
-		input := CreateBookingServiceRequest{
-			Items: []Item{
-				{
-					ID:    4,
-					Name:  "Test Item 1",
-					Price: 10000,
-					Qty:   2,
-				},
-				{
-					ID:    5,
-					Name:  "Test Item 2",
-					Price: 10000,
-					Qty:   2,
-				},
-			},
-			Date:                date,
-			StartTime:           startTime,
-			EndTime:             EndTime,
-			Count:               10,
-			PlaceID:             1,
-			UserID:              1,
-			CustomerName:        "Rafi Muhammad",
-			CustomerPhoneNumber: "081291264758",
-		}
-
-		items := []CheckedItemParams{
-			{
-				ID:      4,
-				PlaceID: 1,
-			},
-			{
-				ID:      5,
-				PlaceID: 1,
-			},
-		}
-
-		bookingParams := CreateBookingParams{
-			UserID:     input.UserID,
-			PlaceID:    input.PlaceID,
-			Date:       input.Date,
-			StartTime:  input.StartTime,
-			EndTime:    input.EndTime,
-			Capacity:   input.Count,
-			Status:     util.BookingMenungguKonfirmasi,
-			TotalPrice: 0,
-		}
-
-		bookingItemParams := []CreateBookingItemsParams{
-			{
-				BookingID:  1,
-				ItemID:     4,
-				TotalPrice: 20000,
-				Qty:        2,
-			},
-			{
-				BookingID:  1,
-				ItemID:     5,
-				TotalPrice: 20000,
-				Qty:        2,
-			},
-		}
-
-		updateTotalPrice := UpdateTotalPriceParams{
-			BookingID:  1,
-			TotalPrice: 40000,
-		}
-
-		xenditItems := []xendit.Item{
-			{
-				Name:  "Test Item 1",
-				Price: 10000,
-				Qty:   2,
-			},
-			{
-				Name:  "Test Item 2",
-				Price: 10000,
-				Qty:   2,
-			},
-		}
-
-		invoiceParams := xendit.CreateInvoiceParams{
-			PlaceID:             1,
-			Items:               xenditItems,
-			Description:         fmt.Sprintf("order from %s", input.CustomerName),
-			CustomerName:        input.CustomerName,
-			CustomerPhoneNumber: input.CustomerPhoneNumber,
-			BookingFee:          10000,
-		}
-
-		invoice := xendit2.Invoice{
-			ID:         "testID1",
-			InvoiceURL: "test123.com",
-			ExternalID: "1",
-		}
-
-		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
-		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
-
-		repoParams := GetBookingDataParams{
-			PlaceID:   input.PlaceID,
-			StartDate: input.Date,
-			EndDate:   midnight,
-			StartTime: input.StartTime,
-		}
-
-		getBookingData := []DataForCheckAvailableSchedule{
-			{
-				ID:        1,
-				Date:      input.Date,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Capacity:  input.Count,
-			},
-		}
-
-		timeSlotsData := []TimeSlot{
-			{
-				ID:        1,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Day:       int(input.Date.Weekday()),
-			},
-		}
-
-		placeIDAndCapacity := PlaceOpenHourAndCapacity{
-			OpenHour: input.StartTime,
-			Capacity: 100,
-		}
-
-		xenditInformation := XenditInformation{XenditID: "testID1", InvoicesURL: "test123.com", BookingID: 1}
-
-		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
-		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
-		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
-		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
-		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 1).Return(10000.0, nil)
-		mockRepo.On("CreateBookingItems", bookingItemParams).Return(&CreateBookingItemsResponse{TotalPrice: 40000}, nil)
-		mockRepo.On("UpdateTotalPrice", updateTotalPrice).Return(true, nil)
-		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, nil)
-		mockRepo.On("InsertXenditInformation", xenditInformation).Return(false, errors.Wrap(ErrInternalServerError, "test error"))
-
-		resp, err := service.CreateBooking(input)
-		mockRepo.AssertExpectations(t)
-		mockXenditService.AssertExpectations(t)
 		assert.NotNil(t, err)
 		assert.Nil(t, resp)
 		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
@@ -2678,21 +2932,6 @@ func TestService_CreateBooking(t *testing.T) {
 			TotalPrice: 0,
 		}
 
-		invoiceParams := xendit.CreateInvoiceParams{
-			PlaceID:             1,
-			Items:               nil,
-			Description:         fmt.Sprintf("order from %s", input.CustomerName),
-			CustomerName:        input.CustomerName,
-			CustomerPhoneNumber: input.CustomerPhoneNumber,
-			BookingFee:          10000,
-		}
-
-		invoice := xendit2.Invoice{
-			ID:         "testID1",
-			InvoiceURL: "test123.com",
-			ExternalID: "1",
-		}
-
 		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
 		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
 
@@ -2727,15 +2966,10 @@ func TestService_CreateBooking(t *testing.T) {
 			Capacity: 100,
 		}
 
-		xenditInformation := XenditInformation{XenditID: "testID1", InvoicesURL: "test123.com", BookingID: 1}
-
 		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
 		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
 		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
 		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 1).Return(10000.0, nil)
-		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, nil)
-		mockRepo.On("InsertXenditInformation", xenditInformation).Return(true, nil)
 
 		resp, err := service.CreateBooking(input)
 		mockRepo.AssertExpectations(t)
@@ -2744,206 +2978,6 @@ func TestService_CreateBooking(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, 1, resp.BookingID)
-		assert.Equal(t, "test123.com", resp.PaymentURL)
-		assert.Equal(t, "testID1", resp.XenditID)
-	})
-
-	t.Run("failed no item when inserting xendit information", func(t *testing.T) {
-		mockRepo := new(MockRepository)
-		mockXenditService := new(MockXenditService)
-
-		service := NewService(mockRepo, mockXenditService)
-
-		date, _ := time.Parse(util.DateLayout, "2022-02-02")
-		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
-		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
-
-		input := CreateBookingServiceRequest{
-			Items:               []Item{},
-			Date:                date,
-			StartTime:           startTime,
-			EndTime:             EndTime,
-			Count:               10,
-			PlaceID:             1,
-			UserID:              1,
-			CustomerName:        "Rafi Muhammad",
-			CustomerPhoneNumber: "081291264758",
-		}
-
-		bookingParams := CreateBookingParams{
-			UserID:     input.UserID,
-			PlaceID:    input.PlaceID,
-			Date:       input.Date,
-			StartTime:  input.StartTime,
-			EndTime:    input.EndTime,
-			Capacity:   input.Count,
-			Status:     util.BookingMenungguKonfirmasi,
-			TotalPrice: 0,
-		}
-
-		invoiceParams := xendit.CreateInvoiceParams{
-			PlaceID:             1,
-			Items:               nil,
-			Description:         fmt.Sprintf("order from %s", input.CustomerName),
-			CustomerName:        input.CustomerName,
-			CustomerPhoneNumber: input.CustomerPhoneNumber,
-			BookingFee:          10000,
-		}
-
-		invoice := xendit2.Invoice{
-			ID:         "testID1",
-			InvoiceURL: "test123.com",
-			ExternalID: "1",
-		}
-
-		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
-		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
-
-		repoParams := GetBookingDataParams{
-			PlaceID:   input.PlaceID,
-			StartDate: input.Date,
-			EndDate:   midnight,
-			StartTime: input.StartTime,
-		}
-
-		getBookingData := []DataForCheckAvailableSchedule{
-			{
-				ID:        1,
-				Date:      input.Date,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Capacity:  input.Count,
-			},
-		}
-
-		timeSlotsData := []TimeSlot{
-			{
-				ID:        1,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Day:       int(input.Date.Weekday()),
-			},
-		}
-
-		placeIDAndCapacity := PlaceOpenHourAndCapacity{
-			OpenHour: input.StartTime,
-			Capacity: 100,
-		}
-
-		xenditInformation := XenditInformation{XenditID: "testID1", InvoicesURL: "test123.com", BookingID: 1}
-
-		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
-		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
-		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
-		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 1).Return(10000.0, nil)
-		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, nil)
-		mockRepo.On("InsertXenditInformation", xenditInformation).Return(false, errors.Wrap(ErrInternalServerError, "test error"))
-
-		resp, err := service.CreateBooking(input)
-		mockRepo.AssertExpectations(t)
-		mockXenditService.AssertExpectations(t)
-
-		assert.NotNil(t, err)
-		assert.Nil(t, resp)
-		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
-	})
-
-	t.Run("failed no item when using xendit", func(t *testing.T) {
-		mockRepo := new(MockRepository)
-		mockXenditService := new(MockXenditService)
-
-		service := NewService(mockRepo, mockXenditService)
-
-		date, _ := time.Parse(util.DateLayout, "2022-02-02")
-		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
-		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
-
-		input := CreateBookingServiceRequest{
-			Items:               []Item{},
-			Date:                date,
-			StartTime:           startTime,
-			EndTime:             EndTime,
-			Count:               10,
-			PlaceID:             1,
-			UserID:              1,
-			CustomerName:        "Rafi Muhammad",
-			CustomerPhoneNumber: "081291264758",
-		}
-
-		bookingParams := CreateBookingParams{
-			UserID:     input.UserID,
-			PlaceID:    input.PlaceID,
-			Date:       input.Date,
-			StartTime:  input.StartTime,
-			EndTime:    input.EndTime,
-			Capacity:   input.Count,
-			Status:     util.BookingMenungguKonfirmasi,
-			TotalPrice: 0,
-		}
-
-		invoiceParams := xendit.CreateInvoiceParams{
-			PlaceID:             1,
-			Items:               nil,
-			Description:         fmt.Sprintf("order from %s", input.CustomerName),
-			CustomerName:        input.CustomerName,
-			CustomerPhoneNumber: input.CustomerPhoneNumber,
-			BookingFee:          10000,
-		}
-
-		invoice := xendit2.Invoice{
-			ID:         "testID1",
-			InvoiceURL: "test123.com",
-			ExternalID: "1",
-		}
-
-		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
-		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
-
-		repoParams := GetBookingDataParams{
-			PlaceID:   input.PlaceID,
-			StartDate: input.Date,
-			EndDate:   midnight,
-			StartTime: input.StartTime,
-		}
-
-		getBookingData := []DataForCheckAvailableSchedule{
-			{
-				ID:        1,
-				Date:      input.Date,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Capacity:  input.Count,
-			},
-		}
-
-		timeSlotsData := []TimeSlot{
-			{
-				ID:        1,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Day:       int(input.Date.Weekday()),
-			},
-		}
-
-		placeIDAndCapacity := PlaceOpenHourAndCapacity{
-			OpenHour: input.StartTime,
-			Capacity: 100,
-		}
-
-		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
-		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
-		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
-		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 1).Return(10000.0, nil)
-		mockXenditService.On("CreateInvoice", invoiceParams).Return(&invoice, errors.Wrap(ErrInternalServerError, "test error"))
-
-		resp, err := service.CreateBooking(input)
-		mockRepo.AssertExpectations(t)
-		mockXenditService.AssertExpectations(t)
-		assert.NotNil(t, err)
-		assert.Nil(t, resp)
-		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	})
 
 	t.Run("failed when called get available time service", func(t *testing.T) {
@@ -3194,114 +3228,6 @@ func TestService_CreateBooking(t *testing.T) {
 		assert.Nil(t, resp)
 		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	})
-
-	t.Run("failed getting booking price", func(t *testing.T) {
-		mockRepo := new(MockRepository)
-		mockXenditService := new(MockXenditService)
-
-		service := NewService(mockRepo, mockXenditService)
-
-		date, _ := time.Parse(util.DateLayout, "2022-02-02")
-		startTime, _ := time.Parse(util.TimeLayout, "08:00:00")
-		EndTime, _ := time.Parse(util.TimeLayout, "09:00:00")
-
-		input := CreateBookingServiceRequest{
-			Items: []Item{
-				{
-					ID:    4,
-					Name:  "Test Item 1",
-					Price: 10000,
-					Qty:   2,
-				},
-				{
-					ID:    5,
-					Name:  "Test Item 2",
-					Price: 10000,
-					Qty:   2,
-				},
-			},
-			Date:                date,
-			StartTime:           startTime,
-			EndTime:             EndTime,
-			Count:               10,
-			PlaceID:             1,
-			UserID:              1,
-			CustomerName:        "Rafi Muhammad",
-			CustomerPhoneNumber: "081291264758",
-		}
-
-		items := []CheckedItemParams{
-			{
-				ID:      4,
-				PlaceID: 1,
-			},
-			{
-				ID:      5,
-				PlaceID: 1,
-			},
-		}
-
-		bookingParams := CreateBookingParams{
-			UserID:     input.UserID,
-			PlaceID:    input.PlaceID,
-			Date:       input.Date,
-			StartTime:  input.StartTime,
-			EndTime:    input.EndTime,
-			Capacity:   input.Count,
-			Status:     util.BookingMenungguKonfirmasi,
-			TotalPrice: 0,
-		}
-
-		midnight := time.Date(input.Date.Year(), input.Date.Month(), input.Date.Day(), 0, 0, 0, 0, input.Date.Location())
-		midnight = midnight.Add(time.Duration(1*24) * time.Hour)
-
-		repoParams := GetBookingDataParams{
-			PlaceID:   input.PlaceID,
-			StartDate: input.Date,
-			EndDate:   midnight,
-			StartTime: input.StartTime,
-		}
-
-		getBookingData := []DataForCheckAvailableSchedule{
-			{
-				ID:        1,
-				Date:      input.Date,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Capacity:  input.Count,
-			},
-		}
-
-		timeSlotsData := []TimeSlot{
-			{
-				ID:        1,
-				StartTime: input.StartTime,
-				EndTime:   input.EndTime,
-				Day:       int(input.Date.Weekday()),
-			},
-		}
-
-		placeIDAndCapacity := PlaceOpenHourAndCapacity{
-			OpenHour: input.StartTime,
-			Capacity: 100,
-		}
-
-		mockRepo.On("CheckedItem", items).Return(&items, true, nil)
-		mockRepo.On("GetBookingData", repoParams).Return(&getBookingData, nil)
-		mockRepo.On("GetTimeSlotsData", input.PlaceID, []time.Time{input.Date}).Return(&timeSlotsData, nil)
-		mockRepo.On("GetPlaceCapacity", input.PlaceID).Return(&placeIDAndCapacity, nil)
-		mockRepo.On("CreateBooking", bookingParams).Return(&CreateBookingResponse{ID: 1}, nil)
-		mockRepo.On("GetPlaceBookingPrice", 1).Return(0.0, ErrInternalServerError)
-
-		resp, err := service.CreateBooking(input)
-		mockRepo.AssertExpectations(t)
-		mockXenditService.AssertExpectations(t)
-
-		assert.NotNil(t, err)
-		assert.Nil(t, resp)
-		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
-	})
-
 }
 
 func TestService_GetTimeSlots(t *testing.T) {
@@ -3392,9 +3318,9 @@ func TestService_GetTimeSlots(t *testing.T) {
 func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		repo := new(MockRepository)
-		xendit := new(MockXenditService)
+		xenditService := new(MockXenditService)
 
-		service := NewService(repo, xendit)
+		service := NewService(repo, xenditService)
 
 		params := XenditInvoicesCallback{
 			ID:         "1",
@@ -3411,9 +3337,9 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 
 	t.Run("failed from repo", func(t *testing.T) {
 		repo := new(MockRepository)
-		xendit := new(MockXenditService)
+		xenditService := new(MockXenditService)
 
-		service := NewService(repo, xendit)
+		service := NewService(repo, xenditService)
 
 		params := XenditInvoicesCallback{
 			ID:         "1",
@@ -3431,9 +3357,9 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 
 	t.Run("success booking expired", func(t *testing.T) {
 		repo := new(MockRepository)
-		xendit := new(MockXenditService)
+		xenditService := new(MockXenditService)
 
-		service := NewService(repo, xendit)
+		service := NewService(repo, xenditService)
 
 		params := XenditInvoicesCallback{
 			ID:         "1",
@@ -3451,9 +3377,9 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 
 	t.Run("validation error unknown status", func(t *testing.T) {
 		repo := new(MockRepository)
-		xendit := new(MockXenditService)
+		xenditService := new(MockXenditService)
 
-		service := NewService(repo, xendit)
+		service := NewService(repo, xenditService)
 
 		params := XenditInvoicesCallback{
 			ID:         "1",

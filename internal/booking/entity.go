@@ -4,12 +4,13 @@ import "time"
 
 // CustomerBooking contains information that are needed by Business Admin
 type CustomerBooking struct {
-	ID           int    `json:"id" db:"id"`
-	CustomerName string `json:"name" db:"name"`
-	Capacity     int    `json:"capacity" db:"capacity"`
-	Date         string `json:"date" db:"date"`
-	StartTime    string `json:"start_time" db:"start_time"`
-	EndTime      string `json:"end_time" db:"end_time"`
+	ID           int       `json:"id" db:"id"`
+	CustomerName string    `json:"name" db:"name"`
+	Capacity     int       `json:"capacity" db:"capacity"`
+	Date         time.Time `json:"date" db:"date"`
+	StartTime    time.Time `json:"start_time" db:"start_time"`
+	EndTime      time.Time `json:"end_time" db:"end_time"`
+	Status       int       `json:"-" db:"status"`
 }
 
 // ListBooking is a container for customer bookings
@@ -166,9 +167,7 @@ type Item struct {
 
 // CreateBookingServiceResponse response for create booking
 type CreateBookingServiceResponse struct {
-	XenditID   string `json:"xendit_id"`
-	BookingID  int    `json:"booking_id"`
-	PaymentURL string `json:"payment_url"`
+	BookingID int `json:"booking_id"`
 }
 
 // CreateBookingRequestBody for API request body
@@ -182,16 +181,16 @@ type CreateBookingRequestBody struct {
 
 // Booking contains customer booking information
 type Booking struct {
-	ID           int    `json:"id"`
-	PlaceID      int    `json:"place_id" db:"place_id"`
-	PlaceName    string `json:"place_name" db:"place_name"`
-	PlaceImage   string `json:"place_image" db:"place_image"`
-	Date         string `json:"date"`
-	StartTime    string `json:"start_time" db:"start_time"`
-	EndTime      string `json:"end_time" db:"end_time"`
-	Status       int    `json:"status"`
-	TotalPrice   int    `json:"total_price" db:"total_price"`
-	BookingPrice int    `json:"booking_price"`
+	ID           int       `json:"id"`
+	PlaceID      int       `json:"place_id" db:"place_id"`
+	PlaceName    string    `json:"place_name" db:"place_name"`
+	PlaceImage   string    `json:"place_image" db:"place_image"`
+	Date         time.Time `json:"date"`
+	StartTime    time.Time `json:"start_time" db:"start_time"`
+	EndTime      time.Time `json:"end_time" db:"end_time"`
+	Status       int       `json:"status"`
+	TotalPrice   int       `json:"total_price" db:"total_price"`
+	BookingPrice int       `json:"booking_price"`
 }
 
 // List contains list of customer booking information
@@ -209,18 +208,20 @@ type BookingsListRequest struct {
 
 // Detail contain required information about booking
 type Detail struct {
-	ID               int          `json:"id"`
-	CustomerName     string       `json:"customer_name" db:"name"`
-	Date             string       `json:"date"`
-	StartTime        string       `json:"start_time" db:"start_time"`
-	EndTime          string       `json:"end_time" db:"end_time"`
-	Capacity         int          `json:"capacity"`
-	Status           int          `json:"status"`
-	CreatedAt        string       `json:"created_at" db:"created_at"`
-	TotalPrice       float64      `json:"total_price"`
-	TotalPriceTicket float64      `json:"total_price_ticket"`
-	TotalPriceItem   float64      `json:"total_price_item" db:"total_price"`
-	Items            []ItemDetail `json:"items"`
+	ID                  int          `json:"id"`
+	CustomerName        string       `json:"customer_name" db:"name"`
+	CustomerPhoneNumber string       `json:"-" db:"phone_number"`
+	PlaceID             int          `json:"-" db:"place_id"`
+	Date                time.Time    `json:"date"`
+	StartTime           time.Time    `json:"start_time" db:"start_time"`
+	EndTime             time.Time    `json:"end_time" db:"end_time"`
+	Capacity            int          `json:"capacity"`
+	Status              int          `json:"status"`
+	CreatedAt           string       `json:"created_at" db:"created_at"`
+	TotalPrice          float64      `json:"total_price"`
+	TotalPriceTicket    float64      `json:"total_price_ticket"`
+	TotalPriceItem      float64      `json:"total_price_item" db:"total_price"`
+	Items               []ItemDetail `json:"items"`
 }
 
 // TicketPriceWrapper will consist ticket price related to place
