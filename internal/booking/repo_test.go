@@ -1564,3 +1564,126 @@ func TestRepo_GetPlaceBookingPrice(t *testing.T) {
 		assert.Equal(t, 0.0, resp)
 	})
 }
+
+func TestRepo_AddExpiredPayment(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+
+		timeNow := time.Now()
+		query := "UPDATE bookings SET payment_expired_at = $1  WHERE id = $2"
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(timeNow, 1).WillReturnResult(driver.ResultNoRows)
+
+		err = repoMock.AddExpiredPayment(1, timeNow)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+
+		timeNow := time.Now()
+		query := "UPDATE bookings SET payment_expired_at = $1  WHERE id = $2"
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(timeNow, 1).WillReturnError(ErrInternalServerError)
+
+		err = repoMock.AddExpiredPayment(1, timeNow)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_GetInvoicesFromBooking(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+
+		query := "SELECT COALESCE (xendit_id, '') as xendit_id FROM bookings WHERE id = $1"
+
+		rows := mock.NewRows([]string{"xendit_id"})
+		rows.AddRow("test xendit id")
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnRows(rows)
+
+		isExist, err := repoMock.GetInvoicesFromBooking(1)
+		assert.True(t, isExist)
+		assert.Nil(t, err)
+	})
+
+	t.Run("no error but xendit id not found", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+
+		query := "SELECT COALESCE (xendit_id, '') as xendit_id FROM bookings WHERE id = $1"
+
+		rows := mock.NewRows([]string{"xendit_id"})
+		rows.AddRow("")
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnRows(rows)
+
+		isExist, err := repoMock.GetInvoicesFromBooking(1)
+		assert.False(t, isExist)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+
+		query := "SELECT COALESCE (xendit_id, '') as xendit_id FROM bookings WHERE id = $1"
+
+		rows := mock.NewRows([]string{"xendit_id"})
+		rows.AddRow("test xendit id")
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnError(ErrInternalServerError)
+
+		isExist, err := repoMock.GetInvoicesFromBooking(1)
+		assert.False(t, isExist)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+		assert.NotNil(t, err)
+	})
+
+	t.Run("err no rows", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+
+		query := "SELECT COALESCE (xendit_id, '') as xendit_id FROM bookings WHERE id = $1"
+
+		rows := mock.NewRows([]string{"xendit_id"})
+		rows.AddRow("test xendit id")
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnError(sql.ErrNoRows)
+
+		isExist, err := repoMock.GetInvoicesFromBooking(1)
+		assert.False(t, isExist)
+		assert.Equal(t, ErrNotFound, errors.Cause(err))
+		assert.NotNil(t, err)
+	})
+}
