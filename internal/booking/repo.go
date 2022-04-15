@@ -41,6 +41,37 @@ type Repo interface {
 	InsertXenditInformation(params XenditInformation) (bool, error)
 	UpdateBookingStatusByXenditID(string, int) error
 	GetPlaceBookingPrice(placeID int) (float64, error)
+	GetInvoicesFromBooking(ID int) (bool, error)
+	AddExpiredPayment(ID int, expiredAt time.Time) error
+}
+
+func (r repo) AddExpiredPayment(ID int, expiredAt time.Time) error {
+	query := "UPDATE bookings SET payment_expired_at = $1  WHERE id = $2"
+
+	_, err := r.db.Exec(query, expiredAt, ID)
+	if err != nil {
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return nil
+}
+
+func (r repo) GetInvoicesFromBooking(ID int) (bool, error) {
+	var xenditID string
+	err := r.db.Get(&xenditID, "SELECT COALESCE (xendit_id, '') as xendit_id FROM bookings WHERE id = $1", ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, errors.Wrap(ErrNotFound, err.Error())
+		}
+
+		return false, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	if xenditID == "" {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBooking, error) {
@@ -256,7 +287,7 @@ func (r repo) GetPlaceBookingPrice(placeID int) (float64, error) {
 func (r *repo) GetDetail(bookingID int) (*Detail, error) {
 	var bookingDetail Detail
 
-	query := `SELECT b.id, u.name, b.date, b.start_time, b.end_time, b.capacity, b.status, b.total_price, b.created_at
+	query := `SELECT b.id, u.name, u.phone_number, b.place_id, b.date, b.start_time, b.end_time, b.capacity, b.status, b.total_price, b.created_at
 			  FROM bookings b, users u
 			  WHERE b.id = $1 AND b.user_id = u.id`
 	err := r.db.Get(&bookingDetail, query, bookingID)
@@ -336,7 +367,6 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-	
 
 	return &bookingList, nil
 }
