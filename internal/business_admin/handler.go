@@ -47,3 +47,48 @@ func (h *Handler) GetBalanceDetail(c echo.Context) error {
 		Data:    balanceDetail,
 	})
 }
+
+// GetListTransactionsHistoryWithPagination is a handler for API request to get list of transaction history in business admin
+func (h *Handler) GetListTransactionsHistoryWithPagination(c echo.Context) error {
+	errorList := []string{}
+	limitString := c.QueryParam("limit")
+	pageString := c.QueryParam("page")
+
+	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
+
+	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
+	errorList = append(errorList, errorsFromValidator...)
+
+	if len(errorList) != 0 {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
+	}
+
+	params := ListTransactionRequest{}
+	params.UserID = user.ID
+	params.Limit = limit
+	params.Page = page
+	params.Path = "/api/v1/business-admin/transaction-history"
+
+	listTransaction, pagination, err := h.service.GetListTransactionsHistoryWithPagination(params)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  200,
+		Message: "success",
+		Data: map[string]interface{}{
+			"transactions": listTransaction.Transactions,
+			"pagination":   pagination,
+		},
+	})
+}

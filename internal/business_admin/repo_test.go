@@ -211,3 +211,217 @@ func TestRepo_GetBalanceInternalServerError(t *testing.T) {
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, balanceDetailRetrieved)
 }
+
+func TestRepo_GetListTransactionsHistoryWithPaginationSuccess(t *testing.T) {
+	listTransactionExpected := &ListTransaction{
+		Transactions: []Transaction{
+			{
+				ID:    1,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+			{
+				ID:    2,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		UserID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "name", "image", "total_price", "date"}).
+		AddRow(listTransactionExpected.Transactions[0].ID,
+			listTransactionExpected.Transactions[0].Name,
+			listTransactionExpected.Transactions[0].Image,
+			listTransactionExpected.Transactions[0].Price,
+			listTransactionExpected.Transactions[0].Date).
+		AddRow(listTransactionExpected.Transactions[1].ID,
+			listTransactionExpected.Transactions[1].Name,
+			listTransactionExpected.Transactions[1].Image,
+			listTransactionExpected.Transactions[1].Price,
+			listTransactionExpected.Transactions[1].Date)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT b.id, u.name, u.image, b.total_price, b.date
+	FROM bookings b, users u, places p
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id LIMIT $2 OFFSET $3`)).
+		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"count"}).AddRow(10)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1")).
+		WithArgs(params.UserID).
+		WillReturnRows(rows)
+
+	// Test
+	listTransactionResult, err := repoMock.GetListTransactionsHistoryWithPagination(params)
+	assert.Equal(t, listTransactionExpected, listTransactionResult)
+	assert.NotNil(t, listTransactionResult)
+	assert.NoError(t, err)
+}
+
+func TestRepo_GetListTransactionsHistoryWithPaginationError(t *testing.T) {
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		UserID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+
+	// Expectation
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT b.id, u.name, u.image, b.total_price, b.date
+		FROM bookings b, users u, places p
+		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id LIMIT $2 OFFSET $3`)).
+		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	listTransactionsResult, err := repoMock.GetListTransactionsHistoryWithPagination(params)
+	assert.Nil(t, listTransactionsResult)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+
+}
+
+func TestRepo_GetListTransactionsHistoryWithPaginationCountError(t *testing.T) {
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		UserID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+
+	// Expectation
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "name", "image", "total_price", "date"}).
+		AddRow("1", "test name", "image", 10, "date")
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT b.id, u.name, u.image, b.total_price, b.date
+		FROM bookings b, users u, places p
+		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id LIMIT $2 OFFSET $3`)).
+		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1")).
+		WithArgs(params.UserID).
+		WillReturnError(sql.ErrConnDone)
+
+	// Test
+	listTransactionsResult, err := repoMock.GetListTransactionsHistoryWithPagination(params)
+	assert.Nil(t, listTransactionsResult)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+
+}
+
+func TestRepo_GetListTransactionsHistoryWithPaginationEmpty(t *testing.T) {
+	listTransactionsExpected := &ListTransaction{
+		Transactions: make([]Transaction, 0),
+	}
+
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		UserID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT b.id, u.name, u.image, b.total_price, b.date
+		FROM bookings b, users u, places p
+		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id LIMIT $2 OFFSET $3`)).
+		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	listTransactionsResult, err := repoMock.GetListTransactionsHistoryWithPagination(params)
+	assert.Equal(t, listTransactionsExpected, listTransactionsResult)
+	assert.NotNil(t, listTransactionsResult)
+	assert.NoError(t, err)
+
+}
+
+func TestRepo_GetListTransactionsHistoryWithPaginationCountEmpty(t *testing.T) {
+	listTransactionsExpected := &ListTransaction{
+		Transactions: make([]Transaction, 0),
+		TotalCount:   0,
+	}
+
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		UserID: 1,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "name", "image", "total_price", "date"}).
+		AddRow("1", "name", "image", 10, "date")
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT b.id, u.name, u.image, b.total_price, b.date
+	FROM bookings b, users u, places p
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id LIMIT $2 OFFSET $3`)).
+		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnRows(rows)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1")).
+		WithArgs(params.UserID).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	listTransactionsResult, err := repoMock.GetListTransactionsHistoryWithPagination(params)
+	assert.Equal(t, listTransactionsExpected, listTransactionsResult)
+	assert.NotNil(t, listTransactionsResult)
+	assert.NoError(t, err)
+}

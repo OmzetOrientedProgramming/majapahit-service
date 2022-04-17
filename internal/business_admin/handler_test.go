@@ -2,8 +2,11 @@ package businessadmin
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -25,6 +28,13 @@ func (m *MockService) GetBalanceDetail(userID int) (*BalanceDetail, error) {
 	args := m.Called(userID)
 	ret := args.Get(0).(*BalanceDetail)
 	return ret, args.Error(1)
+}
+
+func (m *MockService) GetListTransactionsHistoryWithPagination(params ListTransactionRequest) (*ListTransaction, *util.Pagination, error) {
+	args := m.Called(params)
+	listItem := args.Get(0).(*ListTransaction)
+	pagination := args.Get(1).(util.Pagination)
+	return listItem, &pagination, args.Error(2)
 }
 
 func TestHandler_GetBalanceDetailSuccess(t *testing.T) {
@@ -312,4 +322,444 @@ func TestHandler_GetBalanceDetailBadRequestFromService(t *testing.T) {
 	util.ErrorHandler(h.GetBalanceDetail(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListTransactionHistoryWithPaginationSuccess(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/transaction-history"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		Path:   "/api/v1/business-admin/transaction-history",
+		UserID: userModel.ID,
+	}
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	listTransaction := ListTransaction{
+		Transactions: []Transaction{
+			{
+				ID:    1,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+			{
+				ID:    2,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/business-admin/transaction-history?limit=10&page=1", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/business-admin/transaction-history?limit=10&page=1", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/business-admin/transaction-history?limit=10&page=1", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/business-admin/transaction-history?limit=10&page=1", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"transactions": listTransaction.Transactions,
+			"pagination":   pagination,
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("GetListTransactionsHistoryWithPagination", params).Return(&listTransaction, pagination, nil)
+
+	// Tes
+	if assert.NoError(t, h.GetListTransactionsHistoryWithPagination(ctx)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetListTransactionsHistoryWithPaginationStateAndLimitAndPageAreNotInt(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "asd")
+	q.Set("page", "asd")
+	req := httptest.NewRequest(http.MethodGet, "/transaction-history?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"limit should be positive integer",
+			"page should be positive integer",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	util.ErrorHandler(h.GetListTransactionsHistoryWithPagination(ctx), ctx)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListTransactionsHistoryWithPaginationLimitError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "110")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/transaction-history?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	params := ListTransactionRequest{
+		Limit:  110,
+		Page:   1,
+		Path:   "/api/v1/business-admin/transaction-history",
+		UserID: 1,
+	}
+
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"limit should be 1 - 100"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	var listTransaction ListTransaction
+	var pagination util.Pagination
+	mockService.On("GetListTransactionsHistoryWithPagination", params).Return(&listTransaction, pagination, errorFromService)
+
+	// Tes
+	util.ErrorHandler(h.GetListTransactionsHistoryWithPagination(ctx), ctx)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListCustomerBookingWithPaginationInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "110")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/transaction-history?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	params := ListTransactionRequest{
+		Limit:  110,
+		Page:   1,
+		Path:   "/api/v1/business-admin/transaction-history",
+		UserID: 1,
+	}
+
+	internalServerError := errors.Wrap(ErrInternalServerError, "test")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var listTransaction ListTransaction
+	var pagination util.Pagination
+	mockService.On("GetListTransactionsHistoryWithPagination", params).Return(&listTransaction, pagination, internalServerError)
+
+	// Tes
+	util.ErrorHandler(h.GetListTransactionsHistoryWithPagination(ctx), ctx)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListTransactionsHistoryWithPaginationParseUserDataError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/transaction-history?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	params := ListTransactionRequest{
+		Limit:  110,
+		Page:   1,
+		Path:   "/api/v1/business-admin/transaction-history",
+		UserID: 1,
+	}
+
+	// Excpectation
+	var listTransaction ListTransaction
+	var pagination util.Pagination
+	mockService.On("GetListTransactionsHistoryWithPagination", params).Return(&listTransaction, pagination, nil)
+
+	// Tes
+	util.ErrorHandler(h.GetListTransactionsHistoryWithPagination(ctx), ctx)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
