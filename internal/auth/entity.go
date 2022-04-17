@@ -34,6 +34,7 @@ type UserModel struct {
 	UpdatedAt       time.Time `db:"updated_at"`
 	Email           string    `db:"email"`
 	Password        string    `db:"password"`
+	Image           string    `db:"image"`
 }
 
 // CheckPhoneNumberRequest represent request body for checking phone number

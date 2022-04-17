@@ -29,6 +29,12 @@ func (m *MockRepository) GetBalance(userID int) (*BalanceDetail, error) {
 	return &ret, args.Error(1)
 }
 
+func (m *MockRepository) GetListTransactionsHistoryWithPagination(params ListTransactionRequest) (*ListTransaction, error) {
+	args := m.Called(params)
+	ret := args.Get(0).(ListTransaction)
+	return &ret, args.Error(1)
+}
+
 func TestService_GetBalanceDetailSuccess(t *testing.T) {
 	userID := 1
 	placeID := 2
@@ -124,4 +130,161 @@ func TestService_GetBalanceDetailFailedCalledGetBalance(t *testing.T) {
 
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, balanceDetailResult)
+}
+
+func TestService_GetListTransactionHistoryWithPaginationSuccess(t *testing.T) {
+	// Define input and output
+	listTransactionExpected := ListTransaction{
+		Transactions: []Transaction{
+			{
+				ID:    1,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+			{
+				ID:    2,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		Path:   "/api/testing",
+		UserID: 0,
+	}
+	// Expectation
+	mockRepo.On("GetListTransactionsHistoryWithPagination", params).Return(listTransactionExpected, nil)
+
+	// Test
+	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &listTransactionExpected, listTransactionResult)
+	assert.NotNil(t, listTransactionResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetListTransactionHistoryWithPaginationSuccessWithDefaultParam(t *testing.T) {
+	// Define input and output
+	listTransactionExpected := ListTransaction{
+		Transactions: []Transaction{
+			{
+				ID:    1,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+			{
+				ID:    2,
+				Name:  "test name",
+				Image: "test image",
+				Price: 10000,
+				Date:  "test date",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	params := ListTransactionRequest{
+		Limit:  0,
+		Page:   0,
+		Path:   "/api/testing",
+		UserID: 1,
+	}
+
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	paramsDefault := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		Path:   "/api/testing",
+		UserID: 1,
+	}
+	// Expectation
+	mockRepo.On("GetListTransactionsHistoryWithPagination", paramsDefault).Return(listTransactionExpected, nil)
+
+	// Test
+	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &listTransactionExpected, listTransactionResult)
+	assert.NotNil(t, listTransactionResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetListTransactionHistoryWithPaginationFailedLimitExceedMaxLimit(t *testing.T) {
+	// Define input
+	params := ListTransactionRequest{
+		Limit: 101,
+		Page:  0,
+		Path:  "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listTransactionResult)
+}
+
+func TestService_GetListItemByIDWithPaginationError(t *testing.T) {
+	listTransaction := ListTransaction{}
+
+	params := ListTransactionRequest{
+		Limit:  10,
+		Page:   1,
+		Path:   "/api/testing",
+		UserID: 1,
+	}
+
+	// Mock DB
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetListTransactionsHistoryWithPagination", params).Return(listTransaction, ErrInternalServerError)
+
+	// Test
+	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, listTransactionResult)
+}
+
+func TestService_GetListItemWithPaginationFailedURLIsEmpty(t *testing.T) {
+	// Define input
+	params := ListTransactionRequest{
+		Limit: 100,
+		Page:  0,
+		Path:  "",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listTransactionResult)
 }

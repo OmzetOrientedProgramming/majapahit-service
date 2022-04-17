@@ -75,6 +75,9 @@ func (r *Routes) Init() {
 			businessProfileRoutes := businessAdminRoutes.Group("/business-profile")
 			listItemsRoutes := businessProfileRoutes.Group("/list-items")
 			listItemsRoutes.GET("", r.itemHandler.GetListItemAdminWithPagination)
+
+			transactionHistoryRoutes := businessAdminRoutes.Group("/transaction-history")
+			transactionHistoryRoutes.GET("", r.businessadminHandler.GetListTransactionsHistoryWithPagination)
 		}
 
 		// Auth module
