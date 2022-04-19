@@ -37,7 +37,7 @@ func TestRepo_GetLatestDisbursementSuccess(t *testing.T) {
 			latestDateExpected.Status,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND status = 1) ORDER BY date DESC LIMIT 1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND (status = 0 OR status = 1)) ORDER BY date DESC LIMIT 1")).
 		WithArgs(placeID).
 		WillReturnRows(rows)
 
@@ -67,7 +67,7 @@ func TestRepo_GetLatestDisbursementErrorNoRows(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND status = 1) ORDER BY date DESC LIMIT 1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND (status = 0 OR status = 1)) ORDER BY date DESC LIMIT 1")).
 		WithArgs(placeID).
 		WillReturnError(sql.ErrNoRows)
 
@@ -92,7 +92,7 @@ func TestRepo_GetLatestDisbursementInternalServerError(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND status = 1) ORDER BY date DESC LIMIT 1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND (status = 0 OR status = 1)) ORDER BY date DESC LIMIT 1")).
 		WithArgs(placeID).
 		WillReturnError(sql.ErrTxDone)
 

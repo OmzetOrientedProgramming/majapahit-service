@@ -41,7 +41,7 @@ func (r *repo) GetPlaceIDByUserID(userID int) (int, error) {
 func (r *repo) GetLatestDisbursement(placeID int) (*DisbursementDetail, error) {
 	var result DisbursementDetail
 
-	query := "SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND status = 1) ORDER BY date DESC LIMIT 1"
+	query := "SELECT date, amount, status FROM disbursements WHERE (place_id = $1 AND (status = 0 OR status = 1)) ORDER BY date DESC LIMIT 1"
 	err := r.db.Get(&result, query, placeID)
 	if err != nil {
 		if err == sql.ErrNoRows {
