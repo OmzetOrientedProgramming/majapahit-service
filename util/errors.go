@@ -1,11 +1,12 @@
 package util
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"strings"
 )
 
 // ErrorUnwrap function will unwrap all the error and return the list of error

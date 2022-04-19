@@ -2,11 +2,12 @@ package util
 
 import (
 	"encoding/json"
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/labstack/echo/v4"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
