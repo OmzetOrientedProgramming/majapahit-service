@@ -2,6 +2,7 @@ package businessadmin
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -13,6 +14,10 @@ type Repo interface {
 	GetLatestDisbursement(int) (*DisbursementDetail, error)
 	GetBalance(int) (*BalanceDetail, error)
 	GetListTransactionsHistoryWithPagination(params ListTransactionRequest) (*ListTransaction, error)
+	GetBusinessAdminInformation(userID int) (*InfoForDisbursement, error)
+	SaveDisbursement(disbursement DisbursementDetail) (int, error)
+	UpdateBalance(float64, int) error
+	UpdateDisbursementStatusByXenditID(int, string) error
 	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
 	GetItemsWrapper(int) (*ItemsWrapper, error)
 	GetCustomerForTransactionHistoryDetail(int) (*CustomerForTrasactionHistoryDetail, error)
@@ -27,6 +32,61 @@ func NewRepo(db *sqlx.DB) Repo {
 	return &repo{
 		db: db,
 	}
+}
+
+func (r *repo) UpdateBalance(newAmount float64, userID int) error {
+	query := "UPDATE business_owners SET balance = $1 " +
+		"WHERE user_id= $2"
+
+	_, err := r.db.Exec(query, newAmount, userID)
+	if err != nil {
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return nil
+}
+
+func (r *repo) UpdateDisbursementStatusByXenditID(newStatus int, xenditID string) error {
+	query := "UPDATE disbursements as d SET status = $1 " +
+		"WHERE xendit_id = $2"
+
+	_, err := r.db.Exec(query, newStatus, xenditID)
+	if err != nil {
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return nil
+}
+
+func (r *repo) GetBusinessAdminInformation(userID int) (*InfoForDisbursement, error) {
+	var disbursementInfo InfoForDisbursement
+
+	query := "SELECT u.id, u.name, u.email, b.bank_account_number, b.bank_account_name, p.id as place_id " +
+		"FROM users as u " +
+		"JOIN business_owners as b ON b.user_id = u.id " +
+		"JOIN places as p ON p.user_id = u.id " +
+		"WHERE u.id = $1"
+
+	err := r.db.Get(&disbursementInfo, query, userID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &disbursementInfo, nil
+}
+
+func (r *repo) SaveDisbursement(disbursement DisbursementDetail) (int, error) {
+	var lastInsertedID int
+
+	query := "INSERT INTO disbursements (place_id, date, xendit_id, amount, status) " +
+		"VALUES ($1, $2, $3, $4, $5) " +
+		"RETURNING id"
+
+	if err := r.db.QueryRow(query, disbursement.PlaceID, disbursement.Date, disbursement.XenditID, disbursement.Amount, disbursement.Status).Scan(&lastInsertedID); err != nil {
+		return 0, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return lastInsertedID, nil
 }
 
 func (r *repo) GetPlaceIDByUserID(userID int) (int, error) {
@@ -49,7 +109,7 @@ func (r *repo) GetLatestDisbursement(placeID int) (*DisbursementDetail, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			result = DisbursementDetail{
-				Date:   "-",
+				Date:   time.Time{},
 				Amount: 0,
 				Status: 1,
 			}

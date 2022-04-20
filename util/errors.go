@@ -17,7 +17,16 @@ func ErrorUnwrap(err error) ([]string, string) {
 	}
 	errList, errMessage := errString[len(errString)-2], errString[len(errString)-1]
 
-	return strings.Split(errList, ";"), strings.TrimSpace(errMessage)
+	// trim whitespace
+	errMessage = strings.TrimSpace(errMessage)
+	errListSplit := strings.Split(errList, ";")
+
+	var errListSplitTrimmed []string
+	for _, i := range errListSplit {
+		errListSplitTrimmed = append(errListSplitTrimmed, strings.TrimSpace(i))
+	}
+
+	return errListSplitTrimmed, strings.TrimSpace(errMessage)
 }
 
 // ErrorWrapWithContext for wrapping error with context

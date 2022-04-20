@@ -43,6 +43,21 @@ type Repo interface {
 	GetPlaceBookingPrice(placeID int) (float64, error)
 	GetInvoicesFromBooking(ID int) (bool, error)
 	AddExpiredPayment(ID int, expiredAt time.Time) error
+	IncrementBusinessAdminBalance(float64, int) error
+}
+
+func (r repo) IncrementBusinessAdminBalance(balance float64, placeID int) error {
+	query := "UPDATE business_owners as bo SET balance = balance + $1 " +
+		"FROM places as p " +
+		"WHERE p.user_id = bo.user_id " +
+		"AND p.id = $2"
+
+	_, err := r.db.Exec(query, balance, placeID)
+	if err != nil {
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return nil
 }
 
 func (r repo) AddExpiredPayment(ID int, expiredAt time.Time) error {

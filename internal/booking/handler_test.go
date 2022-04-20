@@ -75,7 +75,7 @@ func (m *MockService) GetMyBookingsPreviousWithPagination(localID string, params
 	return myBookingsPrevious, &pagination, args.Error(2)
 }
 
-func (m *MockService) UpdateBookingStatusByXendit(callback XenditInvoicesCallback) error {
+func (m *MockService) XenditInvoicesCallback(callback XenditInvoicesCallback) error {
 	args := m.Called(callback)
 	return args.Error(0)
 }
@@ -3134,7 +3134,7 @@ func TestHandler_XenditInvoicesCallback(t *testing.T) {
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 
-		mockService.On("UpdateBookingStatusByXendit", params).Return(nil)
+		mockService.On("XenditInvoicesCallback", params).Return(nil)
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
@@ -3195,7 +3195,7 @@ func TestHandler_XenditInvoicesCallback(t *testing.T) {
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 
-		mockService.On("UpdateBookingStatusByXendit", params).Return(errors.Wrap(ErrInputValidationError, "test error"))
+		mockService.On("XenditInvoicesCallback", params).Return(errors.Wrap(ErrInputValidationError, "test error"))
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
@@ -3226,7 +3226,7 @@ func TestHandler_XenditInvoicesCallback(t *testing.T) {
 		mockService := new(MockService)
 		mockHandler := NewHandler(mockService)
 
-		mockService.On("UpdateBookingStatusByXendit", params).Return(errors.Wrap(ErrInternalServerError, "test error"))
+		mockService.On("XenditInvoicesCallback", params).Return(errors.Wrap(ErrInternalServerError, "test error"))
 
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))

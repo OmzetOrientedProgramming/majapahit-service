@@ -65,6 +65,8 @@ func (r *Routes) Init() {
 		businessAdminRoutes := v1.Group("/business-admin", r.authMiddleware.AuthMiddleware())
 		businessAdminRoutes.GET("/balance", r.businessadminHandler.GetBalanceDetail)
 		{
+			businessAdminRoutes.POST("/disbursement", r.businessadminHandler.CreateDisbursement)
+
 			// Booking Module
 			bookingRoutes := businessAdminRoutes.Group("/booking")
 			bookingRoutes.GET("", r.bookingHandler.GetListCustomerBookingWithPagination)
@@ -108,6 +110,7 @@ func (r *Routes) Init() {
 			xenditCallbackRoutes := callbackRoutes.Group("/xendit")
 			{
 				xenditCallbackRoutes.POST("/invoices", r.bookingHandler.XenditInvoicesCallback)
+				xenditCallbackRoutes.POST("/disbursement", r.businessadminHandler.XenditDisbursementCallback)
 			}
 		}
 	}

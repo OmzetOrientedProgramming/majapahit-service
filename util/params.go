@@ -63,6 +63,20 @@ const (
 	Available = 0
 	//FullyBook booking status
 	FullyBook = 1
+
+	// XenditDisbursementPending for xendit disbursement status pending
+	XenditDisbursementPending = 0
+	// XenditDisbursementCompleted for xendit disbursement status completed
+	XenditDisbursementCompleted = 1
+	// XenditDisbursementFailed for xendit disbursemnet status failed
+	XenditDisbursementFailed = 2
+
+	// XenditDisbursementPendingString for xendit disbursement callback pending
+	XenditDisbursementPendingString = "PENDING"
+	// XenditDisbursementCompletedString for xendit disbursement callback completed
+	XenditDisbursementCompletedString = "COMPLETED"
+	// XenditDisbursementFailedString for xendit disbursement callback failed
+	XenditDisbursementFailedString = "FAILED"
 )
 
 var (
@@ -73,7 +87,7 @@ var (
 	XenditFeesDefault = []xendit.InvoiceFee{
 		{
 			Type:  "PlatformFee",
-			Value: 3000,
+			Value: XenditPlatformFee,
 		},
 	}
 
@@ -88,4 +102,13 @@ var (
 
 	// XenditStatusExpired for xendit status expired
 	XenditStatusExpired = "EXPIRED"
+
+	// XenditPlatformFee for xendit platform fee
+	XenditPlatformFee = 3000.0
+
+	// XenditDisbursementFee for xendit disbursement fee
+	XenditDisbursementFee = 5000.0
+
+	// XenditVATPercentage for xendit vat percentage
+	XenditVATPercentage = .11
 )

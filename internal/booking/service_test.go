@@ -141,6 +141,11 @@ func (m *MockRepository) GetPlaceBookingPrice(placeID int) (float64, error) {
 	return args.Get(0).(float64), args.Error(1)
 }
 
+func (m *MockRepository) IncrementBusinessAdminBalance(balance float64, placeID int) error {
+	args := m.Called(balance, placeID)
+	return args.Error(0)
+}
+
 func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	// Define input and output
 	date := time.Now()
@@ -3326,13 +3331,55 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 			ID:         "1",
 			ExternalID: "1",
 			Status:     "PAID",
+			Amount:     20000.0,
 		}
 
 		repo.On("UpdateBookingStatusByXenditID", "1", 2).
 			Return(nil)
+		repo.On("IncrementBusinessAdminBalance", 17000.0, 1).Return(nil)
 
-		err := service.UpdateBookingStatusByXendit(params)
+		err := service.XenditInvoicesCallback(params)
 		assert.Nil(t, err)
+	})
+
+	t.Run("failed repo increment balance", func(t *testing.T) {
+		repo := new(MockRepository)
+		xenditService := new(MockXenditService)
+
+		service := NewService(repo, xenditService)
+
+		params := XenditInvoicesCallback{
+			ID:         "1",
+			ExternalID: "1",
+			Status:     "PAID",
+			Amount:     20000.0,
+		}
+
+		repo.On("UpdateBookingStatusByXenditID", "1", 2).
+			Return(nil)
+		repo.On("IncrementBusinessAdminBalance", 17000.0, 1).Return(errors.Wrap(ErrInternalServerError, "test error"))
+
+		err := service.XenditInvoicesCallback(params)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed external id not valid", func(t *testing.T) {
+		repo := new(MockRepository)
+		xenditService := new(MockXenditService)
+
+		service := NewService(repo, xenditService)
+
+		params := XenditInvoicesCallback{
+			ID:         "1",
+			ExternalID: "tes",
+			Status:     "PAID",
+			Amount:     20000.0,
+		}
+
+		err := service.XenditInvoicesCallback(params)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	})
 
 	t.Run("failed from repo", func(t *testing.T) {
@@ -3350,7 +3397,7 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 		repo.On("UpdateBookingStatusByXenditID", "1", 2).
 			Return(ErrInternalServerError)
 
-		err := service.UpdateBookingStatusByXendit(params)
+		err := service.XenditInvoicesCallback(params)
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	})
@@ -3370,7 +3417,7 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 		repo.On("UpdateBookingStatusByXenditID", "1", 4).
 			Return(ErrInternalServerError)
 
-		err := service.UpdateBookingStatusByXendit(params)
+		err := service.XenditInvoicesCallback(params)
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	})
@@ -3387,7 +3434,7 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 			Status:     "UNKNOWN",
 		}
 
-		err := service.UpdateBookingStatusByXendit(params)
+		err := service.XenditInvoicesCallback(params)
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	})

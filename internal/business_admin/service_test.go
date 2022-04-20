@@ -1,7 +1,12 @@
 package businessadmin
 
 import (
+	"fmt"
+	"github.com/tkuchiki/faketime"
+	xendit2 "github.com/xendit/xendit-go"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -53,6 +58,51 @@ func (m *MockRepository) GetCustomerForTransactionHistoryDetail(bookingID int) (
 	return &ret, args.Error(1)
 }
 
+func (m *MockRepository) GetBusinessAdminInformation(userID int) (*InfoForDisbursement, error) {
+	args := m.Called(userID)
+	ret := args.Get(0).(InfoForDisbursement)
+	return &ret, args.Error(1)
+}
+
+func (m *MockRepository) SaveDisbursement(disbursement DisbursementDetail) (int, error) {
+	args := m.Called(disbursement)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockRepository) UpdateBalance(newBalance float64, userID int) error {
+	args := m.Called(newBalance, userID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpdateDisbursementStatusByXenditID(newStatus int, xenditID string) error {
+	args := m.Called(newStatus, xenditID)
+	return args.Error(0)
+}
+
+type MockXenditService struct {
+	mock.Mock
+}
+
+func (x *MockXenditService) CreateInvoice(params xendit.CreateInvoiceParams) (*xendit2.Invoice, error) {
+	args := x.Called(params)
+	return args.Get(0).(*xendit2.Invoice), args.Error(1)
+}
+
+func (x *MockXenditService) CreateDisbursement(params xendit.CreateDisbursementParams) (*xendit2.Disbursement, error) {
+	args := x.Called(params)
+	return args.Get(0).(*xendit2.Disbursement), args.Error(1)
+}
+
+func (x *MockXenditService) GetInvoice(ID string) (*xendit2.Invoice, error) {
+	args := x.Called(ID)
+	return args.Get(0).(*xendit2.Invoice), args.Error(1)
+}
+
+func (x *MockXenditService) GetDisbursement(ID string) (*xendit2.Disbursement, error) {
+	args := x.Called(ID)
+	return args.Get(0).(*xendit2.Disbursement), args.Error(1)
+}
+
 func TestService_GetBalanceDetailSuccess(t *testing.T) {
 	userID := 1
 	placeID := 2
@@ -61,13 +111,13 @@ func TestService_GetBalanceDetailSuccess(t *testing.T) {
 	}
 
 	latestDisbursement := DisbursementDetail{
-		Date:   "27 Januari 2022",
+		Date:   time.Now(),
 		Amount: 500000,
 		Status: 1,
 	}
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
 	mockRepo.On("GetLatestDisbursement", placeID).Return(latestDisbursement, nil)
@@ -77,7 +127,7 @@ func TestService_GetBalanceDetailSuccess(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 
 	var balanceDetail BalanceDetail
-	balanceDetail.LatestDisbursementDate = latestDisbursement.Date
+	balanceDetail.LatestDisbursementDate = latestDisbursement.Date.String()
 	balanceDetail.Balance = balance.Balance
 
 	assert.Equal(t, &balanceDetail, balanceDetailResult)
@@ -89,7 +139,7 @@ func TestService_GetBalanceDetailWithWrongInput(t *testing.T) {
 	userID := 0
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	balanceDetail, err := mockService.GetBalanceDetail(userID)
 
@@ -101,7 +151,7 @@ func TestService_GetBalanceDetailFailedCalledGetPlaceIDByUserID(t *testing.T) {
 	userID := 10
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(0, ErrInternalServerError)
 
@@ -118,7 +168,7 @@ func TestService_GetBalanceDetailFailedCalledGetLatestDisbursement(t *testing.T)
 	var disbursementsDetail DisbursementDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
 	mockRepo.On("GetLatestDisbursement", placeID).Return(disbursementsDetail, ErrInternalServerError)
@@ -137,7 +187,7 @@ func TestService_GetBalanceDetailFailedCalledGetBalance(t *testing.T) {
 	var balanceDetail BalanceDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
 	mockRepo.On("GetLatestDisbursement", placeID).Return(disbursementsDetail, nil)
@@ -174,7 +224,7 @@ func TestService_GetListTransactionHistoryWithPaginationSuccess(t *testing.T) {
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	params := ListTransactionRequest{
 		Limit:  10,
@@ -225,7 +275,7 @@ func TestService_GetListTransactionHistoryWithPaginationSuccessWithDefaultParam(
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	paramsDefault := ListTransactionRequest{
 		Limit:  10,
@@ -255,7 +305,7 @@ func TestService_GetListTransactionHistoryWithPaginationFailedLimitExceedMaxLimi
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	// Test
 	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
@@ -276,7 +326,7 @@ func TestService_GetListItemByIDWithPaginationError(t *testing.T) {
 
 	// Mock DB
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetListTransactionsHistoryWithPagination", params).Return(listTransaction, ErrInternalServerError)
 
@@ -298,7 +348,7 @@ func TestService_GetListItemWithPaginationFailedURLIsEmpty(t *testing.T) {
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	// Test
 	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
@@ -307,11 +357,490 @@ func TestService_GetListItemWithPaginationFailedURLIsEmpty(t *testing.T) {
 	assert.Nil(t, listTransactionResult)
 }
 
+func TestService_CreateDisbursement(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXendit := new(MockXenditService)
+		service := NewService(mockRepo, mockXendit)
+
+		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
+		defer f.Undo()
+		f.Do()
+
+		lastDisbursementDate := time.Date(2022, 03, 01, 0, 0, 0, 0, time.Local)
+
+		businessAdminInfo := InfoForDisbursement{
+			ID:                1,
+			Name:              "test",
+			Email:             "test@gmail.com",
+			BankAccountName:   "TEST",
+			BankAccountNumber: "123456789",
+			PlaceID:           1,
+		}
+
+		lastDisbursementInfo := DisbursementDetail{
+			ID:       1,
+			PlaceID:  1,
+			Date:     lastDisbursementDate,
+			XenditID: "1",
+			Amount:   10000,
+			Status:   0,
+		}
+
+		xenditDisbursementParams := xendit.CreateDisbursementParams{
+			ID:                businessAdminInfo.ID,
+			BankAccountName:   businessAdminInfo.BankAccountName,
+			BankAccountNumber: businessAdminInfo.BankAccountNumber,
+			Amount:            4450,
+			Description:       fmt.Sprintf("Disbursement by %s", businessAdminInfo.Name),
+			Email:             []string{businessAdminInfo.Email},
+		}
+
+		createXenditDisbursement := xendit2.Disbursement{ID: "1", Amount: 4450}
+
+		disbursement := DisbursementDetail{
+			PlaceID:  businessAdminInfo.PlaceID,
+			Date:     time.Now(),
+			XenditID: createXenditDisbursement.ID,
+			Amount:   createXenditDisbursement.Amount,
+			Status:   0,
+		}
+
+		expectedOutput := CreateDisbursementResponse{
+			ID:        1,
+			CreatedAt: disbursement.Date,
+			Amount:    4450,
+			XenditID:  "1",
+		}
+
+		mockRepo.On("GetBusinessAdminInformation", 1).Return(businessAdminInfo, nil)
+		mockRepo.On("GetLatestDisbursement", 1).Return(lastDisbursementInfo, nil)
+		mockXendit.On("CreateDisbursement", xenditDisbursementParams).Return(&createXenditDisbursement, nil)
+		mockRepo.On("SaveDisbursement", disbursement).Return(1, nil)
+
+		resp, err := service.CreateDisbursement(1, 10000)
+		assert.Nil(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, &expectedOutput, resp)
+	})
+
+	t.Run("error while calling SaveDisbursement", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXendit := new(MockXenditService)
+		service := NewService(mockRepo, mockXendit)
+
+		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
+		defer f.Undo()
+		f.Do()
+
+		lastDisbursementDate := time.Date(2022, 03, 01, 0, 0, 0, 0, time.Local)
+
+		businessAdminInfo := InfoForDisbursement{
+			ID:                1,
+			Name:              "test",
+			Email:             "test@gmail.com",
+			BankAccountName:   "TEST",
+			BankAccountNumber: "123456789",
+			PlaceID:           1,
+		}
+
+		lastDisbursementInfo := DisbursementDetail{
+			ID:       1,
+			PlaceID:  1,
+			Date:     lastDisbursementDate,
+			XenditID: "1",
+			Amount:   10000,
+			Status:   0,
+		}
+
+		xenditDisbursementParams := xendit.CreateDisbursementParams{
+			ID:                businessAdminInfo.ID,
+			BankAccountName:   businessAdminInfo.BankAccountName,
+			BankAccountNumber: businessAdminInfo.BankAccountNumber,
+			Amount:            4450,
+			Description:       fmt.Sprintf("Disbursement by %s", businessAdminInfo.Name),
+			Email:             []string{businessAdminInfo.Email},
+		}
+
+		createXenditDisbursement := xendit2.Disbursement{ID: "1", Amount: 4450}
+
+		disbursement := DisbursementDetail{
+			PlaceID:  businessAdminInfo.PlaceID,
+			Date:     time.Now(),
+			XenditID: createXenditDisbursement.ID,
+			Amount:   createXenditDisbursement.Amount,
+			Status:   0,
+		}
+
+		mockRepo.On("GetBusinessAdminInformation", 1).Return(businessAdminInfo, nil)
+		mockRepo.On("GetLatestDisbursement", 1).Return(lastDisbursementInfo, nil)
+		mockXendit.On("CreateDisbursement", xenditDisbursementParams).Return(&createXenditDisbursement, nil)
+		mockRepo.On("SaveDisbursement", disbursement).Return(1, errors.Wrap(ErrInternalServerError, "test error"))
+
+		resp, err := service.CreateDisbursement(1, 10000)
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("error while calling CreateDisbursement", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXendit := new(MockXenditService)
+		service := NewService(mockRepo, mockXendit)
+
+		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
+		defer f.Undo()
+		f.Do()
+
+		lastDisbursementDate := time.Date(2022, 03, 01, 0, 0, 0, 0, time.Local)
+
+		businessAdminInfo := InfoForDisbursement{
+			ID:                1,
+			Name:              "test",
+			Email:             "test@gmail.com",
+			BankAccountName:   "TEST",
+			BankAccountNumber: "123456789",
+			PlaceID:           1,
+		}
+
+		lastDisbursementInfo := DisbursementDetail{
+			ID:       1,
+			PlaceID:  1,
+			Date:     lastDisbursementDate,
+			XenditID: "1",
+			Amount:   10000,
+			Status:   0,
+		}
+
+		xenditDisbursementParams := xendit.CreateDisbursementParams{
+			ID:                businessAdminInfo.ID,
+			BankAccountName:   businessAdminInfo.BankAccountName,
+			BankAccountNumber: businessAdminInfo.BankAccountNumber,
+			Amount:            4450,
+			Description:       fmt.Sprintf("Disbursement by %s", businessAdminInfo.Name),
+			Email:             []string{businessAdminInfo.Email},
+		}
+
+		createXenditDisbursement := xendit2.Disbursement{ID: "1", Amount: 4450}
+
+		mockRepo.On("GetBusinessAdminInformation", 1).Return(businessAdminInfo, nil)
+		mockRepo.On("GetLatestDisbursement", 1).Return(lastDisbursementInfo, nil)
+		mockXendit.On("CreateDisbursement", xenditDisbursementParams).Return(&createXenditDisbursement, errors.Wrap(ErrInternalServerError, "test error"))
+
+		resp, err := service.CreateDisbursement(1, 10000)
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("error while calling GetLatestDisbursement", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXendit := new(MockXenditService)
+		service := NewService(mockRepo, mockXendit)
+
+		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
+		defer f.Undo()
+		f.Do()
+
+		lastDisbursementDate := time.Date(2022, 03, 01, 0, 0, 0, 0, time.Local)
+
+		businessAdminInfo := InfoForDisbursement{
+			ID:                1,
+			Name:              "test",
+			Email:             "test@gmail.com",
+			BankAccountName:   "TEST",
+			BankAccountNumber: "123456789",
+			PlaceID:           1,
+		}
+
+		lastDisbursementInfo := DisbursementDetail{
+			ID:       1,
+			PlaceID:  1,
+			Date:     lastDisbursementDate,
+			XenditID: "1",
+			Amount:   10000,
+			Status:   0,
+		}
+
+		mockRepo.On("GetBusinessAdminInformation", 1).Return(businessAdminInfo, nil)
+		mockRepo.On("GetLatestDisbursement", 1).Return(lastDisbursementInfo, errors.Wrap(ErrInternalServerError, "test error"))
+
+		resp, err := service.CreateDisbursement(1, 10000)
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("error while input validation", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXendit := new(MockXenditService)
+		service := NewService(mockRepo, mockXendit)
+
+		resp, err := service.CreateDisbursement(-1, -10000)
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	})
+
+	t.Run("error while calling GetBusinessAdminInformation", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXendit := new(MockXenditService)
+		service := NewService(mockRepo, mockXendit)
+
+		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
+		defer f.Undo()
+		f.Do()
+
+		businessAdminInfo := InfoForDisbursement{
+			ID:                1,
+			Name:              "test",
+			Email:             "test@gmail.com",
+			BankAccountName:   "TEST",
+			BankAccountNumber: "123456789",
+			PlaceID:           1,
+		}
+
+		mockRepo.On("GetBusinessAdminInformation", 1).Return(businessAdminInfo, errors.Wrap(ErrInternalServerError, "test error"))
+
+		resp, err := service.CreateDisbursement(1, 10000)
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("input validation error when last disbursement is yesterday", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockXendit := new(MockXenditService)
+		service := NewService(mockRepo, mockXendit)
+
+		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
+		defer f.Undo()
+		f.Do()
+
+		lastDisbursementDate := time.Date(2022, 04, 01, 0, 0, 0, 0, time.Local)
+
+		businessAdminInfo := InfoForDisbursement{
+			ID:                1,
+			Name:              "test",
+			Email:             "test@gmail.com",
+			BankAccountName:   "TEST",
+			BankAccountNumber: "123456789",
+			PlaceID:           1,
+		}
+
+		lastDisbursementInfo := DisbursementDetail{
+			ID:       1,
+			PlaceID:  1,
+			Date:     lastDisbursementDate,
+			XenditID: "1",
+			Amount:   10000,
+			Status:   0,
+		}
+
+		mockRepo.On("GetBusinessAdminInformation", 1).Return(businessAdminInfo, nil)
+		mockRepo.On("GetLatestDisbursement", 1).Return(lastDisbursementInfo, nil)
+
+		resp, err := service.CreateDisbursement(1, 10000)
+		assert.Nil(t, resp)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	})
+}
+
+func TestService_DisbursementCallbackFromXendit(t *testing.T) {
+	t.Run("success status completed", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "1",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "COMPLETED",
+		}
+
+		balanceDetail := BalanceDetail{Balance: 10000, LatestDisbursementDate: time.Now().String()}
+		mockRepo.On("GetBalance", 1).Return(balanceDetail, nil)
+		mockRepo.On("UpdateBalance", 0.0, 1).Return(nil)
+		mockRepo.On("UpdateDisbursementStatusByXenditID", 1, "test").Return(nil)
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed status", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "1",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "TEST",
+		}
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	})
+
+	t.Run("failed calling update disbursement status", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "1",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "COMPLETED",
+		}
+
+		balanceDetail := BalanceDetail{Balance: 10000, LatestDisbursementDate: time.Now().String()}
+		mockRepo.On("GetBalance", 1).Return(balanceDetail, nil)
+		mockRepo.On("UpdateBalance", 0.0, 1).Return(nil)
+		mockRepo.On("UpdateDisbursementStatusByXenditID", 1, "test").Return(errors.Wrap(ErrInternalServerError, "test error"))
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed calling update disbursement status on failed callback case", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "1",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "FAILED",
+		}
+
+		mockRepo.On("UpdateDisbursementStatusByXenditID", 2, "test").Return(errors.Wrap(ErrInternalServerError, "test error"))
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed calling update balance", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "1",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "COMPLETED",
+		}
+
+		balanceDetail := BalanceDetail{Balance: 10000, LatestDisbursementDate: time.Now().String()}
+		mockRepo.On("GetBalance", 1).Return(balanceDetail, nil)
+		mockRepo.On("UpdateBalance", 0.0, 1).Return(errors.Wrap(ErrInternalServerError, "test error"))
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("failed when calling get balance", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "1",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "COMPLETED",
+		}
+
+		balanceDetail := BalanceDetail{Balance: 10000, LatestDisbursementDate: time.Now().String()}
+		mockRepo.On("GetBalance", 1).Return(balanceDetail, errors.Wrap(ErrInternalServerError, "test error"))
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.NotNil(t, err)
+		assert.Error(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("success status failed", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "1",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "FAILED",
+		}
+
+		mockRepo.On("UpdateDisbursementStatusByXenditID", 2, "test").Return(nil)
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed parse user id", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo, nil)
+
+		// input
+		params := DisbursementCallback{
+			ID:                      "test",
+			ExternalID:              "test",
+			Amount:                  10000,
+			BankCode:                "BCA",
+			AccountHolderName:       "TEST",
+			DisbursementDescription: "test",
+			FailureCode:             "",
+			Status:                  "FAILED",
+		}
+
+		err := service.DisbursementCallbackFromXendit(params)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	})
+}
+
 func TestService_GetTransactionHistoryDetailWithWrongInput(t *testing.T) {
 	bookingID := 0
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	balanceDetail, err := mockService.GetTransactionHistoryDetail(bookingID)
 
@@ -350,7 +879,7 @@ func TestService_GetTransactionHistoryDetailSuccess(t *testing.T) {
 	}
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
 	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, nil)
@@ -373,7 +902,7 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetItemsWrapper(t *testi
 	var itemsWrapper ItemsWrapper
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, ErrInternalServerError)
 
@@ -390,7 +919,7 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetCustomerForTransactio
 	var customer CustomerForTrasactionHistoryDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
 	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, ErrInternalServerError)
@@ -409,7 +938,7 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetTransactionHistoryDet
 	var transactionHistoryDetail TransactionHistoryDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
 	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, nil)

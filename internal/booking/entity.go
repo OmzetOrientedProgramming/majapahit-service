@@ -256,7 +256,8 @@ type XenditInformation struct {
 
 // XenditInvoicesCallback for getting callback data from xendit
 type XenditInvoicesCallback struct {
-	ID         string `json:"id"`
-	ExternalID string `json:"external_id"`
-	Status     string `json:"status"`
+	ID         string  `json:"id"`
+	ExternalID string  `json:"external_id"`
+	Status     string  `json:"status"`
+	Amount     float64 `json:"amount"`
 }

@@ -108,16 +108,18 @@ func (s Server) Init() {
 	authService = auth.NewService(authRepo, firebaseAuthRepo)
 	authHandler = auth.NewHandler(authService)
 
-	// Booking Module
-	bookingRepo = booking.NewRepo(db)
+	// Xendit service
 	xenCli := client.New(os.Getenv("XENDIT_TOKEN"))
 	xenditService := xendit.NewXenditClient(xenCli)
+
+	// Booking Module
+	bookingRepo = booking.NewRepo(db)
 	bookingService = booking.NewService(bookingRepo, xenditService)
 	bookingHandler = booking.NewHandler(bookingService)
 
 	// BusinessAdmin module
 	businessadminRepo = businessadmin.NewRepo(db)
-	businessadminService = businessadmin.NewService(businessadminRepo)
+	businessadminService = businessadmin.NewService(businessadminRepo, xenditService)
 	businessadminHandler = businessadmin.NewHandler(businessadminService)
 
 	// Start routing

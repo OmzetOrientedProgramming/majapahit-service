@@ -462,7 +462,7 @@ func (h Handler) XenditInvoicesCallback(c echo.Context) error {
 		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, ErrInternalServerError, err.Error())
 	}
 
-	err = h.service.UpdateBookingStatusByXendit(params)
+	err = h.service.XenditInvoicesCallback(params)
 	if err != nil {
 		if errors.Cause(err) == ErrInputValidationError {
 			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
