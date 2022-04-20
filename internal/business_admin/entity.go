@@ -21,11 +21,11 @@ type ListTransaction struct {
 
 // Transaction consist related information for transaction history from customer
 type Transaction struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Image string `json:"image"`
-	Price int    `json:"price" db:"total_price"`
-	Date  string `json:"date"`
+	ID    int     `json:"id"`
+	Name  string  `json:"name"`
+	Image string  `json:"image"`
+	Price float64 `json:"price" db:"total_price"`
+	Date  string  `json:"date"`
 }
 
 // ListTransactionRequest consists of request data from client

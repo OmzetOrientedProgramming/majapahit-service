@@ -94,6 +94,7 @@ func (h *Handler) GetListTransactionsHistoryWithPagination(c echo.Context) error
 	})
 }
 
+// GetTransactionHistoryDetail is a handler for API request to get detail transaction history
 func (h *Handler) GetTransactionHistoryDetail(c echo.Context) error {
 	errorList := []string{}
 
