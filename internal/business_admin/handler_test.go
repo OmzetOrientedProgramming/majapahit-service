@@ -1,6 +1,7 @@
 package businessadmin
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -35,6 +36,16 @@ func (m *MockService) GetListTransactionsHistoryWithPagination(params ListTransa
 	listItem := args.Get(0).(*ListTransaction)
 	pagination := args.Get(1).(util.Pagination)
 	return listItem, &pagination, args.Error(2)
+}
+
+func (m *MockService) CreateDisbursement(ID int, amount float64) (*CreateDisbursementResponse, error) {
+	args := m.Called(ID, amount)
+	return args.Get(0).(*CreateDisbursementResponse), args.Error(1)
+}
+
+func (m *MockService) DisbursementCallbackFromXendit(params DisbursementCallback) error {
+	args := m.Called(params)
+	return args.Error(0)
 }
 
 func (m *MockService) GetTransactionHistoryDetail(bookingID int) (*TransactionHistoryDetail, error) {
@@ -768,6 +779,657 @@ func TestHandler_GetListTransactionsHistoryWithPaginationParseUserDataError(t *t
 	// Tes
 	util.ErrorHandler(h.GetListTransactionsHistoryWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+func TestHandler_CreateDisbursement(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		// input
+		payload, _ := json.Marshal(map[string]interface{}{"amount": 10000})
+
+		// output
+		respData := CreateDisbursementResponse{
+			ID:        1,
+			CreatedAt: time.Now(),
+			Amount:    10000,
+			XenditID:  "test xendit id",
+		}
+
+		expectedOutput := util.APIResponse{
+			Status:  200,
+			Message: "success",
+			Data:    respData,
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateDisbursement", 1, 10000.0).Return(&respData, nil)
+		err := h.CreateDisbursement(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed internal server error from service", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		// input
+		payload, _ := json.Marshal(map[string]interface{}{"amount": 10000})
+
+		// output
+		respData := CreateDisbursementResponse{
+			ID:        1,
+			CreatedAt: time.Now(),
+			Amount:    10000,
+			XenditID:  "test xendit id",
+		}
+
+		expectedOutput := util.APIResponse{
+			Status:  500,
+			Message: "internal server error",
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateDisbursement", 1, 10000.0).Return(&respData, errors.Wrap(ErrInternalServerError, "tes error"))
+		err := h.CreateDisbursement(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed input validation error from service", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		// input
+		payload, _ := json.Marshal(map[string]interface{}{"amount": 10000})
+
+		// output
+		respData := CreateDisbursementResponse{
+			ID:        1,
+			CreatedAt: time.Now(),
+			Amount:    10000,
+			XenditID:  "test xendit id",
+		}
+
+		expectedOutput := util.APIResponse{
+			Status:  400,
+			Message: "input validation error",
+			Errors:  []string{"test error"},
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateDisbursement", 1, 10000.0).Return(&respData, errors.Wrap(ErrInputValidationError, "test error"))
+		err := h.CreateDisbursement(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed bind body", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		// input
+		payload, _ := json.Marshal(map[string]interface{}{"amount": 10000})
+
+		// output
+		respData := CreateDisbursementResponse{
+			ID:        1,
+			CreatedAt: time.Now(),
+			Amount:    10000,
+			XenditID:  "test xendit id",
+		}
+
+		expectedOutput := util.APIResponse{
+			Status:  400,
+			Message: "input validation error",
+			Errors:  []string{"invalid body"},
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateDisbursement", 1, 10000.0).Return(&respData, nil)
+		err := h.CreateDisbursement(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed amount", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		// input
+		payload, _ := json.Marshal(map[string]interface{}{"amount": "test"})
+
+		// output
+		respData := CreateDisbursementResponse{
+			ID:        1,
+			CreatedAt: time.Now(),
+			Amount:    10000,
+			XenditID:  "test xendit id",
+		}
+
+		expectedOutput := util.APIResponse{
+			Status:  400,
+			Message: "input validation error",
+			Errors:  []string{"invalid amount"},
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateDisbursement", 1, 10000.0).Return(&respData, nil)
+		err := h.CreateDisbursement(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("success", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		// input
+		payload, _ := json.Marshal(map[string]interface{}{"amount": 10000})
+
+		// output
+		respData := CreateDisbursementResponse{
+			ID:        1,
+			CreatedAt: time.Now(),
+			Amount:    10000,
+			XenditID:  "test xendit id",
+		}
+
+		expectedOutput := util.APIResponse{
+			Status:  403,
+			Message: "user does not have access to this endpoint",
+			Errors: []string{
+				"user is not business admin",
+			},
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateDisbursement", 1, 10000.0).Return(&respData, nil)
+		err := h.CreateDisbursement(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+}
+
+func TestHandler_XenditDisbursementCallback(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+
+		// input
+		input := DisbursementCallback{
+			ID:                      "1",
+			ExternalID:              "1",
+			Amount:                  1000,
+			BankCode:                "BCA",
+			AccountHolderName:       "test",
+			DisbursementDescription: "test description",
+			FailureCode:             "TEST",
+			Status:                  "COMPLETED",
+		}
+		payload, _ := json.Marshal(input)
+
+		// input
+		expectedOutput := util.APIResponse{
+			Status:  201,
+			Message: "success",
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("DisbursementCallbackFromXendit", input).Return(nil)
+		err := h.XenditDisbursementCallback(ctx)
+
+		assert.Nil(t, err)
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed bind param", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+
+		// input
+		input := map[string]interface{}{
+			"id": 1,
+		}
+		payload, _ := json.Marshal(input)
+
+		// input
+		expectedOutput := util.APIResponse{
+			Status:  500,
+			Message: "internal server error",
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("DisbursementCallbackFromXendit", input).Return(nil)
+		err := h.XenditDisbursementCallback(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.NotNil(t, err)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed from service", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+
+		// input
+		input := DisbursementCallback{
+			ID:                      "1",
+			ExternalID:              "1",
+			Amount:                  1000,
+			BankCode:                "BCA",
+			AccountHolderName:       "test",
+			DisbursementDescription: "test description",
+			FailureCode:             "TEST",
+			Status:                  "COMPLETED",
+		}
+		payload, _ := json.Marshal(input)
+
+		// input
+		expectedOutput := util.APIResponse{
+			Status:  500,
+			Message: "internal server error",
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("DisbursementCallbackFromXendit", input).Return(errors.Wrap(ErrInternalServerError, "test error"))
+		err := h.XenditDisbursementCallback(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.NotNil(t, err)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
+
+	t.Run("failed from service input validation error", func(t *testing.T) {
+		// setup echo
+		e := echo.New()
+
+		// input
+		input := DisbursementCallback{
+			ID:                      "1",
+			ExternalID:              "1",
+			Amount:                  1000,
+			BankCode:                "BCA",
+			AccountHolderName:       "test",
+			DisbursementDescription: "test description",
+			FailureCode:             "TEST",
+			Status:                  "COMPLETED",
+		}
+		payload, _ := json.Marshal(input)
+
+		// input
+		expectedOutput := util.APIResponse{
+			Status:  400,
+			Message: "input validation error",
+			Errors: []string{
+				"test error",
+			},
+		}
+
+		expectedOutputJSON, _ := json.Marshal(expectedOutput)
+
+		// import "net/url"
+		req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("DisbursementCallbackFromXendit", input).Return(errors.Wrap(ErrInputValidationError, "test error"))
+		err := h.XenditDisbursementCallback(ctx)
+
+		util.ErrorHandler(err, ctx)
+		assert.NotNil(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Equal(t, string(expectedOutputJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	})
 }
 
 func TestHandler_GetTransactionHistoryDetailSuccess(t *testing.T) {

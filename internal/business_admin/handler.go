@@ -94,6 +94,67 @@ func (h *Handler) GetListTransactionsHistoryWithPagination(c echo.Context) error
 	})
 }
 
+// CreateDisbursement for handling create disbursement endpoint
+func (h *Handler) CreateDisbursement(c echo.Context) error {
+	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
+
+	userID := user.ID
+
+	var (
+		amount      float64
+		amountParam map[string]interface{}
+		ok          bool
+	)
+
+	err = c.Bind(&amountParam)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, errors.Wrap(ErrInputValidationError, "invalid body"), err.Error())
+	}
+
+	if amount, ok = amountParam["amount"].(float64); !ok {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, errors.Wrap(ErrInputValidationError, "invalid amount"))
+	}
+
+	resp, err := h.service.CreateDisbursement(userID, amount)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{Status: http.StatusOK, Message: "success", Data: resp})
+}
+
+// XenditDisbursementCallback for handling xendit disbursement callback
+func (h *Handler) XenditDisbursementCallback(c echo.Context) error {
+	var params DisbursementCallback
+
+	err := c.Bind(&params)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, ErrInternalServerError, err.Error())
+	}
+
+	err = h.service.DisbursementCallbackFromXendit(params)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusCreated, util.APIResponse{
+		Status:  http.StatusCreated,
+		Message: "success",
+	})
+}
+
 // GetTransactionHistoryDetail is a handler for API request to get detail transaction history
 func (h *Handler) GetTransactionHistoryDetail(c echo.Context) error {
 	errorList := []string{}

@@ -1,7 +1,11 @@
 package businessadmin
 
 import (
+	"fmt"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
@@ -11,18 +15,130 @@ import (
 type Service interface {
 	GetBalanceDetail(int) (*BalanceDetail, error)
 	GetListTransactionsHistoryWithPagination(params ListTransactionRequest) (*ListTransaction, *util.Pagination, error)
+	CreateDisbursement(int, float64) (*CreateDisbursementResponse, error)
+	DisbursementCallbackFromXendit(params DisbursementCallback) error
 	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
 }
 
 type service struct {
-	repo Repo
+	repo          Repo
+	xenditService xendit.Service
 }
 
 // NewService create new service
-func NewService(repo Repo) Service {
+func NewService(repo Repo, xenditService xendit.Service) Service {
 	return &service{
-		repo: repo,
+		repo:          repo,
+		xenditService: xenditService,
 	}
+}
+
+func (s *service) DisbursementCallbackFromXendit(params DisbursementCallback) error {
+	userID, err := strconv.Atoi(params.ExternalID)
+	if err != nil {
+		return errors.Wrap(ErrInputValidationError, "external id is not valid")
+	}
+
+	switch params.Status {
+	case util.XenditDisbursementCompletedString:
+		currentBalance, err := s.repo.GetBalance(userID)
+		if err != nil {
+			return err
+		}
+
+		newBalance := currentBalance.Balance - params.Amount
+
+		err = s.repo.UpdateBalance(newBalance, userID)
+		if err != nil {
+			return err
+		}
+
+		err = s.repo.UpdateDisbursementStatusByXenditID(util.XenditDisbursementCompleted, params.ID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	case util.XenditDisbursementFailedString:
+		err = s.repo.UpdateDisbursementStatusByXenditID(util.XenditDisbursementFailed, params.ID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	default:
+		return errors.Wrap(ErrInputValidationError, "status must be COMPLETED or FAILED")
+	}
+}
+
+func (s *service) CreateDisbursement(userID int, amount float64) (*CreateDisbursementResponse, error) {
+	var errorList []string
+
+	if userID <= 0 {
+		errorList = append(errorList, "userID must be positive integer")
+	}
+
+	if amount <= 0 {
+		errorList = append(errorList, "amount must be positive integer")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	businessAdminInfo, err := s.repo.GetBusinessAdminInformation(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	latestDisbursement, err := s.repo.GetLatestDisbursement(businessAdminInfo.PlaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	currentDateTime := time.Now()
+	oneMonthAgo := currentDateTime.AddDate(0, -1, 0)
+	if !latestDisbursement.Date.Before(oneMonthAgo) {
+		return nil, errors.Wrap(ErrInputValidationError, "disbursement can only be done once a month ")
+	}
+
+	amount -= util.XenditDisbursementFee + (util.XenditDisbursementFee * util.XenditVATPercentage)
+
+	xenditDisbursementParams := xendit.CreateDisbursementParams{
+		ID:                businessAdminInfo.ID,
+		BankAccountName:   businessAdminInfo.BankAccountName,
+		BankAccountNumber: businessAdminInfo.BankAccountNumber,
+		Amount:            amount,
+		Description:       fmt.Sprintf("Disbursement by %s", businessAdminInfo.Name),
+		Email:             []string{businessAdminInfo.Email},
+	}
+
+	createXenditDisbursement, err := s.xenditService.CreateDisbursement(xenditDisbursementParams)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	disbursement := DisbursementDetail{
+		PlaceID:  businessAdminInfo.PlaceID,
+		Date:     currentDateTime,
+		XenditID: createXenditDisbursement.ID,
+		Amount:   createXenditDisbursement.Amount,
+		Status:   util.XenditDisbursementPending,
+	}
+
+	ID, err := s.repo.SaveDisbursement(disbursement)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := CreateDisbursementResponse{
+		ID:        ID,
+		CreatedAt: disbursement.Date,
+		Amount:    disbursement.Amount,
+		XenditID:  createXenditDisbursement.ID,
+	}
+
+	return &resp, nil
 }
 
 func (s *service) GetBalanceDetail(userID int) (*BalanceDetail, error) {
@@ -51,7 +167,7 @@ func (s *service) GetBalanceDetail(userID int) (*BalanceDetail, error) {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	balanceDetail.LatestDisbursementDate = latestDisbursement.Date
+	balanceDetail.LatestDisbursementDate = latestDisbursement.Date.String()
 
 	return balanceDetail, nil
 }

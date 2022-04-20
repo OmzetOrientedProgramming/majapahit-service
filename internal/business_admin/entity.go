@@ -1,5 +1,7 @@
 package businessadmin
 
+import "time"
+
 // BalanceDetail consist related information for balance
 type BalanceDetail struct {
 	LatestDisbursementDate string  `json:"latest_disbursement_date"`
@@ -8,9 +10,12 @@ type BalanceDetail struct {
 
 // DisbursementDetail consist related information for disbursement
 type DisbursementDetail struct {
-	Date   string
-	Amount float64
-	Status int
+	ID       int       `json:"id"`
+	PlaceID  int       `json:"place_id"`
+	Date     time.Time `json:"date"`
+	XenditID string    `json:"xendit_id" db:"xendit_id"`
+	Amount   float64   `json:"amount"`
+	Status   int       `json:"status"`
 }
 
 // ListTransaction is a container for transaction history of customers
@@ -34,6 +39,36 @@ type ListTransactionRequest struct {
 	Page   int    `json:"page"`
 	Path   string `json:"path"`
 	UserID int    `json:"user_id"`
+}
+
+// CreateDisbursementResponse for create disbursement response entity
+type CreateDisbursementResponse struct {
+	ID        int       `json:"place_id"`
+	CreatedAt time.Time `json:"created_at"`
+	Amount    float64   `json:"amount"`
+	XenditID  string    `json:"xendit_id"`
+}
+
+// InfoForDisbursement for business admin info for disbursement entity
+type InfoForDisbursement struct {
+	ID                int    `json:"id"`
+	Name              string `json:"name"`
+	Email             string `json:"email"`
+	BankAccountName   string `json:"bank_account_name" db:"bank_account_name"`
+	BankAccountNumber string `json:"bank_account_number" db:"bank_account_number"`
+	PlaceID           int    `json:"place_id" db:"place_id"`
+}
+
+// DisbursementCallback for disbursement callback struct
+type DisbursementCallback struct {
+	ID                      string  `json:"id"`
+	ExternalID              string  `json:"external_id"`
+	Amount                  float64 `json:"amount"`
+	BankCode                string  `json:"bank_code"`
+	AccountHolderName       string  `json:"account_holder_name"`
+	DisbursementDescription string  `json:"disbursement_description"`
+	FailureCode             string  `json:"failure_code"`
+	Status                  string  `json:"status"`
 }
 
 // TransactionHistoryDetail consists detail of a transaction history from customer

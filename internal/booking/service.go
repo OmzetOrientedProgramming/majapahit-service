@@ -23,7 +23,7 @@ type Service interface {
 	UpdateBookingStatus(bookingID int, newStatus int) error
 	GetMyBookingsOngoing(localID string) (*[]Booking, error)
 	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error)
-	UpdateBookingStatusByXendit(callback XenditInvoicesCallback) error
+	XenditInvoicesCallback(callback XenditInvoicesCallback) error
 }
 
 type service struct {
@@ -595,8 +595,13 @@ func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
 	return nil
 }
 
-func (s *service) UpdateBookingStatusByXendit(callback XenditInvoicesCallback) error {
+func (s *service) XenditInvoicesCallback(callback XenditInvoicesCallback) error {
 	var errorList []string
+
+	placeID, err := strconv.Atoi(callback.ExternalID)
+	if err != nil {
+		errorList = append(errorList, "external id is not valid")
+	}
 
 	var status int
 	switch callback.Status {
@@ -612,9 +617,16 @@ func (s *service) UpdateBookingStatusByXendit(callback XenditInvoicesCallback) e
 		return errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
 	}
 
-	err := s.repo.UpdateBookingStatusByXenditID(callback.ID, status)
+	err = s.repo.UpdateBookingStatusByXenditID(callback.ID, status)
 	if err != nil {
 		return err
+	}
+
+	if callback.Status == util.XenditStatusPaid {
+		err = s.repo.IncrementBusinessAdminBalance(callback.Amount-util.XenditPlatformFee, placeID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

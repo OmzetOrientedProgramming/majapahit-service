@@ -2,8 +2,10 @@ package businessadmin
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
@@ -14,7 +16,7 @@ import (
 func TestRepo_GetLatestDisbursementSuccess(t *testing.T) {
 	placeID := 1
 	latestDateExpected := &DisbursementDetail{
-		Date:   "27 Oktober 2021",
+		Date:   time.Now(),
 		Amount: 150000,
 		Status: 0,
 	}
@@ -51,7 +53,7 @@ func TestRepo_GetLatestDisbursementSuccess(t *testing.T) {
 func TestRepo_GetLatestDisbursementErrorNoRows(t *testing.T) {
 	placeID := 1
 	latestDateExpected := &DisbursementDetail{
-		Date:   "-",
+		Date:   time.Time{},
 		Amount: 0,
 		Status: 1,
 	}
@@ -429,6 +431,223 @@ func TestRepo_GetListTransactionsHistoryWithPaginationCountEmpty(t *testing.T) {
 	assert.Equal(t, listTransactionsExpected, listTransactionsResult)
 	assert.NotNil(t, listTransactionsResult)
 	assert.NoError(t, err)
+}
+
+func TestRepo_GetBusinessAdminInformation(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// output
+		businessAdminInfo := InfoForDisbursement{
+			ID:                1,
+			Name:              "name",
+			Email:             "email@email.com",
+			BankAccountName:   "name",
+			BankAccountNumber: "number",
+			PlaceID:           1,
+		}
+
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "SELECT u.id, u.name, u.email, b.bank_account_number, b.bank_account_name, p.id as place_id " +
+			"FROM users as u " +
+			"JOIN business_owners as b ON b.user_id = u.id " +
+			"JOIN places as p ON p.user_id = u.id " +
+			"WHERE u.id = $1"
+
+		rows := mock.
+			NewRows([]string{"id", "name", "email", "bank_account_number", "bank_account_name", "place_id"}).
+			AddRow(1, "name", "email@email.com", "number", "name", 1)
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnRows(rows)
+
+		resp, err := repo.GetBusinessAdminInformation(1)
+		assert.NotNil(t, resp)
+		assert.Nil(t, err)
+		assert.Equal(t, &businessAdminInfo, resp)
+	})
+
+	t.Run("err when doing query", func(t *testing.T) {
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "SELECT u.id, u.name, u.email, b.bank_account_number, b.bank_account_name, p.id as place_id " +
+			"FROM users as u " +
+			"JOIN business_owners as b ON b.user_id = u.id " +
+			"JOIN places as p ON p.user_id = u.id " +
+			"WHERE u.id = $1"
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).
+			WithArgs(1).
+			WillReturnError(ErrInternalServerError)
+
+		resp, err := repo.GetBusinessAdminInformation(1)
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_SaveDisbursement(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// input
+		disbursement := DisbursementDetail{
+			PlaceID:  1,
+			Date:     time.Now(),
+			XenditID: "test xendit id",
+			Amount:   10000,
+			Status:   0,
+		}
+
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "INSERT INTO disbursements (place_id, date, xendit_id, amount, status) " +
+			"VALUES ($1, $2, $3, $4, $5) " +
+			"RETURNING id"
+
+		rows := mock.NewRows([]string{"id"})
+		rows.AddRow(1)
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(rows)
+
+		lastID, err := repo.SaveDisbursement(disbursement)
+		assert.NotNil(t, lastID)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, lastID)
+	})
+
+	t.Run("failed internal server error", func(t *testing.T) {
+		// input
+		disbursement := DisbursementDetail{
+			PlaceID:  1,
+			Date:     time.Now(),
+			XenditID: "test xendit id",
+			Amount:   10000,
+			Status:   0,
+		}
+
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "INSERT INTO disbursements (place_id, date, xendit_id, amount, status) " +
+			"VALUES ($1, $2, $3, $4, $5) " +
+			"RETURNING id"
+
+		mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(ErrInternalServerError)
+
+		lastID, err := repo.SaveDisbursement(disbursement)
+		assert.NotNil(t, err)
+		assert.Zero(t, lastID)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_UpdateBalance(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "UPDATE business_owners SET balance = $1 " +
+			"WHERE user_id= $2"
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(10000.0, 1).WillReturnResult(driver.ResultNoRows)
+
+		err = repo.UpdateBalance(10000, 1)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed", func(t *testing.T) {
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "UPDATE business_owners SET balance = $1 " +
+			"WHERE user_id= $2"
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(10000.0, 1).WillReturnError(ErrInternalServerError)
+
+		err = repo.UpdateBalance(10000, 1)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}
+
+func TestRepo_UpdateDisbursementStatusByXenditID(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "UPDATE disbursements as d SET status = $1 " +
+			"WHERE xendit_id = $2"
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(0, "test").WillReturnResult(driver.ResultNoRows)
+
+		err = repo.UpdateDisbursementStatusByXenditID(0, "test")
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed", func(t *testing.T) {
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := "UPDATE disbursements as d SET status = $1 " +
+			"WHERE xendit_id = $2"
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(0, "test").WillReturnError(ErrInternalServerError)
+
+		err = repo.UpdateDisbursementStatusByXenditID(0, "test")
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
 }
 
 func TestRepo_GetTransactionHistoryDetailSuccess(t *testing.T) {
