@@ -35,3 +35,33 @@ type ListTransactionRequest struct {
 	Path   string `json:"path"`
 	UserID int    `json:"user_id"`
 }
+
+// TransactionHistoryDetail consists detail of a transaction history from customer
+type TransactionHistoryDetail struct {
+	CustomerName   string       `json:"customer_name"`
+	CustomerImage  string       `json:"customer_image"`
+	Date           string       `json:"date"`
+	StartTime      string       `db:"start_time" json:"start_time"`
+	EndTime        string       `db:"end_time" json:"end_time"`
+	Capacity       int          `json:"capacity"`
+	TotalPriceItem float64      `json:"total_price_item" db:"total_price"`
+	Items          []ItemDetail `json:"items"`
+}
+
+// CustomerForTrasactionHistoryDetail is a wrapper consists customer information
+type CustomerForTrasactionHistoryDetail struct {
+	CustomerName  string `json:"customer_name" db:"name"`
+	CustomerImage string `json:"customer_image" db:"image"`
+}
+
+// ItemsWrapper is a struct to provide a wrap for items
+type ItemsWrapper struct {
+	Items []ItemDetail
+}
+
+// ItemDetail consist information related to item
+type ItemDetail struct {
+	Name  string  `json:"name"`
+	Qty   int     `json:"qty"`
+	Price float64 `json:"price"`
+}

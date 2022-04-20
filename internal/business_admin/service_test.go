@@ -35,6 +35,24 @@ func (m *MockRepository) GetListTransactionsHistoryWithPagination(params ListTra
 	return &ret, args.Error(1)
 }
 
+func (m *MockRepository) GetTransactionHistoryDetail(bookingID int) (*TransactionHistoryDetail, error) {
+	args := m.Called(bookingID)
+	ret := args.Get(0).(TransactionHistoryDetail)
+	return &ret, args.Error(1)
+}
+
+func (m *MockRepository) GetItemsWrapper(bookingID int) (*ItemsWrapper, error) {
+	args := m.Called(bookingID)
+	ret := args.Get(0).(ItemsWrapper)
+	return &ret, args.Error(1)
+}
+
+func (m *MockRepository) GetCustomerForTransactionHistoryDetail(bookingID int) (*CustomerForTrasactionHistoryDetail, error) {
+	args := m.Called(bookingID)
+	ret := args.Get(0).(CustomerForTrasactionHistoryDetail)
+	return &ret, args.Error(1)
+}
+
 func TestService_GetBalanceDetailSuccess(t *testing.T) {
 	userID := 1
 	placeID := 2
@@ -287,4 +305,119 @@ func TestService_GetListItemWithPaginationFailedURLIsEmpty(t *testing.T) {
 
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	assert.Nil(t, listTransactionResult)
+}
+
+func TestService_GetTransactionHistoryDetailWithWrongInput(t *testing.T) {
+	bookingID := 0
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	balanceDetail, err := mockService.GetTransactionHistoryDetail(bookingID)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, balanceDetail)
+}
+
+func TestService_GetTransactionHistoryDetailSuccess(t *testing.T) {
+	bookingID := 1
+	itemsWrapper := ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "ini_nama_item_1",
+				Qty:   25,
+				Price: 10000,
+			},
+			{
+				Name:  "ini_nama_item_2",
+				Qty:   5,
+				Price: 20000,
+			},
+		},
+	}
+
+	customer := CustomerForTrasactionHistoryDetail{
+		CustomerName:  "ini_customer_name",
+		CustomerImage: "ini_customer_image",
+	}
+
+	transactionHistoryDetail := TransactionHistoryDetail{
+		Date:           "27 Oktober 2021",
+		StartTime:      "08:00",
+		EndTime:        "09:00",
+		Capacity:       20,
+		TotalPriceItem: 25000,
+	}
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
+	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, nil)
+	mockRepo.On("GetTransactionHistoryDetail", bookingID).Return(transactionHistoryDetail, nil)
+
+	transactionHistoryDetailResult, err := mockService.GetTransactionHistoryDetail(bookingID)
+	mockRepo.AssertExpectations(t)
+
+	transactionHistoryDetail.CustomerName = customer.CustomerName
+	transactionHistoryDetail.CustomerImage = customer.CustomerImage
+	transactionHistoryDetail.Items = itemsWrapper.Items
+
+	assert.Equal(t, &transactionHistoryDetail, transactionHistoryDetailResult)
+	assert.NotNil(t, transactionHistoryDetailResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetTransactionHistoryDetailFailedCalledGetItemsWrapper(t *testing.T) {
+	bookingID := 1
+	var itemsWrapper ItemsWrapper
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, ErrInternalServerError)
+
+	transactionHistoryDetailResult, err := mockService.GetTransactionHistoryDetail(bookingID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, transactionHistoryDetailResult)
+}
+
+func TestService_GetTransactionHistoryDetailFailedCalledGetCustomerForTransactionHistoryDetail(t *testing.T) {
+	bookingID := 1
+	var itemsWrapper ItemsWrapper
+	var customer CustomerForTrasactionHistoryDetail
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
+	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, ErrInternalServerError)
+
+	transactionHistoryDetailResult, err := mockService.GetTransactionHistoryDetail(bookingID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, transactionHistoryDetailResult)
+}
+
+func TestService_GetTransactionHistoryDetailFailedCalledGetTransactionHistoryDetail(t *testing.T) {
+	bookingID := 1
+	var itemsWrapper ItemsWrapper
+	var customer CustomerForTrasactionHistoryDetail
+	var transactionHistoryDetail TransactionHistoryDetail
+
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
+	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, nil)
+	mockRepo.On("GetTransactionHistoryDetail", bookingID).Return(transactionHistoryDetail, ErrInternalServerError)
+
+	transactionHistoryDetailResult, err := mockService.GetTransactionHistoryDetail(bookingID)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, transactionHistoryDetailResult)
 }

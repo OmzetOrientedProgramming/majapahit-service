@@ -425,3 +425,234 @@ func TestRepo_GetListTransactionsHistoryWithPaginationCountEmpty(t *testing.T) {
 	assert.NotNil(t, listTransactionsResult)
 	assert.NoError(t, err)
 }
+
+func TestRepo_GetTransactionHistoryDetailSuccess(t *testing.T) {
+	bookingID := 1
+	transactionHistoryDetailExpected := &TransactionHistoryDetail{
+		Date:           "27 Oktober 2021",
+		StartTime:      "20-00",
+		EndTime:        "21-00",
+		TotalPriceItem: 500000,
+		Capacity:       5,
+	}
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"date", "start_time", "end_time", "total_price", "capacity"}).
+		AddRow(
+			transactionHistoryDetailExpected.Date,
+			transactionHistoryDetailExpected.StartTime,
+			transactionHistoryDetailExpected.EndTime,
+			transactionHistoryDetailExpected.TotalPriceItem,
+			transactionHistoryDetailExpected.Capacity,
+		)
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT date, start_time, end_time, total_price, capacity 
+			FROM bookings 
+			WHERE id = $1
+		`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	// Test
+	transactionHistoryDetailRetrieved, err := repoMock.GetTransactionHistoryDetail(bookingID)
+	assert.Equal(t, transactionHistoryDetailExpected, transactionHistoryDetailRetrieved)
+	assert.NotNil(t, transactionHistoryDetailRetrieved)
+	assert.NoError(t, err)
+}
+
+func TestRepo_GetTransactionHistoryDetailInternalServerError(t *testing.T) {
+	bookingID := 1
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT date, start_time, end_time, total_price capacity 
+									   FROM bookings 
+									   WHERE id = $1`)).
+		WithArgs(bookingID).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	transactionHistoryDetailRetrieved, err := repoMock.GetTransactionHistoryDetail(bookingID)
+	assert.Nil(t, transactionHistoryDetailRetrieved)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
+func TestRepo_GetItemsWrapperSuccess(t *testing.T) {
+	bookingID := 1
+	itemsWrapperExpected := &ItemsWrapper{
+		Items: []ItemDetail{
+			{
+				Name:  "Sample Name 1",
+				Qty:   10,
+				Price: 75000.0,
+			},
+			{
+				Name:  "Sample Name 2",
+				Qty:   5,
+				Price: 20000.0,
+			},
+		},
+	}
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"name", "qty", "price"}).
+		AddRow(
+			itemsWrapperExpected.Items[0].Name,
+			itemsWrapperExpected.Items[0].Qty,
+			itemsWrapperExpected.Items[0].Price,
+		).
+		AddRow(
+			itemsWrapperExpected.Items[1].Name,
+			itemsWrapperExpected.Items[1].Qty,
+			itemsWrapperExpected.Items[1].Price,
+		)
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT i.name, bi.qty, i.price
+			FROM bookings b
+			INNER JOIN booking_items bi
+			ON b.id = bi.booking_id
+			INNER JOIN items i
+			ON bi.item_id = i.id
+			WHERE b.id = $1
+		`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	// Test
+	itemsWrapperRetrieved, err := repoMock.GetItemsWrapper(bookingID)
+	assert.Equal(t, itemsWrapperExpected, itemsWrapperRetrieved)
+	assert.NotNil(t, itemsWrapperRetrieved)
+	assert.NoError(t, err)
+}
+
+func TestRepo_GetItemsWrapperInternalServerError(t *testing.T) {
+	bookingID := 1
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT i.name, bi.qty, i.price
+			FROM bookings b
+			INNER JOIN booking_items bi
+			ON b.id = bi.booking_id
+			INNER JOIN items i
+			ON bi.item_id = i.id
+			WHERE b.id = $1
+		`)).
+		WithArgs(bookingID).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	itemsWrapperRetrieved, err := repoMock.GetItemsWrapper(bookingID)
+	assert.Nil(t, itemsWrapperRetrieved)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
+func TestRepo_GetCustomerForTransactionHistoryDetailSuccess(t *testing.T) {
+	bookingID := 1
+	customerExpected := &CustomerForTrasactionHistoryDetail{
+		CustomerName:  "customer_name_1",
+		CustomerImage: "customer_image_1",
+	}
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"name", "image"}).
+		AddRow(
+			customerExpected.CustomerName,
+			customerExpected.CustomerImage,
+		)
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT u.name, u.image
+			FROM bookings b
+			INNER JOIN users u
+			ON b.user_id = u.id
+			WHERE b.id = $1
+		`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	// Test
+	customerRetrieved, err := repoMock.GetCustomerForTransactionHistoryDetail(bookingID)
+	assert.Equal(t, customerExpected, customerRetrieved)
+	assert.NotNil(t, customerRetrieved)
+	assert.NoError(t, err)
+}
+
+func TestRepo_GetCustomerForTransactionHistoryDetailInternalServerError(t *testing.T) {
+	bookingID := 1
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT u.name, u.image
+			FROM bookings b
+			INNER JOIN users u
+			ON b.user_id = u.id
+			WHERE b.id = $1
+		`)).
+		WithArgs(bookingID).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	customerRetrieved, err := repoMock.GetCustomerForTransactionHistoryDetail(bookingID)
+	assert.Nil(t, customerRetrieved)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}

@@ -2,6 +2,7 @@ package businessadmin
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -90,5 +91,40 @@ func (h *Handler) GetListTransactionsHistoryWithPagination(c echo.Context) error
 			"transactions": listTransaction.Transactions,
 			"pagination":   pagination,
 		},
+	})
+}
+
+func (h *Handler) GetTransactionHistoryDetail(c echo.Context) error {
+	errorList := []string{}
+
+	_, _, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
+
+	bookinIDString := c.Param("bookingID")
+	bookingID, err := strconv.Atoi(bookinIDString)
+	if err != nil {
+		errorList = append(errorList, "bookingID must be number")
+	}
+
+	if len(errorList) != 0 {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
+	}
+
+	transactionHistoryDetail, err := h.service.GetTransactionHistoryDetail(bookingID)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  200,
+		Message: "success",
+		Data:    transactionHistoryDetail,
 	})
 }

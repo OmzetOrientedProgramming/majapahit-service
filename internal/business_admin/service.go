@@ -11,6 +11,7 @@ import (
 type Service interface {
 	GetBalanceDetail(int) (*BalanceDetail, error)
 	GetListTransactionsHistoryWithPagination(params ListTransactionRequest) (*ListTransaction, *util.Pagination, error)
+	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
 }
 
 type service struct {
@@ -88,4 +89,37 @@ func (s *service) GetListTransactionsHistoryWithPagination(params ListTransactio
 
 	pagination := util.GeneratePagination(listTransaction.TotalCount, params.Limit, params.Page, params.Path)
 	return listTransaction, &pagination, err
+}
+
+func (s *service) GetTransactionHistoryDetail(bookingID int) (*TransactionHistoryDetail, error) {
+	var errorList []string
+
+	if bookingID <= 0 {
+		errorList = append(errorList, "bookingID must be above 0")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ","))
+	}
+
+	itemsWrapper, err := s.repo.GetItemsWrapper(bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	customerForTrasactionHistoryDetail, err := s.repo.GetCustomerForTransactionHistoryDetail(bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	transactionHistoryDetail, err := s.repo.GetTransactionHistoryDetail(bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	transactionHistoryDetail.CustomerName = customerForTrasactionHistoryDetail.CustomerName
+	transactionHistoryDetail.CustomerImage = customerForTrasactionHistoryDetail.CustomerImage
+	transactionHistoryDetail.Items = itemsWrapper.Items
+
+	return transactionHistoryDetail, nil
 }
