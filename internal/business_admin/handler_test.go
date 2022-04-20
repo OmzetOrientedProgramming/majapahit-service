@@ -37,6 +37,12 @@ func (m *MockService) GetListTransactionsHistoryWithPagination(params ListTransa
 	return listItem, &pagination, args.Error(2)
 }
 
+func (m *MockService) GetTransactionHistoryDetail(bookingID int) (*TransactionHistoryDetail, error) {
+	args := m.Called(bookingID)
+	ret := args.Get(0).(*TransactionHistoryDetail)
+	return ret, args.Error(1)
+}
+
 func TestHandler_GetBalanceDetailSuccess(t *testing.T) {
 	// Setup echo
 	e := echo.New()
@@ -762,4 +768,409 @@ func TestHandler_GetListTransactionsHistoryWithPaginationParseUserDataError(t *t
 	// Tes
 	util.ErrorHandler(h.GetListTransactionsHistoryWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+func TestHandler_GetTransactionHistoryDetailSuccess(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/transaction-history/:bookingID")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("1")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	c.Set("userFromDatabase", &userModel)
+	c.Set("userFromFirebase", &userData)
+
+	bookingID := 1
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	transactionHistoryDetail := TransactionHistoryDetail{
+		Date:           "27 Oktober 2021",
+		StartTime:      "08:00",
+		EndTime:        "09:00",
+		Capacity:       20,
+		TotalPriceItem: 25000,
+		CustomerName:   "ini_customer_name",
+		CustomerImage:  "ini_customer_image",
+		Items: []ItemDetail{
+			{
+				Name:  "ini_nama_item_1",
+				Qty:   25,
+				Price: 10000,
+			},
+			{
+				Name:  "ini_nama_item_2",
+				Qty:   5,
+				Price: 20000,
+			},
+		},
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    transactionHistoryDetail,
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("GetTransactionHistoryDetail", bookingID).Return(&transactionHistoryDetail, nil)
+
+	// Tes
+	if assert.NoError(t, h.GetTransactionHistoryDetail(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetTransactionHistoryDetailParseUserDataError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/transaction-history/:bookingID")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("1")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	c.Set("userFromDatabase", &userModel)
+	c.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	// Excpectation
+	var transactionHistoryDetail TransactionHistoryDetail
+	mockService.On("GetTransactionHistoryDetail", userModel.ID).Return(&transactionHistoryDetail, nil)
+
+	// Tes
+	util.ErrorHandler(h.GetTransactionHistoryDetail(c), c)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+func TestHandler_GetTransactionHistoryDetailWithBookingIDString(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/transaction-history/:bookingID")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("satu")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	c.Set("userFromDatabase", &userModel)
+	c.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	// Excpectation
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"bookingID must be number",
+		},
+	}
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	response := h.GetTransactionHistoryDetail(c)
+	util.ErrorHandler(response, c)
+
+	// Tes
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetTransactionHistoryDetailWithBookingIDBelowOne(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/transaction-history/:bookingID")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("0")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	c.Set("userFromDatabase", &userModel)
+	c.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	bookingID := 0
+
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"bookingID must be above 0"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var transactionHistoryDetail TransactionHistoryDetail
+	mockService.On("GetTransactionHistoryDetail", bookingID).Return(&transactionHistoryDetail, errorFromService)
+
+	response := h.GetTransactionHistoryDetail(c)
+	util.ErrorHandler(response, c)
+
+	// Test
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetTransactionHistoryDetailInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/business-admin/transaction-history/:bookingID")
+	c.SetParamNames("bookingID")
+	c.SetParamValues("10")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	c.Set("userFromDatabase", &userModel)
+	c.Set("userFromFirebase", &userData)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	// Setup service
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Define input and output
+	bookingID := 10
+
+	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var transactionHistoryDetail TransactionHistoryDetail
+	mockService.On("GetTransactionHistoryDetail", bookingID).Return(&transactionHistoryDetail, errorFromService)
+
+	response := h.GetTransactionHistoryDetail(c)
+	util.ErrorHandler(response, c)
+
+	// Tes
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }

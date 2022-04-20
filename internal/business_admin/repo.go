@@ -13,6 +13,9 @@ type Repo interface {
 	GetLatestDisbursement(int) (*DisbursementDetail, error)
 	GetBalance(int) (*BalanceDetail, error)
 	GetListTransactionsHistoryWithPagination(params ListTransactionRequest) (*ListTransaction, error)
+	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
+	GetItemsWrapper(int) (*ItemsWrapper, error)
+	GetCustomerForTransactionHistoryDetail(int) (*CustomerForTrasactionHistoryDetail, error)
 }
 
 type repo struct {
@@ -105,4 +108,60 @@ func (r *repo) GetListTransactionsHistoryWithPagination(params ListTransactionRe
 	}
 
 	return &listTransaction, nil
+}
+
+func (r *repo) GetTransactionHistoryDetail(bookingID int) (*TransactionHistoryDetail, error) {
+	var transactionHistoryDetail TransactionHistoryDetail
+
+	query := `
+		SELECT date, start_time, end_time, total_price, capacity
+		FROM bookings 
+		WHERE id = $1
+	`
+
+	err := r.db.Get(&transactionHistoryDetail, query, bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &transactionHistoryDetail, nil
+}
+
+func (r *repo) GetItemsWrapper(bookingID int) (*ItemsWrapper, error) {
+	var itemsWrapper ItemsWrapper
+	itemsWrapper.Items = make([]ItemDetail, 0)
+
+	query := `
+		SELECT i.name, bi.qty, i.price
+		FROM bookings b
+		INNER JOIN booking_items bi
+		ON b.id = bi.booking_id
+		INNER JOIN items i
+		ON bi.item_id = i.id
+		WHERE b.id = $1
+	`
+	err := r.db.Select(&itemsWrapper.Items, query, bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &itemsWrapper, nil
+}
+
+func (r *repo) GetCustomerForTransactionHistoryDetail(bookingID int) (*CustomerForTrasactionHistoryDetail, error) {
+	var customer CustomerForTrasactionHistoryDetail
+
+	query := `
+		SELECT u.name, u.image
+		FROM bookings b
+		INNER JOIN users u
+		ON b.user_id = u.id
+		WHERE b.id = $1
+	`
+	err := r.db.Get(&customer, query, bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &customer, nil
 }
