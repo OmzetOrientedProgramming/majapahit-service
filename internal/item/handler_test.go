@@ -37,6 +37,11 @@ func (m *MockService) GetItemByID(placeID int, itemID int) (*Item, error) {
 	return item, args.Error(1)
 }
 
+func (m *MockService) DeleteItemAdminByID(itemID int) error {
+	args := m.Called(itemID)
+	return args.Error(0)
+}
+
 func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 	// Setup echo
 	e := echo.New()
@@ -1101,4 +1106,110 @@ func TestHandler_GetListItemAdminWithPaginationWithLimitAndPageAreEmpty(t *testi
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
+}
+
+func TestHandler_DeleteItemAdminByID(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/business-admin/business-profile/list-items", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:itemID")
+	ctx.SetParamNames("itemID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+	itemID := 1
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("DeleteItemAdminByID", itemID).Return(nil)
+
+	// Tes
+	if assert.NoError(t, h.DeleteItemAdminByID(ctx)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_DeleteItemAdminByIDItemIDError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile/list-items/:itemID")
+	ctx.SetParamNames("itemID")
+	ctx.SetParamValues("test")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"incorrect item id",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Tes
+	util.ErrorHandler(h.DeleteItemAdminByID(ctx), ctx)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_DeleteItemAdminByIDInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	req := httptest.NewRequest(http.MethodDelete, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile/list-items/:itemID")
+	ctx.SetParamNames("itemID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+	itemID := 1
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	internalServerError := errors.Wrap(ErrInternalServerError, "test")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("DeleteItemAdminByID", itemID).Return(internalServerError)
+
+	// Tes
+	util.ErrorHandler(h.DeleteItemAdminByID(ctx), ctx)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }

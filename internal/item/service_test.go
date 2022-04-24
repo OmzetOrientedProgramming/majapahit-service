@@ -30,6 +30,11 @@ func (m *MockRepository) GetListItemAdminWithPagination(params ListItemRequest) 
 	return &ret, args.Error(1)
 }
 
+func (m *MockRepository) DeleteItemAdminByID(itemID int) error {
+	args := m.Called(itemID)
+	return args.Error(0)
+}
+
 func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
 	// Define input and output
 	listItemExpected := ListItem{
@@ -294,4 +299,33 @@ func TestService_GetItemByIDError(t *testing.T) {
 
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, itemResult)
+}
+
+func TestService_DeleteItemAdminByID(t *testing.T) {
+	t.Run("success status completed", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo)
+
+		// input
+		itemID := 1
+
+		mockRepo.On("DeleteItemAdminByID", itemID).Return(nil)
+
+		err := service.DeleteItemAdminByID(itemID)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed status", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		service := NewService(mockRepo)
+
+		// input
+		itemID := 1
+
+		mockRepo.On("DeleteItemAdminByID", itemID).Return(ErrInternalServerError)
+
+		err := service.DeleteItemAdminByID(itemID)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
 }

@@ -2,6 +2,7 @@ package item
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"regexp"
 	"testing"
 
@@ -520,12 +521,12 @@ func TestRepo_GetListItemAdminWwithPaginationSuccess(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT i.id, i.name, i.image, i.price, i.description
 		FROM items i, places p
-		WHERE i.place_id = p.id AND p.user_id = $1 LIMIT $2 OFFSET $3`)).
+		WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE")).
 		WithArgs(params.UserID).
 		WillReturnRows(rows)
 
@@ -556,7 +557,7 @@ func TestRepo_GetListItemAdminWithPaginationError(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT i.id, i.name, i.image, i.price, i.description
 		FROM items i, places p
-		WHERE i.place_id = p.id AND p.user_id = $1 LIMIT $2 OFFSET $3`)).
+		WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
 
@@ -590,10 +591,10 @@ func TestRepo_GetListItemAdminWithPaginationCountError(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT i.id, i.name, i.image, i.price, i.description
 		FROM items i, places p
-		WHERE i.place_id = p.id AND p.user_id = $1 LIMIT $2 OFFSET $3`)).
+		WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE")).
 		WithArgs(params.UserID).
 		WillReturnError(sql.ErrConnDone)
 
@@ -628,7 +629,7 @@ func TestRepo_GetListItemAdminWithPaginationEmpty(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT i.id, i.name, i.image, i.price, i.description
 		FROM items i, places p
-		WHERE i.place_id = p.id AND p.user_id = $1 LIMIT $2 OFFSET $3`)).
+		WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
@@ -668,10 +669,10 @@ func TestRepo_GetListItemAdminWithPaginationCountEmpty(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta(`
 	SELECT i.id, i.name, i.image, i.price, i.description
 	FROM items i, places p
-	WHERE i.place_id = p.id AND p.user_id = $1 LIMIT $2 OFFSET $3`)).
+	WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE")).
 		WithArgs(params.UserID).
 		WillReturnError(sql.ErrNoRows)
 
@@ -680,4 +681,53 @@ func TestRepo_GetListItemAdminWithPaginationCountEmpty(t *testing.T) {
 	assert.Equal(t, listItemExpected, listItemResult)
 	assert.NotNil(t, listItemResult)
 	assert.NoError(t, err)
+}
+
+func TestRepo_DeleteItemAdminByID(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		itemID := 1
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := `
+			UPDATE items
+			SET is_active = FALSE
+			WHERE items.id = $1;
+		`
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(itemID).WillReturnResult(driver.ResultNoRows)
+
+		err = repo.DeleteItemAdminByID(itemID)
+		assert.Nil(t, err)
+	})
+
+	t.Run("failed", func(t *testing.T) {
+		itemID := 1
+		// Mock DB
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repo := NewRepo(sqlxDB)
+
+		query := `
+			UPDATE items
+			SET is_active = FALSE
+			WHERE items.id = $1;
+		`
+
+		mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(itemID).WillReturnError(ErrInternalServerError)
+
+		err = repo.DeleteItemAdminByID(itemID)
+		assert.NotNil(t, err)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
 }

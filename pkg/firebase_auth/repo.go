@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // Repo contains all the function that available of this repo package
@@ -34,7 +34,7 @@ func (r repo) VerifyOTP(params VerifyOTPParams) (*VerifyOTPResult, error) {
 
 	reqBodyJSON, _ := json.Marshal(reqBody)
 
-	resp, err := http.Post(URL, util.ApplicationJSON, bytes.NewBuffer(reqBodyJSON))
+	resp, err := http.Post(URL, "", bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServer, err.Error())
 	}
@@ -84,7 +84,7 @@ func (r repo) SendOTP(params SendOTPParams) (*SendOTPResult, error) {
 
 	reqBodyJSON, _ := json.Marshal(reqBody)
 
-	resp, err := http.Post(URL, util.ApplicationJSON, bytes.NewBuffer(reqBodyJSON))
+	resp, err := http.Post(URL, "", bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServer, err.Error())
 	}
@@ -139,7 +139,7 @@ func (r repo) GetUserDataFromToken(token string) (*UserDataFromToken, error) {
 
 	reqBodyJSON, _ := json.Marshal(reqBody)
 
-	resp, err := http.Post(URL, util.ApplicationJSON, bytes.NewBuffer(reqBodyJSON))
+	resp, err := http.Post(URL, "", bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServer, err.Error())
 	}

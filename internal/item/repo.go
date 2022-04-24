@@ -24,6 +24,7 @@ type Repo interface {
 	GetListItemWithPagination(params ListItemRequest) (*ListItem, error)
 	GetItemByID(placeID int, itemID int) (*Item, error)
 	GetListItemAdminWithPagination(params ListItemRequest) (*ListItem, error)
+	DeleteItemAdminByID(itemID int) error
 }
 
 func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, error) {
@@ -111,7 +112,7 @@ func (r repo) GetListItemAdminWithPagination(params ListItemRequest) (*ListItem,
 	query := `
 	SELECT i.id, i.name, i.image, i.price, i.description
 	FROM items i, places p
-	WHERE i.place_id = p.id AND p.user_id = $1 LIMIT $2 OFFSET $3
+	WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE LIMIT $2 OFFSET $3
 	`
 
 	err := r.db.Select(&listItem.Items, query, params.UserID, params.Limit, (params.Page-1)*params.Limit)
@@ -125,7 +126,7 @@ func (r repo) GetListItemAdminWithPagination(params ListItemRequest) (*ListItem,
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	query = "SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1"
+	query = "SELECT COUNT(i.id) FROM items i, places p WHERE i.place_id = p.id AND p.user_id = $1 AND i.is_active = TRUE"
 
 	err = r.db.Get(&listItem.TotalCount, query, params.UserID)
 	if err != nil {
@@ -138,4 +139,19 @@ func (r repo) GetListItemAdminWithPagination(params ListItemRequest) (*ListItem,
 	}
 
 	return &listItem, nil
+}
+
+func (r repo) DeleteItemAdminByID(itemID int) error {
+	query := `
+		UPDATE items
+		SET is_active = FALSE
+		WHERE items.id = $1;
+	`
+
+	_, err := r.db.Exec(query, itemID)
+	if err != nil {
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return nil
 }
