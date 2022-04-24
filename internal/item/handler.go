@@ -148,3 +148,28 @@ func (h *Handler) GetListItemAdminWithPagination(c echo.Context) error {
 		},
 	})
 }
+
+// DeleteItemAdminByID is a handler for API request for delete item by admin, currently updating is_active column
+func (h *Handler) DeleteItemAdminByID(c echo.Context) error {
+	errorList := []string{}
+	itemIDString := c.Param("itemID")
+
+	itemID, err := strconv.Atoi(itemIDString)
+	if err != nil {
+		errorList = append(errorList, "incorrect item id")
+	}
+
+	if len(errorList) != 0 {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
+	}
+
+	err = h.service.DeleteItemAdminByID(itemID)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  200,
+		Message: "success",
+	})
+}

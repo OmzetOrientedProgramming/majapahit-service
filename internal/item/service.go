@@ -18,6 +18,7 @@ func NewService(repo Repo) Service {
 type Service interface {
 	GetListItemWithPagination(params ListItemRequest) (*ListItem, *util.Pagination, error)
 	GetItemByID(placeID int, itemID int) (*Item, error)
+	DeleteItemAdminByID(itemID int) error
 }
 
 type service struct {
@@ -75,4 +76,14 @@ func (s service) GetItemByID(placeID int, itemID int) (*Item, error) {
 	}
 
 	return item, err
+}
+
+func (s service) DeleteItemAdminByID(itemID int) error {
+	err := s.repo.DeleteItemAdminByID(itemID)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
