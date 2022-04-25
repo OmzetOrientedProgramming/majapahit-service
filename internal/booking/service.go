@@ -24,6 +24,7 @@ type Service interface {
 	GetMyBookingsOngoing(localID string) (*[]Booking, error)
 	GetMyBookingsPreviousWithPagination(localID string, params BookingsListRequest) (*List, *util.Pagination, error)
 	XenditInvoicesCallback(callback XenditInvoicesCallback) error
+	GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error)
 }
 
 type service struct {
@@ -724,4 +725,23 @@ func (s service) updateStatusWhenChecking(ID int, date, startTime string, status
 		}
 	}
 	return false, nil
+}
+
+func (s service) GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error) {
+	if bookingID <= 0 {
+		return nil, errors.Wrap(ErrInputValidationError, "Booking ID should be positive")
+	}
+
+	detailBookingSaya, err := s.repo.GetDetailBookingSaya(bookingID)
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := s.repo.GetItemByBookingID(bookingID)
+	if err != nil {
+		return nil, err
+	}
+
+	detailBookingSaya.Items = *items
+	return detailBookingSaya, nil
 }

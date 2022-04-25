@@ -146,6 +146,17 @@ func (m *MockRepository) IncrementBusinessAdminBalance(balance float64, placeID 
 	return args.Error(0)
 }
 
+func (m *MockRepository) GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error) {
+	args := m.Called(bookingID)
+	ret := args.Get(0).(DetailBookingSaya)
+	return &ret, args.Error(1)
+}
+func (m *MockRepository) GetItemByBookingID(bookingID int) (*[]Item, error) {
+	args := m.Called(bookingID)
+	ret := args.Get(0).([]Item)
+	return &ret, args.Error(1)
+}
+
 func TestService_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	// Define input and output
 	date := time.Now()
@@ -3438,4 +3449,140 @@ func TestService_UpdateBookingStatusByXendit(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	})
+}
+
+func TestService_GetDetailBookingSayaSuccess(t *testing.T) {
+	listItemExpected := []Item{
+		{
+			ID:         0,
+			Name:       "Harga Booking",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+		{
+			ID:         1,
+			Name:       "test name 1",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+		{
+			ID:         2,
+			Name:       "test name 2",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+	}
+
+	detailBookingSayaExpected := DetailBookingSaya{
+		ID:          0,
+		Status:      0,
+		PlaceName:   "test place name",
+		Date:        "test date",
+		StartTime:   "test start time",
+		EndTime:     "test end time",
+		TotalPrice:  10000,
+		InvoicesURL: "test invoices url",
+		Image:       "test image",
+		PlatformFee: 3000,
+	}
+
+	detailBookingSayaMergedExpected := DetailBookingSaya{
+		ID:          0,
+		Status:      0,
+		PlaceName:   "test place name",
+		Date:        "test date",
+		StartTime:   "test start time",
+		EndTime:     "test end time",
+		TotalPrice:  10000,
+		InvoicesURL: "test invoices url",
+		Image:       "test image",
+		PlatformFee: 3000,
+		Items:       listItemExpected,
+	}
+
+	bookingID := 1
+
+	repo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	service := NewService(repo, xenditService)
+
+	repo.On("GetDetailBookingSaya", bookingID).Return(detailBookingSayaExpected, nil)
+	repo.On("GetItemByBookingID", bookingID).Return(listItemExpected, nil)
+
+	// Test
+	detailBookingSayaResult, err := service.GetDetailBookingSaya(bookingID)
+	repo.AssertExpectations(t)
+
+	assert.Equal(t, &detailBookingSayaMergedExpected, detailBookingSayaResult)
+	assert.NotNil(t, detailBookingSayaResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetDetailBookingSayaError(t *testing.T) {
+	detailBookingSaya := DetailBookingSaya{}
+	bookingID := 1
+
+	repo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	service := NewService(repo, xenditService)
+
+	repo.On("GetDetailBookingSaya", bookingID).Return(detailBookingSaya, ErrInternalServerError)
+
+	// Test
+	detailBookingSayaResult, err := service.GetDetailBookingSaya(bookingID)
+	repo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, detailBookingSayaResult)
+}
+
+func TestService_GetDetailBookingSayaItemsError(t *testing.T) {
+	detailBookingSaya := DetailBookingSaya{
+		ID:          0,
+		Status:      0,
+		PlaceName:   "test place name",
+		Date:        "test date",
+		StartTime:   "test start time",
+		EndTime:     "test end time",
+		TotalPrice:  10000,
+		InvoicesURL: "test invoices url",
+		Image:       "test image",
+	}
+
+	items := []Item{}
+
+	bookingID := 1
+
+	repo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	service := NewService(repo, xenditService)
+
+	repo.On("GetDetailBookingSaya", bookingID).Return(detailBookingSaya, nil)
+	repo.On("GetItemByBookingID", bookingID).Return(items, ErrInternalServerError)
+
+	// Test
+	detailBookingSayaResult, err := service.GetDetailBookingSaya(bookingID)
+	repo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, detailBookingSayaResult)
+}
+
+func TestService_GetDetailBookingSayaBookingIDError(t *testing.T) {
+	bookingID := 0
+
+	repo := new(MockRepository)
+	xenditService := new(MockXenditService)
+	service := NewService(repo, xenditService)
+
+	// Test
+	detailBookingSayaResult, err := service.GetDetailBookingSaya(bookingID)
+	repo.AssertExpectations(t)
+
+	assert.NotNil(t, err)
+	assert.Nil(t, detailBookingSayaResult)
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 }
