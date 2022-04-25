@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"errors"
+	"github.com/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -90,9 +90,9 @@ func (m *MockRepository) VerifyHour(hour, hourName string) (bool, error) {
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockRepository) CompareOpenAndCloseHour(openHour, closeHour string) (bool, error) {
+func (m *MockRepository) CompareOpenAndCloseHour(openHour, closeHour string) bool {
 	args := m.Called(openHour, closeHour)
-	return args.Bool(0), args.Error(1)
+	return args.Bool(0)
 }
 
 func (m *MockRepository) GetBusinessAdminByEmail(email string) (*BusinessAdmin, error) {
@@ -131,35 +131,164 @@ func TestService_RegisterBusinessAdmin(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockService := NewService(mockRepo, mockAPIKey, mockIdentityToolkitURL)
 
-	var mockEmptyErrorList []string
-	mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
-	mockRepo.On("CheckUserFields", request).Return(nil)
-	mockRepo.On("GeneratePassword").Return("12345678") //SKIPPED
-	mockPassword := "12345678"
-	mockStatus := 1
-	mockRepo.On("CreateUser", request.AdminPhoneNumber, request.AdminName, request.AdminEmail,
-		mockPassword, mockStatus).Return(nil)
+	// var mockEmptyErrorList []string
+	// mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
+	// mockRepo.On("CheckUserFields", request).Return(nil)
+	// mockRepo.On("CheckBusinessAdminFields", request).Return(nil)
+	// mockRepo.On("CheckPlaceFields", request).Return(nil)
+	// mockRepo.On("GeneratePassword").Return("12345678") //SKIPPED
+	// mockPassword := "12345678"
+	// mockStatus := 1
+	// mockRepo.On("CreateUser", request.AdminPhoneNumber, request.AdminName, request.AdminEmail,
+	// 	mockPassword, mockStatus).Return(nil)
+	// mockRepo.On("RetrieveUserID", request.AdminPhoneNumber).Return(1, nil)
+	// mockUserID := 1
+	// var mockBalance float32 = 0.0
+	// mockRepo.On("CreateBusinessAdmin", mockUserID, request.AdminBankAccount, request.AdminBankAccountName, mockBalance).Return(nil)
+	// mockRepo.On("CreatePlace", request.PlaceName, request.PlaceAddress, request.PlaceCapacity,
+	// 	request.PlaceDescription, mockUserID, request.PlaceInterval, request.PlaceOpenHour, request.PlaceCloseHour,
+	// 	request.PlaceImage, request.PlaceMinIntervalBooking, request.PlaceMaxIntervalBooking, request.PlaceMinSlotBooking,
+	// 	request.PlaceMaxSlotBooking, request.PlaceLat, request.PlaceLong).Return(nil)
 
-	mockRepo.On("RetrieveUserID", request.AdminPhoneNumber).Return(1, nil)
-	mockRepo.On("CheckBusinessAdminFields", request).Return(nil)
+	t.Run("success", func(t *testing.T) {
+		var mockEmptyErrorList []string
+		mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
+		mockRepo.On("CheckUserFields", request).Return(nil)
+		mockRepo.On("CheckBusinessAdminFields", request).Return(nil)
+		mockRepo.On("CheckPlaceFields", request).Return(nil)
+		mockRepo.On("GeneratePassword").Return("12345678") //SKIPPED
+		mockPassword := "12345678"
+		mockStatus := 1
+		mockRepo.On("CreateUser", request.AdminPhoneNumber, request.AdminName, request.AdminEmail,
+			mockPassword, mockStatus).Return(nil)
+		mockRepo.On("RetrieveUserID", request.AdminPhoneNumber).Return(1, nil)
+		mockUserID := 1
+		var mockBalance float32 = 0.0
+		mockRepo.On("CreateBusinessAdmin", mockUserID, request.AdminBankAccount, request.AdminBankAccountName, mockBalance).Return(nil)
+		mockRepo.On("CreatePlace", request.PlaceName, request.PlaceAddress, request.PlaceCapacity,
+			request.PlaceDescription, mockUserID, request.PlaceInterval, request.PlaceOpenHour, request.PlaceCloseHour,
+			request.PlaceImage, request.PlaceMinIntervalBooking, request.PlaceMaxIntervalBooking, request.PlaceMinSlotBooking,
+			request.PlaceMaxSlotBooking, request.PlaceLat, request.PlaceLong).Return(nil)
 
-	mockUserID := 1
-	var mockBalance float32 = 0.0
-	mockRepo.On("CreateBusinessAdmin", mockUserID, request.AdminBankAccount, request.AdminBankAccountName, mockBalance).Return(nil)
+		loginCredentialResult, err := mockService.RegisterBusinessAdmin(request)
+		mockRepo.AssertExpectations(t)
 
-	mockRepo.On("CheckPlaceFields", request).Return(nil)
-	mockRepo.On("CreatePlace", request.PlaceName, request.PlaceAddress, request.PlaceCapacity,
-		request.PlaceDescription, mockUserID, request.PlaceInterval, request.PlaceOpenHour, request.PlaceCloseHour,
-		request.PlaceImage, request.PlaceMinIntervalBooking, request.PlaceMaxIntervalBooking, request.PlaceMinSlotBooking,
-		request.PlaceMaxSlotBooking, request.PlaceLat, request.PlaceLong).Return(nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, loginCredentialResult)
+		assert.Equal(t, request.PlaceName, loginCredentialResult.PlaceName)
+		assert.Equal(t, request.AdminEmail, loginCredentialResult.Email)
+	})
 
-	loginCredentialResult, err := mockService.RegisterBusinessAdmin(request)
-	mockRepo.AssertExpectations(t)
+	t.Run("missing some fields", func(t *testing.T) {
+		var mockEmptyErrorList []string
+		request.AdminEmail = ""
 
-	assert.NoError(t, err)
-	assert.NotNil(t, loginCredentialResult)
-	assert.Equal(t, request.PlaceName, loginCredentialResult.PlaceName)
-	assert.Equal(t, request.AdminEmail, loginCredentialResult.Email)
+		var expectedError []string
+		expectedError = append(expectedError, "admin_email is required")
+
+		mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(expectedError)
+
+		loginCredentialResult, err := mockService.RegisterBusinessAdmin(request)
+		mockRepo.AssertExpectations(t)
+
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+		assert.Nil(t, loginCredentialResult)
+
+		request.AdminEmail = "sebuahemail@gmail.com"
+	})
+
+	t.Run("invalid user fields", func(t *testing.T) {
+		request.AdminName = "AB"
+
+		var mockEmptyErrorList []string
+		mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
+		mockRepo.On("CheckUserFields", request).Return(ErrInputValidationError)
+
+		loginCredentialResult, err := mockService.RegisterBusinessAdmin(request)
+		mockRepo.AssertExpectations(t)
+
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+		assert.Nil(t, loginCredentialResult)
+
+		request.AdminName = "Rafi Muhammad"
+	})
+
+	t.Run("invalid business admin fields", func(t *testing.T) {
+		request.AdminBankAccountName = "AB"
+
+		var mockEmptyErrorList []string
+		mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
+		mockRepo.On("CheckUserFields", request).Return(nil)
+		mockRepo.On("CheckBusinessAdminFields", request).Return(ErrInputValidationError)
+
+		loginCredentialResult, err := mockService.RegisterBusinessAdmin(request)
+		mockRepo.AssertExpectations(t)
+
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+		assert.Nil(t, loginCredentialResult)
+
+		request.AdminName = "Rafi Muhammad"
+	})
+
+	t.Run("invalid place fields", func(t *testing.T) {
+		request.PlaceName = "ABC"
+
+		var mockEmptyErrorList []string
+		mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
+		mockRepo.On("CheckUserFields", request).Return(nil)
+		mockRepo.On("CheckBusinessAdminFields", request).Return(nil)
+		mockRepo.On("CheckPlaceFields", request).Return(ErrInputValidationError)
+
+		loginCredentialResult, err := mockService.RegisterBusinessAdmin(request)
+		mockRepo.AssertExpectations(t)
+
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+		assert.Nil(t, loginCredentialResult)
+
+		request.PlaceName = "Kopi Kenangan"
+	})
+
+	// t.Run("error while creating user", func(t *testing.T) {
+	// 	request = RegisterBusinessAdminRequest{
+	// 		AdminPhoneNumber:        "089782828888",
+	// 		AdminEmail:              "sebuahemail@gmail.com",
+	// 		AdminName:               "Rafi Muhammad",
+	// 		AdminBankAccount:        "008-112492374950",
+	// 		AdminBankAccountName:    "RAFI MUHAMMAD",
+	// 		PlaceName:               "Kopi Kenangan",
+	// 		PlaceAddress:            "Jalan Raya Pasar Minggu",
+	// 		PlaceDescription:        "Kopi Kenangan menyediakan berbagai macam kopi sesuai pesanan Anda.",
+	// 		PlaceCapacity:           20,
+	// 		PlaceInterval:           30,
+	// 		PlaceImage:              "https://drive.google.com/file/d/.../view?usp=sharing",
+	// 		PlaceOpenHour:           "08:00",
+	// 		PlaceCloseHour:          "20:00",
+	// 		PlaceMinIntervalBooking: 1,
+	// 		PlaceMaxIntervalBooking: 3,
+	// 		PlaceMinSlotBooking:     1,
+	// 		PlaceMaxSlotBooking:     5,
+	// 		PlaceLat:                100.0,
+	// 		PlaceLong:               2.0002638,
+	// 	}
+
+	// 	var mockEmptyErrorList []string
+	// 	mockRepo.On("CheckRequiredFields", request, mockEmptyErrorList).Return(mockEmptyErrorList)
+	// 	mockRepo.On("CheckUserFields", request).Return(nil)
+	// 	mockRepo.On("CheckBusinessAdminFields", request).Return(nil)
+	// 	mockRepo.On("CheckPlaceFields", request).Return(nil)
+	// 	mockRepo.On("GeneratePassword").Return("12345678") //SKIPPED
+	// 	mockPassword := "12345678"
+	// 	mockStatus := 1
+	// 	mockRepo.On("CreateUser", request.AdminName, request.AdminPhoneNumber, request.AdminEmail,
+	// 		mockPassword, mockStatus).Return(ErrInputValidationError)
+
+	// 	loginCredentialResult, err := mockService.RegisterBusinessAdmin(request)
+	// 	mockRepo.AssertExpectations(t)
+
+	// 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	// 	assert.Nil(t, loginCredentialResult)
+	// })
+
 }
 
 func TestService_Login(t *testing.T) {

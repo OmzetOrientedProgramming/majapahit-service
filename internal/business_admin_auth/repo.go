@@ -12,6 +12,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // NewRepo is a constructor to get Repo instance
@@ -48,12 +49,14 @@ type Repo interface {
 	CheckIfPlaceNameIsUnique(name string) (bool, error)
 	GeneratePassword() string
 	VerifyHour(hour, hourName string) (bool, error)
-	CompareOpenAndCloseHour(openHour, closeHour string) (bool, error)
+	CompareOpenAndCloseHour(openHour, closeHour string) bool
 }
 
 // CreateUser is a method in which we insert a new row of users
 func (r repo) CreateUser(phoneNumber, name, email, password string, status int) error {
-	_, err := r.db.Exec("INSERT INTO users (phone_number, name, email, password, status) VALUES ($1, $2, $3, $4, $5)", phoneNumber, name, email, password, status)
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
+	stringHashedPassword := string(hashedPassword)
+	_, err := r.db.Exec("INSERT INTO users (phone_number, name, email, password, status) VALUES ($1, $2, $3, $4, $5)", phoneNumber, name, email, stringHashedPassword, status)
 	if err != nil {
 		return errors.Wrap(ErrInternalServerError, err.Error())
 	}
@@ -384,10 +387,8 @@ func (r repo) CheckPlaceFields(request RegisterBusinessAdminRequest) error {
 	}
 
 	if isOpenHourOkay && isCloseHourOkay {
-		isHourOkay, err := r.CompareOpenAndCloseHour(request.PlaceOpenHour, request.PlaceCloseHour)
-		if err != nil {
-			return err
-		} else if !isHourOkay {
+		isHourOkay := r.CompareOpenAndCloseHour(request.PlaceOpenHour, request.PlaceCloseHour)
+		if !isHourOkay {
 			return errors.Wrap(ErrInputValidationError, "open hour procedes close hour")
 		}
 	}
@@ -439,16 +440,9 @@ func (r repo) VerifyHour(hour, hourName string) (bool, error) {
 		}
 	}
 
-	hourHourtime, err := strconv.ParseInt(hour[0:1], 10, 64)
-	if err != nil {
-		return false, errors.Wrap(ErrInternalServerError, "error while parsing hour")
-	}
+	hourHourtime, _ := strconv.ParseInt(hour[0:2], 10, 64)
+	hourMinutetime, _ := strconv.ParseInt(hour[3:5], 10, 64)
 
-	hourMinutetime, err := strconv.ParseInt(hour[3:4], 10, 64)
-
-	if err != nil {
-		return false, errors.Wrap(ErrInternalServerError, "error while parsing hour")
-	}
 	if hourHourtime > 23 {
 		return false, errors.Wrap(ErrInputValidationError, fmt.Sprintf("hour time for %s is too large", hourName))
 	}
@@ -460,31 +454,18 @@ func (r repo) VerifyHour(hour, hourName string) (bool, error) {
 }
 
 // CompareOpenAndCloseHour returns true if openHour procedes closeHour
-func (r repo) CompareOpenAndCloseHour(openHour, closeHour string) (bool, error) {
-	openHourHourtime, err := strconv.ParseInt(openHour[0:2], 10, 64)
-	if err != nil {
-		return false, err
-	}
-	openHourMinutetime, err := strconv.ParseInt(openHour[3:5], 10, 64)
-	if err != nil {
-		return false, err
-	}
-	closeHourHourtime, err := strconv.ParseInt(closeHour[0:2], 10, 64)
-	if err != nil {
-		return false, err
-	}
-	closeHourMinutetime, err := strconv.ParseInt(closeHour[3:5], 10, 64)
-	if err != nil {
-		return false, err
-	}
+func (r repo) CompareOpenAndCloseHour(openHour, closeHour string) bool {
+	openHourHourtime, _ := strconv.ParseInt(openHour[0:2], 10, 64)
+	openHourMinutetime, _ := strconv.ParseInt(openHour[3:5], 10, 64)
+	closeHourHourtime, _ := strconv.ParseInt(closeHour[0:2], 10, 64)
+	closeHourMinutetime, _ := strconv.ParseInt(closeHour[3:5], 10, 64)
 
 	if openHourHourtime > closeHourHourtime {
-		return false, nil
+		return false
 	} else if openHourMinutetime > closeHourMinutetime {
-		return false, nil
-	} else {
-		return true, nil
+		return false
 	}
+	return true
 }
 
 // GeneratePassword returns a newly generated password
@@ -493,10 +474,7 @@ func (r repo) GeneratePassword() string {
 	var password = ""
 
 	for i := 0; i < 8; i++ {
-		idx, err := rand.Int(rand.Reader, big.NewInt(36))
-		if err != nil {
-			return ""
-		}
+		idx, _ := rand.Int(rand.Reader, big.NewInt(36))
 		password = password + string(characters[idx.Int64()])
 	}
 
