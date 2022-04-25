@@ -10,6 +10,7 @@ import (
 
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/booking"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/customer"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 
@@ -65,6 +66,10 @@ var (
 	businessadminRepo    businessadmin.Repo
 	businessadminService businessadmin.Service
 	businessadminHandler *businessadmin.Handler
+
+	customerRepo    customer.Repo
+	customerService customer.Service
+	customerHandler *customer.Handler
 
 	userRepo user.Repo
 )
@@ -122,8 +127,13 @@ func (s Server) Init() {
 	businessadminService = businessadmin.NewService(businessadminRepo, xenditService)
 	businessadminHandler = businessadmin.NewHandler(businessadminService)
 
+	// Customer module
+	customerRepo = customer.NewRepo(db)
+	customerService = customer.NewService(customerRepo)
+	customerHandler = customer.NewHandler(customerService)
+
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, itemHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler)
+	r := NewRoutes(s.Router, checkupHandler, itemHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler, customerHandler)
 	r.Init()
 }
 
