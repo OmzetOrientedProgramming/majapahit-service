@@ -7,8 +7,10 @@ import (
 	businessadmin "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin"
 	businessadminauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/business_admin_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/checkup"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/customer"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/upload"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 )
 
@@ -23,10 +25,12 @@ type Routes struct {
 	authMiddleware           middleware.AuthMiddleware
 	bookingHandler           *booking.Handler
 	businessadminHandler     *businessadmin.Handler
+	customerHandler          *customer.Handler
+	uploadHandler            *upload.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, itemHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler, businessadminHandler *businessadmin.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, itemHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler, businessadminHandler *businessadmin.Handler, customerHandler *customer.Handler, uploadHandler *upload.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
@@ -37,6 +41,8 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, itemHandler *
 		authMiddleware:           authMiddleware,
 		bookingHandler:           bookingHandler,
 		businessadminHandler:     businessadminHandler,
+		customerHandler:          customerHandler,
+		uploadHandler:            uploadHandler,
 	}
 }
 
@@ -113,6 +119,18 @@ func (r *Routes) Init() {
 				xenditCallbackRoutes.POST("/invoices", r.bookingHandler.XenditInvoicesCallback)
 				xenditCallbackRoutes.POST("/disbursement", r.businessadminHandler.XenditDisbursementCallback)
 			}
+		}
+
+		// Customer module
+		customerRoutes := v1.Group("/user", r.authMiddleware.AuthMiddleware())
+		{
+			customerRoutes.PUT("", r.customerHandler.PutEditCustomer)
+		}
+
+		// Upload module
+		uploadRoutes := v1.Group("/upload", r.authMiddleware.AuthMiddleware())
+		{
+			uploadRoutes.POST("/profile-picture", r.uploadHandler.UploadProfilePicture)
 		}
 	}
 }

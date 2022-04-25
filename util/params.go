@@ -31,6 +31,9 @@ const (
 	// GenderUndefined mapping for gender undefined
 	GenderUndefined = 0
 
+	// MinimumNameLength for user's minimum name length
+	MinimumNameLength = 3
+
 	// GenderMale mapping for gender male
 	GenderMale = 1
 
