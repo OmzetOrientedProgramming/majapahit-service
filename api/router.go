@@ -103,6 +103,7 @@ func (r *Routes) Init() {
 			bookingRoutes.GET("/date/:placeID", r.bookingHandler.GetAvailableDate)
 			bookingRoutes.GET("/ongoing", r.bookingHandler.GetMyBookingsOngoing)
 			bookingRoutes.GET("/previous", r.bookingHandler.GetMyBookingsPreviousWithPagination)
+			bookingRoutes.GET("/detail/:bookingID", r.bookingHandler.GetDetailBookingSaya)
 		}
 
 		// callback

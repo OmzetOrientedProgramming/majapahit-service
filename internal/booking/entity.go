@@ -159,10 +159,11 @@ type CreateBookingServiceRequest struct {
 
 // Item object on create booking request
 type Item struct {
-	ID    int     `json:"id"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
-	Qty   int     `json:"qty"`
+	ID         int     `json:"id"`
+	Name       string  `json:"name"`
+	Price      float64 `json:"price"`
+	Qty        int     `json:"qty"`
+	TotalPrice float64 `json:"total_price" db:"total_price"`
 }
 
 // CreateBookingServiceResponse response for create booking
@@ -260,4 +261,19 @@ type XenditInvoicesCallback struct {
 	ExternalID string  `json:"external_id"`
 	Status     string  `json:"status"`
 	Amount     float64 `json:"amount"`
+}
+
+// DetailBookingSaya used as a container for detail booking customer
+type DetailBookingSaya struct {
+	ID          int     `json:"id"`
+	Status      int     `json:"status"`
+	PlaceName   string  `json:"place_name" db:"name"`
+	Date        string  `json:"date"`
+	StartTime   string  `json:"start_time" db:"start_time"`
+	EndTime     string  `json:"end_time" db:"end_time"`
+	TotalPrice  float64 `json:"total_price" db:"total_price"`
+	InvoicesURL string  `json:"invoices_url" db:"invoices_url"`
+	Image       string  `json:"image"`
+	PlatformFee float64 `json:"platform_fee"`
+	Items       []Item  `json:"items"`
 }
