@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/cloudinary"
 	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
 
@@ -13,6 +14,7 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/customer"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/upload"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
@@ -67,11 +69,15 @@ var (
 	businessadminService businessadmin.Service
 	businessadminHandler *businessadmin.Handler
 
+	userRepo user.Repo
+
 	customerRepo    customer.Repo
 	customerService customer.Service
 	customerHandler *customer.Handler
 
-	userRepo user.Repo
+	cloudinaryRepo cloudinary.Repo
+	uploadService  upload.Service
+	uploadHandler  *upload.Handler
 )
 
 // Init all dependency
@@ -127,13 +133,18 @@ func (s Server) Init() {
 	businessadminService = businessadmin.NewService(businessadminRepo, xenditService)
 	businessadminHandler = businessadmin.NewHandler(businessadminService)
 
-	// Customer module
+	// Customer Module
 	customerRepo = customer.NewRepo(db)
 	customerService = customer.NewService(customerRepo)
 	customerHandler = customer.NewHandler(customerService)
 
+	// Upload module
+	cloudinaryRepo = cloudinary.NewRepo(os.Getenv("CLOUDINARY_CLOUD_NAME"), os.Getenv("CLOUDINARY_API_KEY"), os.Getenv("CLOUDINARY_API_SECRET"))
+	uploadService = upload.NewService(cloudinaryRepo)
+	uploadHandler = upload.NewHandler(uploadService)
+
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, itemHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler, customerHandler)
+	r := NewRoutes(s.Router, checkupHandler, itemHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler, customerHandler, uploadHandler)
 	r.Init()
 }
 
