@@ -109,6 +109,7 @@ func (r *Routes) Init() {
 			bookingRoutes.GET("/date/:placeID", r.bookingHandler.GetAvailableDate)
 			bookingRoutes.GET("/ongoing", r.bookingHandler.GetMyBookingsOngoing)
 			bookingRoutes.GET("/previous", r.bookingHandler.GetMyBookingsPreviousWithPagination)
+			bookingRoutes.GET("/detail/:bookingID", r.bookingHandler.GetDetailBookingSaya)
 		}
 
 		// callback
@@ -125,6 +126,7 @@ func (r *Routes) Init() {
 		customerRoutes := v1.Group("/user", r.authMiddleware.AuthMiddleware())
 		{
 			customerRoutes.PUT("", r.customerHandler.PutEditCustomer)
+			customerRoutes.GET("", r.customerHandler.RetrieveCustomerProfile)
 		}
 
 		// Upload module

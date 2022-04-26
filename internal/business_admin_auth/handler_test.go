@@ -30,7 +30,7 @@ func (m *MockService) RegisterBusinessAdmin(request RegisterBusinessAdminRequest
 	return loginCredential, args.Error(1)
 }
 
-func TestHandler_RegisterBusinessAdmin(t *testing.T) {
+func TestHandler_RegisterBusinessAdminSuccess(t *testing.T) {
 	t.Setenv("BASE_URL", "localhost:8080")
 
 	mockRequest := RegisterBusinessAdminRequest{

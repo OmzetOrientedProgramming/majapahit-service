@@ -80,6 +80,12 @@ func (m *MockService) XenditInvoicesCallback(callback XenditInvoicesCallback) er
 	return args.Error(0)
 }
 
+func (m *MockService) GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error) {
+	args := m.Called(bookingID)
+	detailBookingSaya := args.Get(0).(*DetailBookingSaya)
+	return detailBookingSaya, args.Error(1)
+}
+
 func TestHandler_GetListCustomerBookingWithPaginationSuccess(t *testing.T) {
 	// Setup echo
 	e := echo.New()
@@ -3239,4 +3245,189 @@ func TestHandler_XenditInvoicesCallback(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	})
+}
+
+func TestHandler_GetDetailBookingSayaSuccess(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/booking/detail/:bookingID")
+	ctx.SetParamNames("bookingID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	listItem := []Item{
+		{
+			ID:         0,
+			Name:       "Harga Booking",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+		{
+			ID:         1,
+			Name:       "test name 1",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+		{
+			ID:         2,
+			Name:       "test name 2",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+	}
+
+	detailBookingSaya := DetailBookingSaya{
+		ID:          0,
+		Status:      0,
+		PlaceName:   "test place name",
+		Date:        "test date",
+		StartTime:   "test start time",
+		EndTime:     "test end time",
+		TotalPrice:  10000,
+		InvoicesURL: "test invoices url",
+		Image:       "test image",
+		PlatformFee: 3000,
+		Items:       listItem,
+	}
+
+	bookingID := 1
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    detailBookingSaya,
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	mockService.On("GetDetailBookingSaya", bookingID).Return(&detailBookingSaya, nil)
+
+	// Tes
+	if assert.NoError(t, h.GetDetailBookingSaya(ctx)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetDetailBookingSayaBookingIDError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/booking/detail/:bookingID")
+	ctx.SetParamNames("bookingID")
+	ctx.SetParamValues("test")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"bookingID must be number",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	util.ErrorHandler(h.GetDetailBookingSaya(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetDetailBookingSayaValidationError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/booking/detail/:bookingID")
+	ctx.SetParamNames("bookingID")
+	ctx.SetParamValues("0")
+	bookingID := 0
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	errorFromService := errors.Wrap(ErrInputValidationError, "Booking ID should be positive integer")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"Booking ID should be positive integer",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	var detailBookingSaya DetailBookingSaya
+	mockService.On("GetDetailBookingSaya", bookingID).Return(&detailBookingSaya, errorFromService)
+	util.ErrorHandler(h.GetDetailBookingSaya(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetDetailBookingSayaValidationInternalSeverError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/booking/detail/:bookingID")
+	ctx.SetParamNames("bookingID")
+	ctx.SetParamValues("1")
+	bookingID := 1
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	internalServerError := errors.Wrap(ErrInternalServerError, "test")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	// Excpectation
+	var detailBookingSaya DetailBookingSaya
+	mockService.On("GetDetailBookingSaya", bookingID).Return(&detailBookingSaya, internalServerError)
+	util.ErrorHandler(h.GetDetailBookingSaya(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }

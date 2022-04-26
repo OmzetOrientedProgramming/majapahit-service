@@ -1,6 +1,7 @@
 package booking
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -474,5 +475,30 @@ func (h Handler) XenditInvoicesCallback(c echo.Context) error {
 	return c.JSON(http.StatusCreated, util.APIResponse{
 		Status:  http.StatusCreated,
 		Message: "success",
+	})
+}
+
+// GetDetailBookingSaya used for handling request to get detail booking saya
+func (h *Handler) GetDetailBookingSaya(c echo.Context) error {
+	bookingIDString := c.Param("bookingID")
+	fmt.Println("bookingID:", bookingIDString)
+	bookingID, err := strconv.Atoi(bookingIDString)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, "bookingID must be number")
+	}
+
+	detailBookingSaya, err := h.service.GetDetailBookingSaya(bookingID)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  200,
+		Message: "success",
+		Data:    detailBookingSaya,
 	})
 }

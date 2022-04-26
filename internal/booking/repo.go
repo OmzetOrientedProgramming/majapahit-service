@@ -44,6 +44,8 @@ type Repo interface {
 	GetInvoicesFromBooking(ID int) (bool, error)
 	AddExpiredPayment(ID int, expiredAt time.Time) error
 	IncrementBusinessAdminBalance(float64, int) error
+	GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error)
+	GetItemByBookingID(bookingID int) (*[]Item, error)
 }
 
 func (r repo) IncrementBusinessAdminBalance(balance float64, placeID int) error {
@@ -426,4 +428,65 @@ func (r repo) GetMyBookingsPreviousWithPagination(localID string, params Booking
 	}
 
 	return &myBookingsPrevious, nil
+}
+
+func (r repo) GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error) {
+	var detailBookingSaya DetailBookingSaya
+
+	query := `
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, b.invoices_url, p.image
+	FROM bookings b, places p
+	WHERE b.id = $1 AND p.id = b.place_id`
+
+	err := r.db.Get(&detailBookingSaya, query, bookingID)
+	fmt.Println(err)
+
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+	detailBookingSaya.PlatformFee = 3000
+
+	return &detailBookingSaya, nil
+}
+
+func (r repo) GetItemByBookingID(bookingID int) (*[]Item, error) {
+	var items []Item
+	items = make([]Item, 0)
+	var placeID int
+
+	query := `
+	SELECT i.id, i.name, i.price, bi.qty, bi.total_price
+	FROM items i, booking_items bi
+	WHERE bi.booking_id = $1 AND bi.item_id = i.id`
+
+	err := r.db.Select(&items, query, bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	query = `SELECT p.id FROM places p, bookings b WHERE p.id = b.place_id AND b.id = $1`
+
+	err = r.db.Get(&placeID, query, bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	bookingPrice, err := r.GetPlaceBookingPrice(placeID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	tempItems := []Item{
+		{
+			ID:         0,
+			Name:       "Harga Booking",
+			Price:      bookingPrice,
+			Qty:        1,
+			TotalPrice: bookingPrice,
+		},
+	}
+
+	items = append(tempItems, items...)
+
+	return &items, nil
 }

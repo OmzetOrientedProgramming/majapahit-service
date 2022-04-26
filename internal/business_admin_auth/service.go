@@ -70,9 +70,6 @@ func (s service) RegisterBusinessAdmin(request RegisterBusinessAdminRequest) (*L
 
 	// Generating Password for User
 	password := s.repo.GeneratePassword()
-	if password == "" {
-		return nil, errors.Wrap(ErrInternalServerError, "error while generating password")
-	}
 
 	// Creating User
 	var status = 1 // business_owners

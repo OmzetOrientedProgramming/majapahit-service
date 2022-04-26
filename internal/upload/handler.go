@@ -23,32 +23,32 @@ func NewHandler(service Service) *Handler {
 
 func (h *Handler) UploadProfilePicture(c echo.Context) error {
 	_, userModel, err := middleware.ParseUserData(c, util.StatusCustomer)
-  if err != nil {
-    if errors.Cause(err) == middleware.ErrForbidden {
-      return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
-    }
-  }
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
 
-  var req FileRequest
-  err = c.Bind(&req)
-  if err != nil {
-    return util.ErrorWrapWithContext(c, http.StatusInternalServerError, errors.Wrap(ErrInternalServer, err.Error()))
-  }
+	var req FileRequest
+	err = c.Bind(&req)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, errors.Wrap(ErrInternalServer, err.Error()))
+	}
 
-  req.CustomerName = userModel.Name
+	req.CustomerName = userModel.Name
 
-  data, err := h.service.UploadProfilePicture(req)
-  if err != nil {
-    if errors.Cause(err) == ErrInputValidation {
-      return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
-    }
-    return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
-  }
+	data, err := h.service.UploadProfilePicture(req)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidation {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
 
-  return c.JSON(http.StatusCreated, util.APIResponse{
-    Status:  http.StatusCreated,
-    Message: "Successfully Uploaded File!",
-    Data:    data,
-  })
+	return c.JSON(http.StatusCreated, util.APIResponse{
+		Status:  http.StatusCreated,
+		Message: "Successfully Uploaded File!",
+		Data:    data,
+	})
 
 }

@@ -24,37 +24,60 @@ func NewHandler(service Service) *Handler {
 
 func (h *Handler) PutEditCustomer(c echo.Context) error {
 	_, userModel, err := middleware.ParseUserData(c, util.StatusCustomer)
-  if err != nil {
-    if errors.Cause(err) == middleware.ErrForbidden {
-      return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
-    }
-  }
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
 
-  var req EditCustomerRequest
-  err = c.Bind(&req)
-  if err != nil {
-    return util.ErrorWrapWithContext(c, http.StatusInternalServerError, errors.Wrap(ErrInternalServer, err.Error()))
-  }
+	var req EditCustomerRequest
+	err = c.Bind(&req)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, errors.Wrap(ErrInternalServer, err.Error()))
+	}
 
-  dateOfBirth, err := time.Parse(util.DateLayout, req.DateOfBirthString)
-  if err != nil {
-    return util.ErrorWrapWithContext(c, http.StatusBadRequest, errors.Wrap(ErrInputValidation, "Format date of birth tidak sesuai (YYYY-MM-DD)"))
-  }
+	dateOfBirth, err := time.Parse(util.DateLayout, req.DateOfBirthString)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, errors.Wrap(ErrInputValidation, "Format date of birth tidak sesuai (YYYY-MM-DD)"))
+	}
 
-  req.ID = userModel.ID
-  req.DateOfBirth = dateOfBirth
+	req.ID = userModel.ID
+	req.DateOfBirth = dateOfBirth
 
-  err = h.service.PutEditCustomer(req)
-  if err != nil {
-    if errors.Cause(err) == ErrInputValidation {
-      return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
-    }
-    return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
-  }
+	err = h.service.PutEditCustomer(req)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidation {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
 
-  return c.JSON(http.StatusOK, util.APIResponse{
-    Status:  http.StatusOK,
-    Message: "Successfully Edited Profile!",
-  })
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "Successfully Edited Profile!",
+	})
 
+}
+
+// RetrieveCustomerProfile returns GET response for customer profile
+func (h *Handler) RetrieveCustomerProfile(c echo.Context) error {
+	_, user, err := middleware.ParseUserData(c, util.StatusCustomer)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
+
+	userID := user.ID
+
+	customerProfile, err := h.service.RetrieveCustomerProfile(userID)
+	if err != nil {
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    customerProfile,
+	})
 }

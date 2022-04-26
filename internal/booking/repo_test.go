@@ -1687,3 +1687,221 @@ func TestRepo_GetInvoicesFromBooking(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 }
+
+func TestRepo_GetDetailBookingSayaSuccess(t *testing.T) {
+	detailBookingSayaExpected := &DetailBookingSaya{
+		ID:          0,
+		Status:      0,
+		PlaceName:   "test place name",
+		Date:        "test date",
+		StartTime:   "test start time",
+		EndTime:     "test end time",
+		TotalPrice:  10000,
+		InvoicesURL: "test invoices url",
+		Image:       "test image",
+		PlatformFee: 3000,
+	}
+
+	bookingID := 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "status", "name", "date", "start_time", "end_time", "total_price", "invoices_url", "image"}).
+		AddRow(detailBookingSayaExpected.ID,
+			detailBookingSayaExpected.Status,
+			detailBookingSayaExpected.PlaceName,
+			detailBookingSayaExpected.Date,
+			detailBookingSayaExpected.StartTime,
+			detailBookingSayaExpected.EndTime,
+			detailBookingSayaExpected.TotalPrice,
+			detailBookingSayaExpected.InvoicesURL,
+			detailBookingSayaExpected.Image)
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, b.invoices_url, p.image
+	FROM bookings b, places p
+	WHERE b.id = $1 AND p.id = b.place_id`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	// Test
+	detailBookingSayaResult, err := repoMock.GetDetailBookingSaya(bookingID)
+	assert.Equal(t, detailBookingSayaExpected, detailBookingSayaResult)
+	assert.NotNil(t, detailBookingSayaResult)
+	assert.NoError(t, err)
+}
+
+func TestRepo_GetDetailBookingSayaError(t *testing.T) {
+	bookingID := 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, b.invoices_url, p.image
+	FROM bookings b, places p
+	WHERE b.id = $1 AND p.id = b.place_id`)).
+		WithArgs(bookingID).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	detailBookingSayaResult, err := repoMock.GetDetailBookingSaya(bookingID)
+	assert.Nil(t, detailBookingSayaResult)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
+func TestRepo_GetItemByBookingIDSuccess(t *testing.T) {
+	listItemExpected := []Item{
+		{
+			ID:         1,
+			Name:       "test name 1",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+		{
+			ID:         2,
+			Name:       "test name 2",
+			Price:      1000,
+			Qty:        1,
+			TotalPrice: 1000,
+		},
+	}
+
+	bookingID, placeID := 1, 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	rows := mock.
+		NewRows([]string{"id", "name", "price", "qty", "total_price"}).
+		AddRow(listItemExpected[0].ID,
+			listItemExpected[0].Name,
+			listItemExpected[0].Price,
+			listItemExpected[0].Qty,
+			listItemExpected[0].TotalPrice).
+		AddRow(listItemExpected[1].ID,
+			listItemExpected[1].Name,
+			listItemExpected[1].Price,
+			listItemExpected[1].Qty,
+			listItemExpected[1].TotalPrice)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT i.id, i.name, i.price, bi.qty, bi.total_price
+	FROM items i, booking_items bi
+	WHERE bi.booking_id = $1 AND bi.item_id = i.id`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"id"}).AddRow(placeID)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT p.id FROM places p, bookings b WHERE p.id = b.place_id AND b.id = $1`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"booking_price"}).AddRow(10000)
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT COALESCE (booking_price, 0) FROM places WHERE id  = $1`)).
+		WithArgs(placeID).
+		WillReturnRows(rows)
+
+	tempList := []Item{
+		{
+			ID:         0,
+			Name:       "Harga Booking",
+			Price:      10000,
+			Qty:        1,
+			TotalPrice: 10000,
+		},
+	}
+
+	listItemExpected = append(tempList, listItemExpected...)
+
+	// Test
+	detailResult, err := repoMock.GetItemByBookingID(bookingID)
+	assert.Equal(t, &listItemExpected, detailResult)
+	assert.NotNil(t, detailResult)
+	assert.NoError(t, err)
+}
+
+func TestRepo_GetItemByBookingIDItemError(t *testing.T) {
+	bookingID := 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT i.id, i.name, i.price, bi.qty, bi.total_price
+	FROM items i, booking_items bi
+	WHERE bi.booking_id = $1 AND bi.item_id = i.id`)).
+		WithArgs(bookingID).
+		WillReturnError(sql.ErrTxDone)
+
+	// Test
+	listItemResult, err := repoMock.GetItemByBookingID(bookingID)
+	assert.Nil(t, listItemResult)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
+func TestRepo_GetItemByBookingIDPlaceIDError(t *testing.T) {
+	bookingID, placeID := 1, 1
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+	rows := mock.
+		NewRows([]string{"id", "name", "price", "qty", "total_price"}).
+		AddRow(1, "test name", 1, 1, 1)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT i.id, i.name, i.price, bi.qty, bi.total_price
+	FROM items i, booking_items bi
+	WHERE bi.booking_id = $1 AND bi.item_id = i.id`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
+	rows = mock.NewRows([]string{"id"})
+	rows.AddRow(10000)
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT p.id FROM places p, bookings b WHERE p.id = b.place_id AND b.id = $1`)).
+		WithArgs(placeID).
+		WillReturnError(ErrInternalServerError)
+
+	// Test
+	listItemResult, err := repoMock.GetItemByBookingID(bookingID)
+	assert.Nil(t, listItemResult)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
