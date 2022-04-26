@@ -3273,6 +3273,13 @@ func TestHandler_GetDetailBookingSayaSuccess(t *testing.T) {
 			TotalPrice: 1000,
 		},
 		{
+			ID:         999,
+			Name:       "Platform Fee",
+			Price:      3000,
+			Qty:        1,
+			TotalPrice: 3000,
+		},
+		{
 			ID:         1,
 			Name:       "test name 1",
 			Price:      1000,
@@ -3298,7 +3305,6 @@ func TestHandler_GetDetailBookingSayaSuccess(t *testing.T) {
 		TotalPrice:  10000,
 		InvoicesURL: "test invoices url",
 		Image:       "test image",
-		PlatformFee: 3000,
 		Items:       listItem,
 	}
 

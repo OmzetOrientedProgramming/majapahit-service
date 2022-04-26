@@ -274,6 +274,5 @@ type DetailBookingSaya struct {
 	TotalPrice  float64 `json:"total_price" db:"total_price"`
 	InvoicesURL string  `json:"invoices_url" db:"invoices_url"`
 	Image       string  `json:"image"`
-	PlatformFee float64 `json:"platform_fee"`
 	Items       []Item  `json:"items"`
 }

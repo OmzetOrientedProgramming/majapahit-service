@@ -432,20 +432,27 @@ func (r repo) GetMyBookingsPreviousWithPagination(localID string, params Booking
 
 func (r repo) GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error) {
 	var detailBookingSaya DetailBookingSaya
+	var placeBookingPrice float64
 
 	query := `
-	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, b.invoices_url, p.image
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image
 	FROM bookings b, places p
 	WHERE b.id = $1 AND p.id = b.place_id`
 
 	err := r.db.Get(&detailBookingSaya, query, bookingID)
-	fmt.Println(err)
 
 	if err != nil {
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-	detailBookingSaya.PlatformFee = 3000
 
+	query = `SELECT p.booking_price FROM places p, bookings b WHERE b.id = $1 AND b.place_id = p.id`
+
+	err = r.db.Get(&placeBookingPrice, query, bookingID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	detailBookingSaya.TotalPrice += placeBookingPrice + 3000
 	return &detailBookingSaya, nil
 }
 
@@ -483,6 +490,13 @@ func (r repo) GetItemByBookingID(bookingID int) (*[]Item, error) {
 			Price:      bookingPrice,
 			Qty:        1,
 			TotalPrice: bookingPrice,
+		},
+		{
+			ID:         999,
+			Name:       "Platform Fee",
+			Price:      3000,
+			Qty:        1,
+			TotalPrice: 3000,
 		},
 	}
 
