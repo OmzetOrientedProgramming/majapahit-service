@@ -1699,7 +1699,6 @@ func TestRepo_GetDetailBookingSayaSuccess(t *testing.T) {
 		TotalPrice:  10000,
 		InvoicesURL: "test invoices url",
 		Image:       "test image",
-		PlatformFee: 3000,
 	}
 
 	bookingID := 1
@@ -1728,14 +1727,20 @@ func TestRepo_GetDetailBookingSayaSuccess(t *testing.T) {
 			detailBookingSayaExpected.Image)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, b.invoices_url, p.image
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image
 	FROM bookings b, places p
 	WHERE b.id = $1 AND p.id = b.place_id`)).
 		WithArgs(bookingID).
 		WillReturnRows(rows)
 
+	rows = mock.NewRows([]string{"booking_price"}).AddRow(10000)
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT p.booking_price FROM places p, bookings b WHERE b.id = $1 AND b.place_id = p.id`)).
+		WithArgs(bookingID).
+		WillReturnRows(rows)
+
 	// Test
 	detailBookingSayaResult, err := repoMock.GetDetailBookingSaya(bookingID)
+	detailBookingSayaExpected.TotalPrice += 13000
 	assert.Equal(t, detailBookingSayaExpected, detailBookingSayaResult)
 	assert.NotNil(t, detailBookingSayaResult)
 	assert.NoError(t, err)
@@ -1754,7 +1759,7 @@ func TestRepo_GetDetailBookingSayaError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, b.invoices_url, p.image
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image
 	FROM bookings b, places p
 	WHERE b.id = $1 AND p.id = b.place_id`)).
 		WithArgs(bookingID).
@@ -1835,6 +1840,13 @@ func TestRepo_GetItemByBookingIDSuccess(t *testing.T) {
 			Price:      10000,
 			Qty:        1,
 			TotalPrice: 10000,
+		},
+		{
+			ID:         999,
+			Name:       "Platform Fee",
+			Price:      3000,
+			Qty:        1,
+			TotalPrice: 3000,
 		},
 	}
 
