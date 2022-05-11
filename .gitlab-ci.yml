@@ -3,7 +3,6 @@ image: golang:latest
 
 services:
   - postgres:latest
-  - cytopia/golint:latest
 
 variables:
   REPO_NAME: gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service
@@ -36,15 +35,15 @@ Formater:
     - go fmt $(go list ./... | grep -v /vendor/)
 
 Linter:
-  image: golangci/golangci-lint:latest
   stage: quality
+  image: registry.gitlab.com/pipeline-components/go-lint:latest  
   script:
-    - golangci-lint run --disable-all -E golint --timeout=5m
+    - golint -set_exit_status ./...
 
 SonarScanner Dev:
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: ['']
+    entrypoint: [ '' ]
   stage: quality
   script:
     - sonar-scanner
@@ -61,7 +60,7 @@ SonarScanner Dev:
 SonarScanner:
   image:
     name: sonarsource/sonar-scanner-cli:latest
-    entrypoint: ['']
+    entrypoint: [ '' ]
   stage: quality
   script:
     - sonar-scanner

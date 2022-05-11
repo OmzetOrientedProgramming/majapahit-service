@@ -22,6 +22,7 @@ func NewHandler(service Service) *Handler {
 	}
 }
 
+// PutEditCustomer for handling edit customer endpoint
 func (h *Handler) PutEditCustomer(c echo.Context) error {
 	_, userModel, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {

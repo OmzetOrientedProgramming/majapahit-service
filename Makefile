@@ -11,6 +11,6 @@ test :
 coverage :
 	go test $$(go list ./... | grep -v ./main.go | grep -v /vendor/) -coverprofile=coverage.out && go tool cover -func coverage.out
 lint:
-	golint -set_exit_status $$(go list ./... | grep -v /vendor/)
+	$$(go list -f {{.Target}} golang.org/x/lint/golint) -set_exit_status $$(go list ./... | grep -v /vendor/)
 fmt:
 	go fmt $$(go list ./... | grep -v /vendor/)
