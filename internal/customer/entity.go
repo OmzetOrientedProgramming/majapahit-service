@@ -2,6 +2,7 @@ package customer
 
 import "time"
 
+// EditCustomerRequest for handling request from client
 type EditCustomerRequest struct {
 	ID                int
 	Name              string `json:"name"`

@@ -21,6 +21,7 @@ func NewHandler(service Service) *Handler {
 	}
 }
 
+// UploadProfilePicture for handling upload profile picture endpoint
 func (h *Handler) UploadProfilePicture(c echo.Context) error {
 	_, userModel, err := middleware.ParseUserData(c, util.StatusCustomer)
 	if err != nil {
