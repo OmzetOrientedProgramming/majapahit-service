@@ -3275,6 +3275,51 @@ func TestService_GetTimeSlots(t *testing.T) {
 		assert.Equal(t, &timeSlots, slots)
 	})
 
+	t.Run("success when date is today", func(t *testing.T) {
+		repo := new(MockRepository)
+		xenditService := new(MockXenditService)
+		service := NewService(repo, xenditService)
+
+		date := time.Now()
+		dateSlice := []time.Time{date}
+		afterDateNowStart, _ := time.Parse(util.TimeLayout, date.Add(2*time.Hour).Format(util.TimeLayout))
+		afterDateNowEnd, _ := time.Parse(util.TimeLayout, date.Add(3*time.Hour).Format(util.TimeLayout))
+		beforeDateNowStart, _ := time.Parse(util.TimeLayout, date.Add(-2*time.Hour).Format(util.TimeLayout))
+		beforeDateNowEnd, _ := time.Parse(util.TimeLayout, date.Add(-3*time.Hour).Format(util.TimeLayout))
+
+		timeSlots := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: afterDateNowStart,
+				EndTime:   afterDateNowEnd,
+				Day:       0,
+			},
+			{
+				ID:        2,
+				StartTime: beforeDateNowStart,
+				EndTime:   beforeDateNowEnd,
+				Day:       0,
+			},
+		}
+
+		expectedTimeSlots := []TimeSlot{
+			{
+				ID:        1,
+				StartTime: afterDateNowStart,
+				EndTime:   afterDateNowEnd,
+				Day:       0,
+			},
+		}
+
+		repo.On("GetTimeSlotsData", 1, dateSlice).Return(&timeSlots, nil)
+
+		slots, err := service.GetTimeSlots(1, date)
+		repo.AssertExpectations(t)
+		assert.NotNil(t, slots)
+		assert.Nil(t, err)
+		assert.Equal(t, &expectedTimeSlots, slots)
+	})
+
 	t.Run("failed input validation error", func(t *testing.T) {
 		repo := new(MockRepository)
 		xenditService := new(MockXenditService)
