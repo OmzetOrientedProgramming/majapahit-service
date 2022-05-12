@@ -27,26 +27,26 @@ type service struct {
 func (s service) UploadProfilePicture(params FileRequest) (*FileResponse, error) {
 	var errorList []string
 
-	if params.File == "" {
-		errorList = append(errorList, "File diperlukan")
-	}
+  if params.File == "" {
+    errorList = append(errorList, "File diperlukan")
+  }
 
-	if params.CustomerName == "" {
-		errorList = append(errorList, "CustomerName diperlukan")
-	}
+  if params.CustomerName == "" {
+    errorList = append(errorList, "CustomerName diperlukan")
+  }
 
-	if len(errorList) > 0 {
-		return nil, errors.Wrap(ErrInputValidation, strings.Join(errorList, ";"))
-	}
+  if len(errorList) > 0 {
+    return nil, errors.Wrap(ErrInputValidation, strings.Join(errorList, ";"))
+  }
 
-	url, err := s.cloudinaryRepo.UploadFile(params.File, "Profile Picture", fmt.Sprintf("%s-Profile-Picture", params.CustomerName))
-	if err != nil {
-		return nil, err
-	}
+  url, err := s.cloudinaryRepo.UploadFile(params.File, "Profile Picture", fmt.Sprintf("%s-Profile-Picture", params.CustomerName))
+  if err != nil {
+    return nil, err
+  }
 
-	response := FileResponse{
-		URL: url,
-	}
+  response := FileResponse{
+    URL: url,
+  }
 
-	return &response, nil
+  return &response, nil
 }

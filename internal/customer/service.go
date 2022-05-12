@@ -2,6 +2,7 @@ package customer
 
 import (
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
@@ -41,6 +42,12 @@ func (s service) PutEditCustomer(body EditCustomerRequest) error {
 
 	if body.DateOfBirth.IsZero() {
 		errorList = append(errorList, "Date of birth diperlukan")
+  } else {
+    currentTime := time.Now()
+    timeDiff := currentTime.Sub(body.DateOfBirth)
+    if timeDiff < 0 {
+      errorList = append(errorList, "Date of birth tidak boleh melebihi tanggal saat ini")
+    }
 	}
 
 	if !(body.Gender == util.GenderMale || body.Gender == util.GenderFemale) {
