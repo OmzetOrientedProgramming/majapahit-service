@@ -228,7 +228,24 @@ func (s service) GetTimeSlots(placeID int, selectedDate time.Time) (*[]TimeSlot,
 		return nil, err
 	}
 
-	return timeSlot, nil
+	currentTime := time.Now()
+	yearNow, monthNow, dayNow := currentTime.Date()
+	yearSelected, monthSelected, daySelected := selectedDate.Date()
+
+	var validTimeSlot []TimeSlot
+	if yearNow == yearSelected && monthNow == monthSelected && dayNow == daySelected {
+		currentTimeOnly, _ := time.Parse(util.TimeLayout, currentTime.Format(util.TimeLayout))
+
+		for _, i := range *timeSlot {
+			if i.StartTime.After(currentTimeOnly) {
+				validTimeSlot = append(validTimeSlot, i)
+			}
+		}
+	} else {
+		return timeSlot, nil
+	}
+
+	return &validTimeSlot, nil
 }
 
 func (s service) GetAvailableDate(params GetAvailableDateParams) (*[]AvailableDateResponse, error) {
