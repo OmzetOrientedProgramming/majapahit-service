@@ -143,6 +143,29 @@ func TestService_PutEditCustomer(t *testing.T) {
 		assert.Equal(t, errors.Cause(err), ErrInputValidation)
 	})
 
+	t.Run("Date of birth is in the future", func(t *testing.T){
+		userID := 1
+		name := "Customer 123"
+		profilePicture := "https://asset-a.grid.id//crop/0x0:0x0/700x465/photo/bobofoto/original/17064_2-cara-untuk-melakukan-sikap-kayang.JPG"
+		dateOfBirthString := "2022-12-31"
+		dateOfBirth, _ := time.Parse(util.DateLayout, dateOfBirthString)
+		gender := 1
+
+		customer := EditCustomerRequest{
+			ID:                userID,
+			Name:              name,
+			ProfilePicture:    profilePicture,
+			DateOfBirth:       dateOfBirth,
+			DateOfBirthString: dateOfBirthString,
+			Gender:            gender,
+		}
+
+		err := mockService.PutEditCustomer(customer)
+
+		assert.Equal(t, errors.Cause(err), ErrInputValidation)
+	})
+
+
 	t.Run("Gender invalid input validation", func(t *testing.T) {
 		userID := 1
 		name := "Customer 123"
