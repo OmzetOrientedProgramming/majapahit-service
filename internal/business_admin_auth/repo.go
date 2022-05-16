@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 	"math/big"
 	"net/mail"
 	"strconv"
 	"strings"
+
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/auth"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -56,7 +57,12 @@ type Repo interface {
 func (r repo) CreateUser(phoneNumber, name, email, password string, status int) error {
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
 	stringHashedPassword := string(hashedPassword)
-	_, err := r.db.Exec("INSERT INTO users (phone_number, name, email, password, status) VALUES ($1, $2, $3, $4, $5)", phoneNumber, name, email, stringHashedPassword, status)
+
+	_, err := r.db.Exec(
+		`INSERT INTO users (phone_number, name, email, password, status) 
+		VALUES ($1, $2, $3, $4, $5)`,
+		phoneNumber, name, email, stringHashedPassword, status)
+
 	if err != nil {
 		return errors.Wrap(ErrInternalServerError, err.Error())
 	}

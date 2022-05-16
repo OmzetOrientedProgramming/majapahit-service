@@ -35,6 +35,13 @@ func (m *MockService) GetDetail(placeID int) (*Detail, error) {
 	return placeDetail, args.Error(1)
 }
 
+func (m *MockService) GetListReviewAndRatingWithPagination(params ListReviewRequest) (*ListReview, *util.Pagination, error) {
+	args := m.Called(params)
+	listReview := args.Get(0).(*ListReview)
+	pagination := args.Get(1).(util.Pagination)
+	return listReview, &pagination, args.Error(2)
+}
+
 func TestHandler_GetDetailSuccess(t *testing.T) {
 	// Setting up echo router
 	e := echo.New()
@@ -485,6 +492,347 @@ func TestHandler_GetPlacesListWithPaginationWithoutParams(t *testing.T) {
 
 	// Tes
 	if assert.NoError(t, h.GetPlacesListWithPagination(c)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationSuccess(t *testing.T) {
+	e := echo.New()
+
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	q.Set("latest", "true")
+	q.Set("rating", "true")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/review")
+	ctx.SetParamNames("placeID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/v1/place/1/review",
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+	}
+
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	listReview := ListReview{
+		Reviews: []Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"reviews":      listReview.Reviews,
+			"pagination":   pagination,
+			"total_review": listReview.TotalCount,
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	mockService.On("GetListReviewAndRatingWithPagination", params).Return(&listReview, pagination, nil)
+
+	if assert.NoError(t, h.GetListReviewAndRatingWithPagination(ctx)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationPlaceIDError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	q.Set("latest", "true")
+	q.Set("rating", "true")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/review")
+	ctx.SetParamNames("placeID")
+	ctx.SetParamValues("test")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"incorrect place id",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationQueryParamsError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "asd")
+	q.Set("page", "asd")
+	q.Set("latest", "asd")
+	q.Set("rating", "asd")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/review")
+	ctx.SetParamNames("placeID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"latest parameter should be boolean type",
+			"rating parameter should be boolean type",
+			"limit should be positive integer",
+			"page should be positive integer",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationLimitError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "110")
+	q.Set("page", "1")
+	q.Set("latest", "true")
+	q.Set("rating", "true")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/review")
+	ctx.SetParamNames("placeID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	params := ListReviewRequest{
+		Limit:   110,
+		Page:    1,
+		Path:    "/api/v1/place/1/review",
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+	}
+
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"limit should be 1 - 100"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	var listReview ListReview
+	var pagination util.Pagination
+	mockService.On("GetListReviewAndRatingWithPagination", params).Return(&listReview, pagination, errorFromService)
+	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "110")
+	q.Set("page", "1")
+	q.Set("latest", "true")
+	q.Set("rating", "true")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/review")
+	ctx.SetParamNames("placeID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	params := ListReviewRequest{
+		Limit:   110,
+		Page:    1,
+		Path:    "/api/v1/place/1/review",
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+	}
+
+	internalServerError := errors.Wrap(ErrInternalServerError, "test")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	var listReview ListReview
+	var pagination util.Pagination
+	mockService.On("GetListReviewAndRatingWithPagination", params).Return(&listReview, pagination, internalServerError)
+	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationQueryParamEmpty(t *testing.T) {
+	e := echo.New()
+
+	q := make(url.Values)
+	q.Set("limit", "")
+	q.Set("page", "")
+	q.Set("latest", "")
+	q.Set("rating", "")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/:placeID/review")
+	ctx.SetParamNames("placeID")
+	ctx.SetParamValues("1")
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	paramsDefault := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/v1/place/1/review",
+		PlaceID: 1,
+		Latest:  false,
+		Rating:  false,
+	}
+
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	listReview := ListReview{
+		Reviews: []Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"reviews":      listReview.Reviews,
+			"pagination":   pagination,
+			"total_review": listReview.TotalCount,
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	mockService.On("GetListReviewAndRatingWithPagination", paramsDefault).Return(&listReview, pagination, nil)
+
+	if assert.NoError(t, h.GetListReviewAndRatingWithPagination(ctx)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 	}
