@@ -64,3 +64,28 @@ type PlacesRatingAndReviewCount struct {
 	Rating      float64 `json:"rating"`
 	ReviewCount int     `json:"review_count" db:"review_count"`
 }
+
+// Review consist of informations about review and rating from customer
+type Review struct {
+	ID      int    `json:"id"`
+	Name    string `json:"name"`
+	Content string `json:"content"`
+	Rating  int    `json:"rating"`
+	Date    string `json:"created_at" db:"created_at"`
+}
+
+// ListReview is a container for review
+type ListReview struct {
+	Reviews    []Review `json:"review"`
+	TotalCount int      `json:"total_count"`
+}
+
+// ListReviewRequest consist of request for pagination and sorting purpose
+type ListReviewRequest struct {
+	Limit   int    `json:"limit"`
+	Page    int    `json:"page"`
+	Path    string `json:"path"`
+	PlaceID int    `json:"place_id"`
+	Rating  bool   `json:"rating"`
+	Latest  bool   `json:"latest"`
+}

@@ -489,3 +489,264 @@ func TestRepo_GetPlaceReviewFailed(t *testing.T) {
 	assert.Nil(t, placeListRetrieve)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 }
+
+func TestRepo_GetListReviewWithPaginationSuccess(t *testing.T) {
+	listRviewExpected := &ListReview{
+		Reviews: []Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	t.Run("success with sort by rating and latest date", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "name", "content", "rating", "created_at"}).
+			AddRow(listRviewExpected.Reviews[0].ID,
+				listRviewExpected.Reviews[0].Name,
+				listRviewExpected.Reviews[0].Content,
+				listRviewExpected.Reviews[0].Rating,
+				listRviewExpected.Reviews[0].Date).
+			AddRow(listRviewExpected.Reviews[1].ID,
+				listRviewExpected.Reviews[1].Name,
+				listRviewExpected.Reviews[1].Content,
+				listRviewExpected.Reviews[1].Rating,
+				listRviewExpected.Reviews[1].Date)
+
+		params := ListReviewRequest{
+			Limit:   10,
+			Page:    1,
+			PlaceID: 1,
+			Latest:  true,
+			Rating:  true,
+		}
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT r.id, u.name, r.content, r.rating, r.created_at
+			FROM reviews r, users u
+			WHERE r.place_id = $1 AND u.id = r.user_id
+			ORDER BY r.created_at DESC, r.rating DESC LIMIT $2 OFFSET $3`)).
+			WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+			WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(10)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(r.id) FROM reviews r, users u WHERE r.place_id = $1 AND u.id = r.user_id")).
+			WithArgs(params.PlaceID).
+			WillReturnRows(rows)
+
+		// Test
+		listReviewResult, err := repoMock.GetListReviewAndRatingWithPagination(params)
+		assert.Equal(t, listRviewExpected, listReviewResult)
+		assert.NotNil(t, listReviewResult)
+		assert.NoError(t, err)
+	})
+
+	t.Run("success with sort by rating", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "name", "content", "rating", "created_at"}).
+			AddRow(listRviewExpected.Reviews[0].ID,
+				listRviewExpected.Reviews[0].Name,
+				listRviewExpected.Reviews[0].Content,
+				listRviewExpected.Reviews[0].Rating,
+				listRviewExpected.Reviews[0].Date).
+			AddRow(listRviewExpected.Reviews[1].ID,
+				listRviewExpected.Reviews[1].Name,
+				listRviewExpected.Reviews[1].Content,
+				listRviewExpected.Reviews[1].Rating,
+				listRviewExpected.Reviews[1].Date)
+
+		params := ListReviewRequest{
+			Limit:   10,
+			Page:    1,
+			PlaceID: 1,
+			Latest:  false,
+			Rating:  true,
+		}
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT r.id, u.name, r.content, r.rating, r.created_at
+			FROM reviews r, users u
+			WHERE r.place_id = $1 AND u.id = r.user_id
+			ORDER BY r.rating DESC LIMIT $2 OFFSET $3`)).
+			WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+			WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(10)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(r.id) FROM reviews r, users u WHERE r.place_id = $1 AND u.id = r.user_id")).
+			WithArgs(params.PlaceID).
+			WillReturnRows(rows)
+
+		// Test
+		listReviewResult, err := repoMock.GetListReviewAndRatingWithPagination(params)
+		assert.Equal(t, listRviewExpected, listReviewResult)
+		assert.NotNil(t, listReviewResult)
+		assert.NoError(t, err)
+	})
+
+	t.Run("success with sort by latest date", func(t *testing.T) {
+		rows := mock.
+			NewRows([]string{"id", "name", "content", "rating", "created_at"}).
+			AddRow(listRviewExpected.Reviews[0].ID,
+				listRviewExpected.Reviews[0].Name,
+				listRviewExpected.Reviews[0].Content,
+				listRviewExpected.Reviews[0].Rating,
+				listRviewExpected.Reviews[0].Date).
+			AddRow(listRviewExpected.Reviews[1].ID,
+				listRviewExpected.Reviews[1].Name,
+				listRviewExpected.Reviews[1].Content,
+				listRviewExpected.Reviews[1].Rating,
+				listRviewExpected.Reviews[1].Date)
+
+		params := ListReviewRequest{
+			Limit:   10,
+			Page:    1,
+			PlaceID: 1,
+			Latest:  true,
+			Rating:  false,
+		}
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT r.id, u.name, r.content, r.rating, r.created_at
+			FROM reviews r, users u
+			WHERE r.place_id = $1 AND u.id = r.user_id
+			ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`)).
+			WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+			WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(10)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(r.id) FROM reviews r, users u WHERE r.place_id = $1 AND u.id = r.user_id")).
+			WithArgs(params.PlaceID).
+			WillReturnRows(rows)
+
+		// Test
+		listReviewResult, err := repoMock.GetListReviewAndRatingWithPagination(params)
+		assert.Equal(t, listRviewExpected, listReviewResult)
+		assert.NotNil(t, listReviewResult)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRepo_GetListReviewWithPaginationEmpty(t *testing.T) {
+	listReviewExpected := &ListReview{
+		Reviews:    make([]Review, 0),
+		TotalCount: 0,
+	}
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  false,
+	}
+
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT r.id, u.name, r.content, r.rating, r.created_at
+		FROM reviews r, users u
+		WHERE r.place_id = $1 AND u.id = r.user_id
+		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`)).
+		WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+		WillReturnError(sql.ErrNoRows)
+
+	// Test
+	listReviewResult, err := repoMock.GetListReviewAndRatingWithPagination(params)
+	assert.Equal(t, listReviewExpected, listReviewResult)
+	assert.NotNil(t, listReviewResult)
+	assert.NoError(t, err)
+}
+
+func TestRepo_GetListReviewWithPaginationError(t *testing.T) {
+	// Mock DB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	repoMock := NewRepo(sqlxDB)
+
+	t.Run("Internal Server Error When Get Review and Rating", func(t *testing.T) {
+		params := ListReviewRequest{
+			Limit:   10,
+			Page:    1,
+			PlaceID: 1,
+			Latest:  true,
+			Rating:  false,
+		}
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT r.id, u.name, r.content, r.rating, r.created_at
+			FROM reviews r, users u
+			WHERE r.place_id = $1 AND u.id = r.user_id
+			ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`)).
+			WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+			WillReturnError(sql.ErrTxDone)
+
+		// Test
+		listReviewResult, err := repoMock.GetListReviewAndRatingWithPagination(params)
+		assert.Nil(t, listReviewResult)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+
+	t.Run("Internal Server Error When Get Review and Rating", func(t *testing.T) {
+		params := ListReviewRequest{
+			Limit:   10,
+			Page:    1,
+			PlaceID: 1,
+			Latest:  true,
+			Rating:  false,
+		}
+
+		rows := mock.
+			NewRows([]string{"id", "name", "content", "rating", "created_at"}).
+			AddRow(1, "test name", "test content", 1, "test created_at")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT r.id, u.name, r.content, r.rating, r.created_at
+			FROM reviews r, users u
+			WHERE r.place_id = $1 AND u.id = r.user_id
+			ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`)).
+			WithArgs(params.PlaceID, params.Limit, (params.Page-1)*params.Limit).
+			WillReturnRows(rows)
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(r.id) FROM reviews r, users u WHERE r.place_id = $1 AND u.id = r.user_id")).
+			WillReturnError(sql.ErrNoRows)
+
+		// Test
+		listReviewResult, err := repoMock.GetListReviewAndRatingWithPagination(params)
+		assert.Nil(t, listReviewResult)
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	})
+}

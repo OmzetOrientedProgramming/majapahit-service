@@ -24,6 +24,12 @@ func (m *MockRepository) GetAverageRatingAndReviews(placeID int) (*AverageRating
 	return &ret, args.Error(1)
 }
 
+func (m *MockRepository) GetListReviewAndRatingWithPagination(params ListReviewRequest) (*ListReview, error) {
+	args := m.Called(params)
+	ret := args.Get(0).(ListReview)
+	return &ret, args.Error(1)
+}
+
 func TestService_GetDetailSuccess(t *testing.T) {
 	placeID := 1
 	placeDetail := Detail{
@@ -371,4 +377,201 @@ func TestService_GetPlaceListWithPaginationFailedURLIsEmpty(t *testing.T) {
 
 	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	assert.Nil(t, placeListResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationSuccess(t *testing.T) {
+	// Define input and output
+	listReview := ListReview{
+		Reviews: []Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+		Path:    "/api/testing",
+	}
+
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Expectation
+	mockRepo.On("GetListReviewAndRatingWithPagination", params).Return(listReview, nil)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &listReview, listReviewResult)
+	assert.NotNil(t, listReviewResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationSuccessWithDefaultParam(t *testing.T) {
+	// Define input and output
+	listReview := ListReview{
+		Reviews: []Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 10,
+	}
+
+	params := ListReviewRequest{
+		Limit:   0,
+		Page:    0,
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+		Path:    "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	paramsDefault := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+		Path:    "/api/testing",
+	}
+
+	// Expectation
+	mockRepo.On("GetListReviewAndRatingWithPagination", paramsDefault).Return(listReview, nil)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &listReview, listReviewResult)
+	assert.NotNil(t, listReviewResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedLimitExceedMaxLimit(t *testing.T) {
+	// Define input
+	params := ListReviewRequest{
+		Limit:   101,
+		Page:    1,
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+		Path:    "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedURLEmpty(t *testing.T) {
+	// Define input
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+		Path:    "",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedPlaceIDNegative(t *testing.T) {
+	// Define input
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: -1,
+		Latest:  true,
+		Rating:  true,
+		Path:    "/api/testing",
+	}
+
+	// Init mock repo and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedCalledRepo(t *testing.T) {
+	// Define input and output
+	var listReview ListReview
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		PlaceID: 1,
+		Latest:  true,
+		Rating:  true,
+		Path:    "/api/testing",
+	}
+
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockService := NewService(mockRepo)
+
+	// Expectation
+	mockRepo.On("GetListReviewAndRatingWithPagination", params).Return(listReview, ErrInternalServerError)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
 }

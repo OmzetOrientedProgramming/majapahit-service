@@ -15,6 +15,7 @@ type Repo interface {
 	GetPlaceRatingAndReviewCountByPlaceID(int) (*PlacesRatingAndReviewCount, error)
 	GetDetail(int) (*Detail, error)
 	GetAverageRatingAndReviews(int) (*AverageRatingAndReviews, error)
+	GetListReviewAndRatingWithPagination(params ListReviewRequest) (*ListReview, error)
 }
 
 type repo struct {
@@ -118,4 +119,41 @@ func (r repo) GetPlaceRatingAndReviewCountByPlaceID(placeID int) (*PlacesRatingA
 	}
 
 	return &result, nil
+}
+
+func (r repo) GetListReviewAndRatingWithPagination(params ListReviewRequest) (*ListReview, error) {
+	var listReview ListReview
+	mainQuery := `
+	SELECT r.id, u.name, r.content, r.rating, r.created_at
+	FROM reviews r, users u
+	WHERE r.place_id = $1 AND u.id = r.user_id `
+	branchQuery := ``
+
+	if params.Latest && params.Rating {
+		branchQuery = `ORDER BY r.created_at DESC, r.rating DESC`
+	} else if params.Latest && !params.Rating {
+		branchQuery = `ORDER BY r.created_at DESC`
+	} else if !params.Latest && params.Rating {
+		branchQuery = `ORDER BY r.rating DESC`
+	}
+
+	branchQuery += ` LIMIT $2 OFFSET $3`
+
+	err := r.db.Select(&listReview.Reviews, mainQuery+branchQuery, params.PlaceID, params.Limit, (params.Page-1)*params.Limit)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			listReview.Reviews = make([]Review, 0)
+			listReview.TotalCount = 0
+			return &listReview, nil
+		}
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	mainQuery = `SELECT COUNT(r.id) FROM reviews r, users u WHERE r.place_id = $1 AND u.id = r.user_id`
+	err = r.db.Get(&listReview.TotalCount, mainQuery, params.PlaceID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return &listReview, nil
 }

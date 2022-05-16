@@ -65,6 +65,7 @@ func (r *Routes) Init() {
 			catalogRoutes.GET("/:itemID", r.itemHandler.GetItemByID)
 
 			placeRoutes.GET("/:placeID/time-slot", r.bookingHandler.GetTimeSlots, r.authMiddleware.AuthMiddleware())
+			placeRoutes.GET("/:placeID/review", r.placeHandler.GetListReviewAndRatingWithPagination)
 		}
 
 		// Business Admin Module
