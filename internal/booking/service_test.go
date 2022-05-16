@@ -3282,10 +3282,10 @@ func TestService_GetTimeSlots(t *testing.T) {
 
 		date := time.Now()
 		dateSlice := []time.Time{date}
-		afterDateNowStart, _ := time.Parse(util.TimeLayout, date.Add(2*time.Hour).Format(util.TimeLayout))
-		afterDateNowEnd, _ := time.Parse(util.TimeLayout, date.Add(3*time.Hour).Format(util.TimeLayout))
-		beforeDateNowStart, _ := time.Parse(util.TimeLayout, date.Add(-2*time.Hour).Format(util.TimeLayout))
-		beforeDateNowEnd, _ := time.Parse(util.TimeLayout, date.Add(-3*time.Hour).Format(util.TimeLayout))
+		afterDateNowStart, _ := time.Parse(util.TimeLayout, date.Add(2*time.Minute).Format(util.TimeLayout))
+		afterDateNowEnd, _ := time.Parse(util.TimeLayout, date.Add(3*time.Minute).Format(util.TimeLayout))
+		beforeDateNowStart, _ := time.Parse(util.TimeLayout, date.Add(-2*time.Minute).Format(util.TimeLayout))
+		beforeDateNowEnd, _ := time.Parse(util.TimeLayout, date.Add(-3*time.Minute).Format(util.TimeLayout))
 
 		timeSlots := []TimeSlot{
 			{

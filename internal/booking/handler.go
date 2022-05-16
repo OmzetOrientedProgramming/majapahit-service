@@ -306,7 +306,7 @@ func (h Handler) GetTimeSlots(c echo.Context) error {
 		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
 	}
 
-	var formattedResp []TimeSlotAPIResponse
+	formattedResp := make([]TimeSlotAPIResponse, 0)
 	for _, i := range *resp {
 		formattedResp = append(formattedResp, TimeSlotAPIResponse{
 			ID:        i.ID,
