@@ -190,3 +190,30 @@ func (h *Handler) GetTransactionHistoryDetail(c echo.Context) error {
 		Data:    transactionHistoryDetail,
 	})
 }
+
+// GetPlaceDetail will retrieve information related to a place
+func (h *Handler) GetPlaceDetail(c echo.Context) error {
+	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
+
+	userID := user.ID
+
+	placeDetail, err := h.service.GetPlaceDetail(userID)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data:    placeDetail,
+	})
+}

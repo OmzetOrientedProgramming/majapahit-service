@@ -90,6 +90,8 @@ func (r *Routes) Init() {
 			transactionHistoryRoutes := businessAdminRoutes.Group("/transaction-history")
 			transactionHistoryRoutes.GET("", r.businessadminHandler.GetListTransactionsHistoryWithPagination)
 			transactionHistoryRoutes.GET("/:bookingID", r.businessadminHandler.GetTransactionHistoryDetail)
+
+			businessProfileRoutes.GET("/detail", r.businessadminHandler.GetPlaceDetail)
 		}
 
 		// Auth module

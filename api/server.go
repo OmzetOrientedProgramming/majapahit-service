@@ -132,7 +132,7 @@ func (s Server) Init() {
 
 	// BusinessAdmin module
 	businessadminRepo = businessadmin.NewRepo(db)
-	businessadminService = businessadmin.NewService(businessadminRepo, xenditService)
+	businessadminService = businessadmin.NewService(businessadminRepo, xenditService, placeService)
 	businessadminHandler = businessadmin.NewHandler(businessadminService)
 
 	// Customer Module
