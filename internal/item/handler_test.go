@@ -48,6 +48,11 @@ func (m *MockService) DeleteItemAdminByID(itemID int) error {
 	return args.Error(0)
 }
 
+func (m *MockService) CreateItem(userID int, item Item) error {
+	args := m.Called(userID, item)
+	return args.Error(0)
+}
+
 func TestHandler_GetListItemWithPaginationSuccess(t *testing.T) {
 	// Setup echo
 	e := echo.New()
@@ -1359,6 +1364,332 @@ func TestHandler_UpdateItem(t *testing.T) {
 		util.ErrorHandler(h.UpdateItem(ctx), ctx)
 		if assert.Error(t, h.UpdateItem(ctx)) {
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
+}
+
+func TestHandler_CreateItem(t *testing.T) {
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	t.Run("success", func(t *testing.T) {
+		// Setup echo
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		expectedItem := Item{
+			ID:          0,
+			Name:        "Nama produk",
+			Image:       "Gambar produk",
+			Description: "Deskripsi produk",
+			Price:       10000,
+		}
+
+		payload, _ := json.Marshal(UpdateItemRequest{
+			Name:        "Nama produk",
+			Image:       "Gambar produk",
+			Description: "Deskripsi produk",
+			Price:       10000,
+		})
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/business-admin/business-profile/list-items", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		expectedResponse := util.APIResponse{
+			Status:  http.StatusOK,
+			Message: "Berhasil",
+		}
+		expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+		mockService.On("CreateItem", userModel.ID, expectedItem).Return(nil)
+
+		if assert.NoError(t, h.CreateItem(ctx)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+		}
+	})
+
+	t.Run("failed to bind request body", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		payload, _ := json.Marshal(map[string]int{
+			"name": 111,
+		})
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/business-admin/business-profile/list-items", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		h := NewHandler(nil)
+
+		util.ErrorHandler(h.CreateItem(ctx), ctx)
+		if assert.Error(t, h.CreateItem(ctx)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("internal error", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/business-admin/business-profile/list-items", nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateItem", userModel.ID, Item{}).Return(ErrInternalServerError)
+
+		util.ErrorHandler(h.CreateItem(ctx), ctx)
+		if assert.Error(t, h.CreateItem(ctx)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
+
+	t.Run("bad request from service", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "password",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/business-admin/business-profile/list-items", nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		mockService.On("CreateItem", userModel.ID, Item{}).Return(ErrInputValidationError)
+
+		util.ErrorHandler(h.CreateItem(ctx), ctx)
+		if assert.Error(t, h.CreateItem(ctx)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("forbidden", func(t *testing.T) {
+		e := echo.New()
+
+		userData := firebaseauth.UserDataFromToken{
+			Kind: "",
+			Users: []firebaseauth.User{
+				{
+					LocalID: "1",
+					ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+						{
+							ProviderID:  "phone",
+							RawID:       "",
+							PhoneNumber: "",
+							FederatedID: "",
+							Email:       "",
+						},
+					},
+					LastLoginAt:       "",
+					CreatedAt:         "",
+					PhoneNumber:       "",
+					LastRefreshAt:     time.Time{},
+					Email:             "",
+					EmailVerified:     false,
+					PasswordHash:      "",
+					PasswordUpdatedAt: 0,
+					ValidSince:        "",
+					Disabled:          false,
+				},
+			},
+		}
+
+		userModel := user.Model{
+			ID:              1,
+			PhoneNumber:     "",
+			Name:            "",
+			Status:          0,
+			FirebaseLocalID: "",
+			Email:           "",
+			CreatedAt:       time.Time{},
+			UpdatedAt:       time.Time{},
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/business-admin/business-profile/list-items", nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.Set("userFromDatabase", &userModel)
+		ctx.Set("userFromFirebase", &userData)
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		util.ErrorHandler(h.CreateItem(ctx), ctx)
+		if assert.Error(t, h.CreateItem(ctx)) {
+			assert.Equal(t, http.StatusForbidden, rec.Code)
 		}
 	})
 }

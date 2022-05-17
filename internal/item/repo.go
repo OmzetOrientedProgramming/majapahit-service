@@ -27,6 +27,7 @@ type Repo interface {
 	GetListItemAdminWithPagination(params ListItemRequest) (*ListItem, error)
 	DeleteItemAdminByID(itemID int) error
 	UpdateItem(ID int, item Item) error
+	CreateItem(userID int, item Item) error
 }
 
 func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, error) {
@@ -175,4 +176,21 @@ func (r repo) UpdateItem(ID int, item Item) error {
 	}
 	return nil
 
+}
+
+func (r repo) CreateItem(userID int, item Item) error {
+	query := `
+		INSERT INTO items (name, image, description, price, place_id)
+		SELECT $1, $2, $3, $4, places.id
+		FROM places
+		WHERE places.user_id = $5
+	`
+
+	_, err := r.db.Exec(query, item.Name, item.Image, item.Description, item.Price, userID)
+	if err != nil {
+		logrus.Errorf("error executing query: %v", err)
+		return fmt.Errorf("failed to execute query: %w", ErrInternalServerError)
+	}
+
+	return nil
 }
