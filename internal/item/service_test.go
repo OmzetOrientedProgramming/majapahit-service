@@ -1,12 +1,12 @@
 package item
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/cloudinary"
 )
 
 type MockRepository struct {
@@ -41,16 +41,20 @@ func (m *MockRepository) UpdateItem(ID int, item Item) error {
 	return args.Error(0)
 }
 
+func (m *MockRepository) CreateItem(userID int, item Item) error {
+	args := m.Called(userID, item)
+	return args.Error(0)
+}
+
 type MockCloudinary struct {
+	mock.Mock
 	isError     bool
 	imageString string
 }
 
-func (mc MockCloudinary) UploadFile(fileContent, folderName, fileName string) (string, error) {
-	if mc.isError {
-		return mc.imageString, ErrInternalServerError
-	}
-	return mc.imageString, nil
+func (mc *MockCloudinary) UploadFile(fileContent, folderName, fileName string) (string, error) {
+	args := mc.Called(fileContent, folderName, fileName)
+	return args.String(0), args.Error(1)
 }
 
 func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
@@ -352,9 +356,9 @@ func TestService_UpdateItem(t *testing.T) {
 	imageString := "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWBAMAAADOL2zRAAAAG1BMVEXMzMyWlpaqqqq3t7fFxcW+vr6xsbGjo6OcnJyLKnDGAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABAElEQVRoge3SMW+DMBiE4YsxJqMJtHOTITPeOsLQnaodGImEUMZEkZhRUqn92f0MaTubtfeMh/QGHANEREREREREREREtIJJ0xbH299kp8l8FaGtLdTQ19HjofxZlJ0m1+eBKZcikd9PWtXC5DoDotRO04B9YOvFIXmXLy2jEbiqE6Df7DTleA5socLqvEFVxtJyrpZFWz/pHM2CVte0lS8g2eDe6prOyqPglhzROL+Xye4tmT4WvRcQ2/m81p+/rdguOi8Hc5L/8Qk4vhZzy08DduGt9eVQyP2qoTM1zi0/uf4hvBWf5c77e69Gf798y08L7j0RERERERERERH9P99ZpSVRivB/rgAAAABJRU5ErkJggg=="
 
 	tests := map[string]struct {
-		expectedItem Item
-		wantError    error
-		cloudinary   cloudinary.Repo
+		expectedItem          Item
+		wantError             error
+		cloudinaryExpectError bool
 	}{
 		"success": {
 			expectedItem: Item{
@@ -390,10 +394,8 @@ func TestService_UpdateItem(t *testing.T) {
 				Description: "Deskripsi item",
 				Price:       1000,
 			},
-			wantError: ErrInternalServerError,
-			cloudinary: MockCloudinary{
-				isError: true,
-			},
+			wantError:             ErrInternalServerError,
+			cloudinaryExpectError: true,
 		},
 		"internal error from repository": {
 			expectedItem: Item{
@@ -409,14 +411,100 @@ func TestService_UpdateItem(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			mockRepo := new(MockRepository)
-			service := NewService(mockRepo, MockCloudinary{
-				imageString: imageString,
-			})
+			mockCloudinary := new(MockCloudinary)
+			service := NewService(mockRepo, mockCloudinary)
 			expectedID := 1
 
 			mockRepo.On("UpdateItem", expectedID, test.expectedItem).Return(test.wantError)
 
+			if test.cloudinaryExpectError {
+				mockCloudinary.On("UploadFile", test.expectedItem.Image, "Item Image", fmt.Sprintf("%d-%s", test.expectedItem.ID, test.expectedItem.Name)).Return("", test.wantError)
+			} else {
+				mockCloudinary.On("UploadFile", test.expectedItem.Image, "Item Image", fmt.Sprintf("%d-%s", test.expectedItem.ID, test.expectedItem.Name)).Return(imageString, nil)
+			}
+
 			err := service.UpdateItem(expectedID, test.expectedItem)
+			if test.wantError != nil {
+				assert.True(t, errors.Is(err, test.wantError))
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestService_CreateItem(t *testing.T) {
+	imageString := "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWBAMAAADOL2zRAAAAG1BMVEXMzMyWlpaqqqq3t7fFxcW+vr6xsbGjo6OcnJyLKnDGAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABAElEQVRoge3SMW+DMBiE4YsxJqMJtHOTITPeOsLQnaodGImEUMZEkZhRUqn92f0MaTubtfeMh/QGHANEREREREREREREtIJJ0xbH299kp8l8FaGtLdTQ19HjofxZlJ0m1+eBKZcikd9PWtXC5DoDotRO04B9YOvFIXmXLy2jEbiqE6Df7DTleA5socLqvEFVxtJyrpZFWz/pHM2CVte0lS8g2eDe6prOyqPglhzROL+Xye4tmT4WvRcQ2/m81p+/rdguOi8Hc5L/8Qk4vhZzy08DduGt9eVQyP2qoTM1zi0/uf4hvBWf5c77e69Gf798y08L7j0RERERERERERH9P99ZpSVRivB/rgAAAABJRU5ErkJggg=="
+
+	tests := map[string]struct {
+		expectedItem          Item
+		wantError             error
+		cloudinaryExpectError bool
+	}{
+		"success": {
+			expectedItem: Item{
+				Name:        "Nama item",
+				Image:       imageString,
+				Description: "Deskripsi item",
+				Price:       1000,
+			},
+			wantError: nil,
+		},
+		"image string is not data uri": {
+			expectedItem: Item{
+				Image: "blablablas:image/jpeg;base64,==",
+			},
+			wantError: ErrInputValidationError,
+		},
+		"image string is not image": {
+			expectedItem: Item{
+				Image: "data:not-image/jpeg;base64,==",
+			},
+			wantError: ErrInputValidationError,
+		},
+		"image string is not base64 encoded": {
+			expectedItem: Item{
+				Image: "data:image/jpeg;base64,==",
+			},
+			wantError: ErrInputValidationError,
+		},
+		"failed to upload image to cloudinary": {
+			expectedItem: Item{
+				Name:        "Nama item",
+				Image:       "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWBAMAAADOL2zRAAAAG1BMVEXMzMyWlpaqqqq3t7fFxcW+vr6xsbGjo6OcnJyLKnDGAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABAElEQVRoge3SMW+DMBiE4YsxJqMJtHOTITPeOsLQnaodGImEUMZEkZhRUqn92f0MaTubtfeMh/QGHANEREREREREREREtIJJ0xbH299kp8l8FaGtLdTQ19HjofxZlJ0m1+eBKZcikd9PWtXC5DoDotRO04B9YOvFIXmXLy2jEbiqE6Df7DTleA5socLqvEFVxtJyrpZFWz/pHM2CVte0lS8g2eDe6prOyqPglhzROL+Xye4tmT4WvRcQ2/m81p+/rdguOi8Hc5L/8Qk4vhZzy08DduGt9eVQyP2qoTM1zi0/uf4hvBWf5c77e69Gf798y08L7j0RERERERERERH9P99ZpSVRivB/rgAAAABJRU5ErkJggg==",
+				Description: "Deskripsi item",
+				Price:       1000,
+			},
+			wantError:             ErrInternalServerError,
+			cloudinaryExpectError: true,
+		},
+		"internal error from repository": {
+			expectedItem: Item{
+				Name:        "Nama item",
+				Image:       imageString,
+				Description: "Deskripsi item",
+				Price:       1000,
+			},
+			wantError: ErrInternalServerError,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockRepo := new(MockRepository)
+			mockCloudinary := new(MockCloudinary)
+			service := NewService(mockRepo, mockCloudinary)
+			userID := 1
+
+			mockRepo.On("CreateItem", userID, test.expectedItem).Return(test.wantError)
+
+			if test.cloudinaryExpectError {
+				mockCloudinary.On("UploadFile", test.expectedItem.Image, "Item Image", fmt.Sprintf("%s", test.expectedItem.Name)).Return("", test.wantError)
+			} else {
+				mockCloudinary.On("UploadFile", test.expectedItem.Image, "Item Image", fmt.Sprintf("%s", test.expectedItem.Name)).Return(imageString, nil)
+			}
+
+			err := service.CreateItem(userID, test.expectedItem)
 			if test.wantError != nil {
 				assert.True(t, errors.Is(err, test.wantError))
 			} else {

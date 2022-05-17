@@ -84,6 +84,7 @@ func (r *Routes) Init() {
 			businessProfileRoutes := businessAdminRoutes.Group("/business-profile")
 			listItemsRoutes := businessProfileRoutes.Group("/list-items")
 			listItemsRoutes.GET("", r.itemHandler.GetListItemAdminWithPagination)
+			listItemsRoutes.POST("", r.itemHandler.CreateItem)
 			listItemsRoutes.DELETE("/:itemID", r.itemHandler.DeleteItemAdminByID)
 			listItemsRoutes.PUT("/:itemID", r.itemHandler.UpdateItem)
 

@@ -216,3 +216,38 @@ func (h *Handler) UpdateItem(c echo.Context) error {
 		Message: "Berhasil",
 	})
 }
+
+// CreateItem is a handler for creating item API request by business admin
+func (h *Handler) CreateItem(c echo.Context) error {
+	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
+
+	var itemRequest Item
+	if err := c.Bind(&itemRequest); err != nil {
+		logrus.Errorf("failed to parse request: %v", err)
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, fmt.Errorf("Request tidak valid"))
+	}
+
+	if err := h.service.CreateItem(user.ID, Item{
+		Name:        itemRequest.Name,
+		Image:       itemRequest.Image,
+		Description: itemRequest.Description,
+		Price:       itemRequest.Price,
+	}); err != nil {
+		switch {
+		case errors.Is(err, ErrInputValidationError):
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, fmt.Errorf("Request tidak valid"))
+		default:
+			return util.ErrorWrapWithContext(c, http.StatusInternalServerError, fmt.Errorf("Terdapat kesalahan pada server"))
+		}
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  200,
+		Message: "Berhasil",
+	})
+}

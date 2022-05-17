@@ -786,3 +786,52 @@ func TestRepo_UpdateItem(t *testing.T) {
 		})
 	}
 }
+
+func TestRepo_CreateItem(t *testing.T) {
+	tests := map[string]struct {
+		wantError error
+	}{
+		"success": {
+			wantError: nil,
+		},
+		"internal error": {
+			wantError: ErrInternalServerError,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
+			}
+			sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+			repo := NewRepo(sqlxDB)
+
+			userID := 1
+			item := Item{}
+			query := `
+				INSERT INTO items (name, image, description, price, place_id)
+				SELECT $1, $2, $3, $4, places.id
+				FROM places
+				WHERE places.user_id = $5
+			`
+
+			expectedExec := mock.
+				ExpectExec(regexp.QuoteMeta(query)).
+				WithArgs(item.Name, item.Image, item.Description, item.Price, userID)
+			if test.wantError != nil {
+				expectedExec.WillReturnError(test.wantError)
+			} else {
+				expectedExec.WillReturnResult(driver.ResultNoRows)
+			}
+
+			err = repo.CreateItem(userID, item)
+			if test.wantError != nil {
+				assert.True(t, errors.Is(err, test.wantError))
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
