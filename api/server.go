@@ -85,6 +85,8 @@ func (s Server) Init() {
 	// Init DB
 	db := postgres.Init()
 
+	cloudinaryRepo = cloudinary.NewRepo(os.Getenv("CLOUDINARY_CLOUD_NAME"), os.Getenv("CLOUDINARY_API_KEY"), os.Getenv("CLOUDINARY_API_SECRET"))
+
 	// Init internal module
 	// Check up module
 	checkUpRepo = checkup.NewRepo(db)
@@ -93,7 +95,7 @@ func (s Server) Init() {
 
 	// Catalog Module
 	itemRepo = item.NewRepo(db)
-	itemService = item.NewService(itemRepo)
+	itemService = item.NewService(itemRepo, cloudinaryRepo)
 	itemHandler = item.NewHandler(itemService)
 
 	// Place module
@@ -139,7 +141,6 @@ func (s Server) Init() {
 	customerHandler = customer.NewHandler(customerService)
 
 	// Upload module
-	cloudinaryRepo = cloudinary.NewRepo(os.Getenv("CLOUDINARY_CLOUD_NAME"), os.Getenv("CLOUDINARY_API_KEY"), os.Getenv("CLOUDINARY_API_SECRET"))
 	uploadService = upload.NewService(cloudinaryRepo)
 	uploadHandler = upload.NewHandler(uploadService)
 

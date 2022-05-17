@@ -1,11 +1,13 @@
 package item
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
@@ -171,5 +173,47 @@ func (h *Handler) DeleteItemAdminByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, util.APIResponse{
 		Status:  200,
 		Message: "success",
+	})
+}
+
+func (h *Handler) UpdateItem(c echo.Context) error {
+	var errorList []string
+	itemIDString := c.Param("itemID")
+	itemID, err := strconv.Atoi(itemIDString)
+	if err != nil {
+		errorList = append(errorList, "ID harus berupa angka")
+	}
+
+	if len(errorList) != 0 {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, fmt.Errorf("Request tidak valid"), errorList...)
+	}
+
+	var itemRequest UpdateItemRequest
+	if err := c.Bind(&itemRequest); err != nil {
+		logrus.Errorf("failed to parse request: %v", err)
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, fmt.Errorf("Request tidak valid"))
+	}
+
+	if err := h.service.UpdateItem(itemID, Item{
+		Name:        itemRequest.Name,
+		Image:       itemRequest.Image,
+		Description: itemRequest.Description,
+		Price:       itemRequest.Price,
+	}); err != nil {
+		switch {
+		case errors.Is(err, ErrInternalServerError):
+			return util.ErrorWrapWithContext(c, http.StatusInternalServerError, fmt.Errorf("Terdapat kesalahan pada server"))
+		case errors.Is(err, ErrNotFound):
+			return util.ErrorWrapWithContext(c, http.StatusNotFound, fmt.Errorf("Item tidak ditemukan"))
+		case errors.Is(err, ErrInputValidationError):
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, fmt.Errorf("Request tidak valid"))
+		default:
+			return util.ErrorWrapWithContext(c, http.StatusInternalServerError, fmt.Errorf("Terdapat kesalahan pada server"))
+		}
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  200,
+		Message: "Berhasil",
 	})
 }

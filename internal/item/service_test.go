@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/cloudinary"
 )
 
 type MockRepository struct {
@@ -35,6 +36,23 @@ func (m *MockRepository) DeleteItemAdminByID(itemID int) error {
 	return args.Error(0)
 }
 
+func (m *MockRepository) UpdateItem(ID int, item Item) error {
+	args := m.Called(ID, item)
+	return args.Error(0)
+}
+
+type MockCloudinary struct {
+	isError     bool
+	imageString string
+}
+
+func (mc MockCloudinary) UploadFile(fileContent, folderName, fileName string) (string, error) {
+	if mc.isError {
+		return mc.imageString, ErrInternalServerError
+	}
+	return mc.imageString, nil
+}
+
 func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
 	// Define input and output
 	listItemExpected := ListItem{
@@ -59,7 +77,7 @@ func TestService_GetListItemByIDWithPaginationSuccess(t *testing.T) {
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	t.Run("success with place id", func(t *testing.T) {
 		params := ListItemRequest{
@@ -135,7 +153,7 @@ func TestService_GetListItemByIDWithPaginationSuccessWithParamsName(t *testing.T
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	// Expectation
 	mockRepo.On("GetListItemWithPagination", newParams).Return(listItemExpected, nil)
@@ -180,7 +198,7 @@ func TestService_GetListItemByIDWithPaginationSuccessWithDefaultParam(t *testing
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	paramsDefault := ListItemRequest{
 		Limit:   10,
@@ -210,7 +228,7 @@ func TestService_GetListItemWithPaginationFailedLimitExceedMaxLimit(t *testing.T
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	// Test
 	listItemResult, _, err := mockService.GetListItemWithPagination(params)
@@ -231,7 +249,7 @@ func TestService_GetListItemByIDWithPaginationError(t *testing.T) {
 
 	// Mock DB
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetListItemWithPagination", params).Return(listItem, ErrInternalServerError)
 
@@ -253,7 +271,7 @@ func TestService_GetListItemWithPaginationFailedURLIsEmpty(t *testing.T) {
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	// Test
 	listItemResult, _, err := mockService.GetListItemWithPagination(params)
@@ -272,7 +290,7 @@ func TestService_GetItemByIDSuccess(t *testing.T) {
 	}
 	// Mock DB
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetItemByID", 10, 1).Return(itemExpected, nil)
 
@@ -289,7 +307,7 @@ func TestService_GetItemByIDError(t *testing.T) {
 	item := Item{}
 	// Mock DB
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo)
+	mockService := NewService(mockRepo, nil)
 
 	mockRepo.On("GetItemByID", 10, 1).Return(item, ErrInternalServerError)
 
@@ -304,7 +322,7 @@ func TestService_GetItemByIDError(t *testing.T) {
 func TestService_DeleteItemAdminByID(t *testing.T) {
 	t.Run("success status completed", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo)
+		service := NewService(mockRepo, nil)
 
 		// input
 		itemID := 1
@@ -317,7 +335,7 @@ func TestService_DeleteItemAdminByID(t *testing.T) {
 
 	t.Run("failed status", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo)
+		service := NewService(mockRepo, nil)
 
 		// input
 		itemID := 1
@@ -328,4 +346,82 @@ func TestService_DeleteItemAdminByID(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	})
+}
+
+func TestService_UpdateItem(t *testing.T) {
+	imageString := "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWBAMAAADOL2zRAAAAG1BMVEXMzMyWlpaqqqq3t7fFxcW+vr6xsbGjo6OcnJyLKnDGAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABAElEQVRoge3SMW+DMBiE4YsxJqMJtHOTITPeOsLQnaodGImEUMZEkZhRUqn92f0MaTubtfeMh/QGHANEREREREREREREtIJJ0xbH299kp8l8FaGtLdTQ19HjofxZlJ0m1+eBKZcikd9PWtXC5DoDotRO04B9YOvFIXmXLy2jEbiqE6Df7DTleA5socLqvEFVxtJyrpZFWz/pHM2CVte0lS8g2eDe6prOyqPglhzROL+Xye4tmT4WvRcQ2/m81p+/rdguOi8Hc5L/8Qk4vhZzy08DduGt9eVQyP2qoTM1zi0/uf4hvBWf5c77e69Gf798y08L7j0RERERERERERH9P99ZpSVRivB/rgAAAABJRU5ErkJggg=="
+
+	tests := map[string]struct {
+		expectedItem Item
+		wantError    error
+		cloudinary   cloudinary.Repo
+	}{
+		"success": {
+			expectedItem: Item{
+				Name:        "Nama item",
+				Image:       imageString,
+				Description: "Deskripsi item",
+				Price:       1000,
+			},
+			wantError: nil,
+		},
+		"image string is not data uri": {
+			expectedItem: Item{
+				Image: "blablablas:image/jpeg;base64,==",
+			},
+			wantError: ErrInputValidationError,
+		},
+		"image string is not image": {
+			expectedItem: Item{
+				Image: "data:not-image/jpeg;base64,==",
+			},
+			wantError: ErrInputValidationError,
+		},
+		"image string is not base64 encoded": {
+			expectedItem: Item{
+				Image: "data:image/jpeg;base64,==",
+			},
+			wantError: ErrInputValidationError,
+		},
+		"failed to upload image to cloudinary": {
+			expectedItem: Item{
+				Name:        "Nama item",
+				Image:       "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWBAMAAADOL2zRAAAAG1BMVEXMzMyWlpaqqqq3t7fFxcW+vr6xsbGjo6OcnJyLKnDGAAAACXBIWXMAAA7EAAAOxAGVKw4bAAABAElEQVRoge3SMW+DMBiE4YsxJqMJtHOTITPeOsLQnaodGImEUMZEkZhRUqn92f0MaTubtfeMh/QGHANEREREREREREREtIJJ0xbH299kp8l8FaGtLdTQ19HjofxZlJ0m1+eBKZcikd9PWtXC5DoDotRO04B9YOvFIXmXLy2jEbiqE6Df7DTleA5socLqvEFVxtJyrpZFWz/pHM2CVte0lS8g2eDe6prOyqPglhzROL+Xye4tmT4WvRcQ2/m81p+/rdguOi8Hc5L/8Qk4vhZzy08DduGt9eVQyP2qoTM1zi0/uf4hvBWf5c77e69Gf798y08L7j0RERERERERERH9P99ZpSVRivB/rgAAAABJRU5ErkJggg==",
+				Description: "Deskripsi item",
+				Price:       1000,
+			},
+			wantError: ErrInternalServerError,
+			cloudinary: MockCloudinary{
+				isError: true,
+			},
+		},
+		"internal error from repository": {
+			expectedItem: Item{
+				Name:        "Nama item",
+				Image:       imageString,
+				Description: "Deskripsi item",
+				Price:       1000,
+			},
+			wantError: ErrInternalServerError,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockRepo := new(MockRepository)
+			service := NewService(mockRepo, MockCloudinary{
+				imageString: imageString,
+			})
+			expectedID := 1
+
+			mockRepo.On("UpdateItem", expectedID, test.expectedItem).Return(test.wantError)
+
+			err := service.UpdateItem(expectedID, test.expectedItem)
+			if test.wantError != nil {
+				assert.True(t, errors.Is(err, test.wantError))
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // NewRepo used to initialize repo
@@ -25,6 +26,7 @@ type Repo interface {
 	GetItemByID(placeID int, itemID int) (*Item, error)
 	GetListItemAdminWithPagination(params ListItemRequest) (*ListItem, error)
 	DeleteItemAdminByID(itemID int) error
+	UpdateItem(ID int, item Item) error
 }
 
 func (r repo) GetListItemWithPagination(params ListItemRequest) (*ListItem, error) {
@@ -154,4 +156,23 @@ func (r repo) DeleteItemAdminByID(itemID int) error {
 	}
 
 	return nil
+}
+
+func (r repo) UpdateItem(ID int, item Item) error {
+	query := `
+		UPDATE items
+		SET name=$1, image=$2, description=$3, price=$4
+		WHERE id=$5
+	`
+
+	_, err := r.db.Exec(query, item.Name, item.Image, item.Description, item.Price, ID)
+	if err != nil {
+		logrus.Errorf("error executing query: %v", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("item not found: %w", ErrNotFound)
+		}
+		return fmt.Errorf("failed to execute query: %w", ErrInternalServerError)
+	}
+	return nil
+
 }

@@ -1,16 +1,21 @@
 package item
 
 import (
+	"encoding/base64"
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/cloudinary"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 )
 
 // NewService for initialize service
-func NewService(repo Repo) Service {
+func NewService(repo Repo, cloudinary cloudinary.Repo) Service {
 	return &service{
-		repo: repo,
+		repo:       repo,
+		cloudinary: cloudinary,
 	}
 }
 
@@ -19,10 +24,12 @@ type Service interface {
 	GetListItemWithPagination(params ListItemRequest) (*ListItem, *util.Pagination, error)
 	GetItemByID(placeID int, itemID int) (*Item, error)
 	DeleteItemAdminByID(itemID int) error
+	UpdateItem(ID int, item Item) error
 }
 
 type service struct {
-	repo Repo
+	repo       Repo
+	cloudinary cloudinary.Repo
 }
 
 func (s service) GetListItemWithPagination(params ListItemRequest) (*ListItem, *util.Pagination, error) {
@@ -85,5 +92,35 @@ func (s service) DeleteItemAdminByID(itemID int) error {
 		return err
 	}
 
+	return nil
+}
+
+func (s service) UpdateItem(ID int, item Item) error {
+	if !strings.HasPrefix(item.Image, "data:") {
+		return fmt.Errorf("string is not a data URI: %w", ErrInputValidationError)
+	}
+	withoutData := strings.TrimPrefix(item.Image, "data:")
+
+	if !strings.HasPrefix(withoutData, "image/") {
+		return fmt.Errorf("string is not an image data URI: %w", ErrInputValidationError)
+	}
+
+	imageString := strings.Split(withoutData, ",")[1]
+
+	_, err := base64.StdEncoding.DecodeString(imageString)
+	if err != nil {
+		logrus.Errorf("image string is not base64: %v", err)
+		return fmt.Errorf("image string is not base64: %w", ErrInputValidationError)
+	}
+
+	imageURL, err := s.cloudinary.UploadFile(item.Image, "Item Image", fmt.Sprintf("%d-%s", item.ID, item.Name))
+	if err != nil {
+		return err
+	}
+
+	item.Image = imageURL
+	if err := s.repo.UpdateItem(ID, item); err != nil {
+		return err
+	}
 	return nil
 }
