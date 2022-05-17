@@ -100,3 +100,21 @@ type ItemDetail struct {
 	Qty   int     `json:"qty"`
 	Price float64 `json:"price"`
 }
+
+// PlaceDetail contain important information in Place
+type PlaceDetail struct {
+	ID                 int          `json:"id"`
+	Name               string       `json:"name"`
+	Image              string       `json:"image"`
+	Address            string       `json:"address"`
+	Description        string       `json:"description"`
+	OpenHour           string       `json:"open_hour" db:"open_hour"`
+	CloseHour          string       `json:"close_hour" db:"close_hour"`
+	BookingPrice       int          `json:"booking_price" db:"booking_price"`
+	MinSlot            int          `json:"min_slot" db:"min_slot_booking"`
+	MaxSlot            int          `json:"max_slot" db:"max_slot_booking"`
+	Capacity           int          `json:"capacity" db:"capacity"`
+	MinIntervalBooking int          `json:"min_interval_booking" db:"min_interval_booking"`
+	MaxIntervalBooking int          `json:"max_interval_booking" db:"max_interval_booking"`
+	AverageRating      float64      `json:"average_rating" db:"rating"`
+}

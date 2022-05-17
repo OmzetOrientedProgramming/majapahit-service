@@ -2,10 +2,12 @@ package businessadmin
 
 import (
 	"fmt"
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
 	"strconv"
 	"strings"
 	"time"
+
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
 
 	"github.com/pkg/errors"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
@@ -18,18 +20,21 @@ type Service interface {
 	CreateDisbursement(int, float64) (*CreateDisbursementResponse, error)
 	DisbursementCallbackFromXendit(params DisbursementCallback) error
 	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
+	GetPlaceDetail(userID int) (*PlaceDetail, error)
 }
 
 type service struct {
 	repo          Repo
 	xenditService xendit.Service
+	placeService 	place.Service
 }
 
 // NewService create new service
-func NewService(repo Repo, xenditService xendit.Service) Service {
+func NewService(repo Repo, xenditService xendit.Service, placeService place.Service) Service {
 	return &service{
 		repo:          repo,
 		xenditService: xenditService,
+		placeService: placeService,
 	}
 }
 
@@ -238,4 +243,44 @@ func (s *service) GetTransactionHistoryDetail(bookingID int) (*TransactionHistor
 	transactionHistoryDetail.Items = itemsWrapper.Items
 
 	return transactionHistoryDetail, nil
+}
+
+func (s *service) GetPlaceDetail(userID int) (*PlaceDetail, error) {
+	errorList := []string{}
+
+	if userID <= 0 {
+		errorList = append(errorList, "userID must be above 0")
+	}
+
+	if len(errorList) > 0 {
+		return nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ";"))
+	}
+
+	placeID, err := s.repo.GetPlaceIDByUserID(userID)
+	if err != nil {
+		return nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	placeDetail, err := s.placeService.GetDetail(placeID)
+	if err != nil {
+		return nil, err
+	}
+
+	var resPlaceDetail PlaceDetail
+	resPlaceDetail.ID = placeDetail.ID
+	resPlaceDetail.Name = placeDetail.Name
+	resPlaceDetail.Image = placeDetail.Image
+	resPlaceDetail.Address = placeDetail.Address
+	resPlaceDetail.Description = placeDetail.Description
+	resPlaceDetail.OpenHour = placeDetail.OpenHour
+	resPlaceDetail.CloseHour = placeDetail.CloseHour
+	resPlaceDetail.BookingPrice = placeDetail.BookingPrice
+	resPlaceDetail.MinSlot = placeDetail.MinSlot
+	resPlaceDetail.MaxSlot = placeDetail.MaxSlot
+	resPlaceDetail.Capacity = placeDetail.Capacity
+	resPlaceDetail.MinIntervalBooking = placeDetail.MinIntervalBooking
+	resPlaceDetail.MaxIntervalBooking = placeDetail.MaxIntervalBooking
+	resPlaceDetail.AverageRating = placeDetail.AverageRating
+
+	return &resPlaceDetail, nil
 }

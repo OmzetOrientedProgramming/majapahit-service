@@ -7,7 +7,9 @@ import (
 
 	"github.com/tkuchiki/faketime"
 	xendit2 "github.com/xendit/xendit-go"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -104,6 +106,29 @@ func (x *MockXenditService) GetDisbursement(ID string) (*xendit2.Disbursement, e
 	return args.Get(0).(*xendit2.Disbursement), args.Error(1)
 }
 
+type MockPlaceService struct {
+	mock.Mock
+}
+
+func (x *MockPlaceService) GetPlaceListWithPagination(params place.PlacesListRequest) (*place.PlacesList, *util.Pagination, error) {
+	args := x.Called(params)
+	placeList := args.Get(0).(*place.PlacesList)
+	pagination := args.Get(1).(util.Pagination)
+	return placeList, &pagination, args.Error(2)
+}
+
+func (x *MockPlaceService) GetDetail(placeID int) (*place.Detail, error) {
+	args := x.Called(placeID)
+	return args.Get(0).(*place.Detail), args.Error(1)
+}
+
+func (x *MockPlaceService) GetListReviewAndRatingWithPagination(params place.ListReviewRequest) (*place.ListReview, *util.Pagination, error) {
+	args := x.Called(params)
+	ret := args.Get(0).(*place.ListReview)
+	pagination := args.Get(1).(util.Pagination)
+	return ret, &pagination, args.Error(2)
+}
+
 func TestService_GetBalanceDetailSuccess(t *testing.T) {
 	userID := 1
 	placeID := 2
@@ -118,7 +143,7 @@ func TestService_GetBalanceDetailSuccess(t *testing.T) {
 	}
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
 	mockRepo.On("GetLatestDisbursement", placeID).Return(latestDisbursement, nil)
@@ -140,7 +165,7 @@ func TestService_GetBalanceDetailWithWrongInput(t *testing.T) {
 	userID := 0
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	balanceDetail, err := mockService.GetBalanceDetail(userID)
 
@@ -152,7 +177,7 @@ func TestService_GetBalanceDetailFailedCalledGetPlaceIDByUserID(t *testing.T) {
 	userID := 10
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(0, ErrInternalServerError)
 
@@ -169,7 +194,7 @@ func TestService_GetBalanceDetailFailedCalledGetLatestDisbursement(t *testing.T)
 	var disbursementsDetail DisbursementDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
 	mockRepo.On("GetLatestDisbursement", placeID).Return(disbursementsDetail, ErrInternalServerError)
@@ -188,7 +213,7 @@ func TestService_GetBalanceDetailFailedCalledGetBalance(t *testing.T) {
 	var balanceDetail BalanceDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
 	mockRepo.On("GetLatestDisbursement", placeID).Return(disbursementsDetail, nil)
@@ -225,7 +250,7 @@ func TestService_GetListTransactionHistoryWithPaginationSuccess(t *testing.T) {
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	params := ListTransactionRequest{
 		Limit:  10,
@@ -276,7 +301,7 @@ func TestService_GetListTransactionHistoryWithPaginationSuccessWithDefaultParam(
 
 	// Init mock repository and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	paramsDefault := ListTransactionRequest{
 		Limit:  10,
@@ -306,7 +331,7 @@ func TestService_GetListTransactionHistoryWithPaginationFailedLimitExceedMaxLimi
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	// Test
 	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
@@ -327,7 +352,7 @@ func TestService_GetListItemByIDWithPaginationError(t *testing.T) {
 
 	// Mock DB
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetListTransactionsHistoryWithPagination", params).Return(listTransaction, ErrInternalServerError)
 
@@ -349,7 +374,7 @@ func TestService_GetListItemWithPaginationFailedURLIsEmpty(t *testing.T) {
 
 	// Init mock repo and mock service
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	// Test
 	listTransactionResult, _, err := mockService.GetListTransactionsHistoryWithPagination(params)
@@ -362,7 +387,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockXendit := new(MockXenditService)
-		service := NewService(mockRepo, mockXendit)
+		service := NewService(mockRepo, mockXendit, nil)
 
 		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
 		defer f.Undo()
@@ -428,7 +453,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 	t.Run("error while calling SaveDisbursement", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockXendit := new(MockXenditService)
-		service := NewService(mockRepo, mockXendit)
+		service := NewService(mockRepo, mockXendit, nil)
 
 		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
 		defer f.Undo()
@@ -487,7 +512,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 	t.Run("error while calling CreateDisbursement", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockXendit := new(MockXenditService)
-		service := NewService(mockRepo, mockXendit)
+		service := NewService(mockRepo, mockXendit, nil)
 
 		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
 		defer f.Undo()
@@ -537,7 +562,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 	t.Run("error while calling GetLatestDisbursement", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockXendit := new(MockXenditService)
-		service := NewService(mockRepo, mockXendit)
+		service := NewService(mockRepo, mockXendit, nil)
 
 		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
 		defer f.Undo()
@@ -575,7 +600,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 	t.Run("error while input validation", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockXendit := new(MockXenditService)
-		service := NewService(mockRepo, mockXendit)
+		service := NewService(mockRepo, mockXendit, nil)
 
 		resp, err := service.CreateDisbursement(-1, -10000)
 		assert.NotNil(t, err)
@@ -586,7 +611,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 	t.Run("error while calling GetBusinessAdminInformation", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockXendit := new(MockXenditService)
-		service := NewService(mockRepo, mockXendit)
+		service := NewService(mockRepo, mockXendit, nil)
 
 		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
 		defer f.Undo()
@@ -612,7 +637,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 	t.Run("input validation error when last disbursement is yesterday", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		mockXendit := new(MockXenditService)
-		service := NewService(mockRepo, mockXendit)
+		service := NewService(mockRepo, mockXendit, nil)
 
 		f := faketime.NewFaketime(2022, 04, 02, 0, 0, 0, 0, time.Local)
 		defer f.Undo()
@@ -651,7 +676,7 @@ func TestService_CreateDisbursement(t *testing.T) {
 func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 	t.Run("success status completed", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -676,7 +701,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 
 	t.Run("failed status", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -697,7 +722,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 
 	t.Run("failed calling update disbursement status", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -723,7 +748,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 
 	t.Run("failed calling update disbursement status on failed callback case", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -746,7 +771,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 
 	t.Run("failed calling update balance", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -771,7 +796,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 
 	t.Run("failed when calling get balance", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -795,7 +820,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 
 	t.Run("success status failed", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -817,7 +842,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 
 	t.Run("failed parse user id", func(t *testing.T) {
 		mockRepo := new(MockRepository)
-		service := NewService(mockRepo, nil)
+		service := NewService(mockRepo, nil, nil)
 
 		// input
 		params := DisbursementCallback{
@@ -841,7 +866,7 @@ func TestService_GetTransactionHistoryDetailWithWrongInput(t *testing.T) {
 	bookingID := 0
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	balanceDetail, err := mockService.GetTransactionHistoryDetail(bookingID)
 
@@ -880,7 +905,7 @@ func TestService_GetTransactionHistoryDetailSuccess(t *testing.T) {
 	}
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
 	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, nil)
@@ -903,7 +928,7 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetItemsWrapper(t *testi
 	var itemsWrapper ItemsWrapper
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, ErrInternalServerError)
 
@@ -920,7 +945,7 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetCustomerForTransactio
 	var customer CustomerForTrasactionHistoryDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
 	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, ErrInternalServerError)
@@ -939,7 +964,7 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetTransactionHistoryDet
 	var transactionHistoryDetail TransactionHistoryDetail
 
 	mockRepo := new(MockRepository)
-	mockService := NewService(mockRepo, nil)
+	mockService := NewService(mockRepo, nil, nil)
 
 	mockRepo.On("GetItemsWrapper", bookingID).Return(itemsWrapper, nil)
 	mockRepo.On("GetCustomerForTransactionHistoryDetail", bookingID).Return(customer, nil)
@@ -950,4 +975,111 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetTransactionHistoryDet
 
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	assert.Nil(t, transactionHistoryDetailResult)
+}
+
+func TestService_GetPlaceDetail(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockPlace := new(MockPlaceService)
+		mockService := NewService(mockRepo, nil, mockPlace)
+
+		userID := 1
+		placeID := 2
+
+		mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
+
+		placeDetail := place.Detail{
+			ID:            1,
+			Name:          "test_name_place",
+			Image:         "test_image_place",
+			Address:       "test_address_place",
+			Description:   "test_description_place",
+			OpenHour:      "08:00",
+			CloseHour:     "16:00",
+			AverageRating: 3.50,
+			ReviewCount:   30,
+			Reviews: []place.UserReview{
+				{
+					User:    "test_user_1",
+					Rating:  4.50,
+					Content: "test_review_content_1",
+				},
+				{
+					User:    "test_user_2",
+					Rating:  5,
+					Content: "test_review_content_2",
+				},
+			},
+		}
+
+		mockPlace.On("GetDetail", placeID).Return(&placeDetail, nil)
+
+		expectedOutput := PlaceDetail{
+			ID:            1,
+			Name:          "test_name_place",
+			Image:         "test_image_place",
+			Address:       "test_address_place",
+			Description:   "test_description_place",
+			OpenHour:      "08:00",
+			CloseHour:     "16:00",
+			AverageRating: 3.50,
+		}
+
+		resp, err := mockService.GetPlaceDetail(userID)
+		mockRepo.AssertExpectations(t)
+		
+		assert.Nil(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, &expectedOutput, resp)
+	})
+
+	t.Run("error while calling GetPlaceIDByUserID", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockPlace := new(MockPlaceService)
+		mockService := NewService(mockRepo, nil, mockPlace)
+
+		userID := 1
+
+		mockRepo.On("GetPlaceIDByUserID", userID).Return(0, ErrInternalServerError)
+
+		resp, err := mockService.GetPlaceDetail(userID)
+		mockRepo.AssertExpectations(t)
+
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+		assert.Nil(t, resp)
+	})
+
+	t.Run("error while calling GetPlaceIDByUserID", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockPlace := new(MockPlaceService)
+		mockService := NewService(mockRepo, nil, mockPlace)
+
+		userID := 1
+		placeID := 2
+
+		mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
+
+		var placeDetail place.Detail
+
+		mockPlace.On("GetDetail", placeID).Return(&placeDetail, ErrInternalServerError)
+
+		resp, err := mockService.GetPlaceDetail(userID)
+		mockRepo.AssertExpectations(t)
+
+		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+		assert.Nil(t, resp)
+	})
+
+	t.Run("error while input validation", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		mockPlace := new(MockPlaceService)
+		mockService := NewService(mockRepo, nil, mockPlace)
+
+		resp, err := mockService.GetPlaceDetail(-1)
+		mockRepo.AssertExpectations(t)
+
+		assert.NotNil(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	})
 }
