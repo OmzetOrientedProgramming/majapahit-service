@@ -176,6 +176,7 @@ func (h *Handler) DeleteItemAdminByID(c echo.Context) error {
 	})
 }
 
+// UpdateItem is a handler for updating item API request by business admin
 func (h *Handler) UpdateItem(c echo.Context) error {
 	var errorList []string
 	itemIDString := c.Param("itemID")
@@ -207,8 +208,6 @@ func (h *Handler) UpdateItem(c echo.Context) error {
 			return util.ErrorWrapWithContext(c, http.StatusNotFound, fmt.Errorf("Item tidak ditemukan"))
 		case errors.Is(err, ErrInputValidationError):
 			return util.ErrorWrapWithContext(c, http.StatusBadRequest, fmt.Errorf("Request tidak valid"))
-		default:
-			return util.ErrorWrapWithContext(c, http.StatusInternalServerError, fmt.Errorf("Terdapat kesalahan pada server"))
 		}
 	}
 
