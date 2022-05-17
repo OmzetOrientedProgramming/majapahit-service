@@ -731,3 +731,58 @@ func TestRepo_DeleteItemAdminByID(t *testing.T) {
 		assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 	})
 }
+
+func TestRepo_UpdateItem(t *testing.T) {
+	tests := map[string]struct {
+		wantError error
+	}{
+		"success": {
+			wantError: nil,
+		},
+		"item not found": {
+			wantError: ErrNotFound,
+		},
+		"internal error": {
+			wantError: ErrInternalServerError,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
+			}
+			sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+			repo := NewRepo(sqlxDB)
+
+			itemID := 1
+			item := Item{}
+			query := `
+				UPDATE items
+				SET name=$1, image=$2, description=$3, price=$4
+				WHERE id=$5
+			`
+
+			expectedExec := mock.
+				ExpectExec(regexp.QuoteMeta(query)).
+				WithArgs(item.Name, item.Image, item.Description, item.Price, itemID)
+			if test.wantError != nil {
+				if errors.Is(test.wantError, ErrNotFound) {
+					expectedExec.WillReturnError(sql.ErrNoRows)
+				} else {
+					expectedExec.WillReturnError(test.wantError)
+				}
+			} else {
+				expectedExec.WillReturnResult(driver.ResultNoRows)
+			}
+
+			err = repo.UpdateItem(itemID, item)
+			if test.wantError != nil {
+				assert.True(t, errors.Is(err, test.wantError))
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}

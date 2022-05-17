@@ -31,3 +31,11 @@ type ListItemRequest struct {
 	UserID  int    `json:"user_id"`
 	Name    string `json:"name"`
 }
+
+// UpdateItemRequest consists of update item request data from client
+type UpdateItemRequest struct {
+	Name        string  `json:"name"`
+	Image       string  `json:"image"`
+	Description string  `json:"description"`
+	Price       float64 `json:"price"`
+}

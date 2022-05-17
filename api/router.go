@@ -85,6 +85,7 @@ func (r *Routes) Init() {
 			listItemsRoutes := businessProfileRoutes.Group("/list-items")
 			listItemsRoutes.GET("", r.itemHandler.GetListItemAdminWithPagination)
 			listItemsRoutes.DELETE("/:itemID", r.itemHandler.DeleteItemAdminByID)
+			listItemsRoutes.PUT("/:itemID", r.itemHandler.UpdateItem)
 
 			transactionHistoryRoutes := businessAdminRoutes.Group("/transaction-history")
 			transactionHistoryRoutes.GET("", r.businessadminHandler.GetListTransactionsHistoryWithPagination)

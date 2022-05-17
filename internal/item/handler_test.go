@@ -1,6 +1,7 @@
 package item
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -35,6 +36,11 @@ func (m *MockService) GetItemByID(placeID int, itemID int) (*Item, error) {
 	args := m.Called(placeID, itemID)
 	item := args.Get(0).(*Item)
 	return item, args.Error(1)
+}
+
+func (m *MockService) UpdateItem(ID int, item Item) error {
+	args := m.Called(ID, item)
+	return args.Error(0)
 }
 
 func (m *MockService) DeleteItemAdminByID(itemID int) error {
@@ -1212,4 +1218,147 @@ func TestHandler_DeleteItemAdminByIDInternalServerError(t *testing.T) {
 	util.ErrorHandler(h.DeleteItemAdminByID(ctx), ctx)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_UpdateItem(t *testing.T) {
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	t.Run("success", func(t *testing.T) {
+		e := echo.New()
+
+		itemID := 1
+		expectedItem := Item{
+			ID:          0,
+			Name:        "Nama produk",
+			Image:       "Gambar produk",
+			Description: "Deskripsi produk",
+			Price:       10000,
+		}
+
+		payload, _ := json.Marshal(UpdateItemRequest{
+			Name:        "Nama produk",
+			Image:       "Gambar produk",
+			Description: "Deskripsi produk",
+			Price:       10000,
+		})
+
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/business-admin/business-profile/list-items/:itemID", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("itemID")
+		ctx.SetParamValues("1")
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+
+		expectedResponse := util.APIResponse{
+			Status:  http.StatusOK,
+			Message: "Berhasil",
+		}
+		expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+		mockService.On("UpdateItem", itemID, expectedItem).Return(nil)
+
+		if assert.NoError(t, h.UpdateItem(ctx)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+			assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+		}
+	})
+
+	t.Run("item ID not valid", func(t *testing.T) {
+		e := echo.New()
+
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/business-admin/business-profile/list-items/:itemID", nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("itemID")
+		ctx.SetParamValues("asdf")
+
+		h := NewHandler(nil)
+
+		expectedResponse := util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "Request tidak valid",
+			Errors: []string{
+				"ID harus berupa angka",
+			},
+		}
+		expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+		util.ErrorHandler(h.UpdateItem(ctx), ctx)
+		if assert.Error(t, h.UpdateItem(ctx)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+		}
+	})
+
+	t.Run("failed to bind request body", func(t *testing.T) {
+		e := echo.New()
+
+		payload, _ := json.Marshal(map[string]int{
+			"name": 111,
+		})
+
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/business-admin/business-profile/list-items/itemID", bytes.NewBuffer(payload))
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("itemID")
+		ctx.SetParamValues("1")
+
+		h := NewHandler(nil)
+
+		util.ErrorHandler(h.UpdateItem(ctx), ctx)
+		if assert.Error(t, h.UpdateItem(ctx)) {
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		}
+	})
+
+	t.Run("item not found", func(t *testing.T) {
+		e := echo.New()
+
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/business-admin/business-profile/list-items/:itemID", nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("itemID")
+		ctx.SetParamValues("1")
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+		itemID := 1
+
+		mockService.On("UpdateItem", itemID, Item{}).Return(ErrNotFound)
+
+		util.ErrorHandler(h.UpdateItem(ctx), ctx)
+		if assert.Error(t, h.UpdateItem(ctx)) {
+			assert.Equal(t, http.StatusNotFound, rec.Code)
+		}
+	})
+
+	t.Run("internal error", func(t *testing.T) {
+		e := echo.New()
+
+		req := httptest.NewRequest(http.MethodPut, "/api/v1/business-admin/business-profile/list-items/:itemID", nil)
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("itemID")
+		ctx.SetParamValues("1")
+
+		mockService := new(MockService)
+		h := NewHandler(mockService)
+		itemID := 1
+
+		mockService.On("UpdateItem", itemID, Item{}).Return(ErrInternalServerError)
+
+		util.ErrorHandler(h.UpdateItem(ctx), ctx)
+		if assert.Error(t, h.UpdateItem(ctx)) {
+			assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		}
+	})
 }
