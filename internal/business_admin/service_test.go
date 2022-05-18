@@ -2,6 +2,7 @@ package businessadmin
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -1082,4 +1083,280 @@ func TestService_GetPlaceDetail(t *testing.T) {
 		assert.Nil(t, resp)
 		assert.Equal(t, ErrInputValidationError, errors.Cause(err))
 	})
+}
+
+func TestService_GetListReviewAndRatingWithPaginationSuccess(t *testing.T) {
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	userID := 1
+	placeID := 2
+
+	// Define input and output
+	listReview := place.ListReview{
+		Reviews: []place.Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 2,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	params := ListReviewRequest{
+		Limit:   5,
+		Page:    1,
+		Path:    "/api/testing",
+	}
+
+	repoParams := place.ListReviewRequest{
+		Limit:   5,
+		Page:    1,
+		Path:    "/api/testing",
+		PlaceID: placeID,
+		Rating: false,
+		Latest: true,
+	}
+
+	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
+
+	// Expectation
+	mockPlace.On("GetListReviewAndRatingWithPagination", repoParams).Return(&listReview, pagination, nil)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(userID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &listReview, listReviewResult)
+	assert.NotNil(t, listReviewResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationSuccessWithDefaultParam(t *testing.T) {
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	userID := 1
+	placeID := 2
+
+	// Define input and output
+	listReview := place.ListReview{
+		Reviews: []place.Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 2,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	params := ListReviewRequest{
+		Limit:   0,
+		Page:    0,
+		Path:    "/api/testing",
+	}
+
+	repoParams := place.ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
+		PlaceID: placeID,
+		Rating: false,
+		Latest: true,
+	}
+
+	// Expectation
+	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
+	mockPlace.On("GetListReviewAndRatingWithPagination", repoParams).Return(&listReview, pagination, nil)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(userID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, &listReview, listReviewResult)
+	assert.NotNil(t, listReviewResult)
+	assert.NoError(t, err)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedLimitExceedMaxLimit(t *testing.T) {
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	userID := 1
+	placeID := 2
+
+	// Define input
+	params := ListReviewRequest{
+		Limit:   101,
+		Page:    1,
+		Path:    "/api/testing",
+	}
+
+	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(userID, params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedPathEmpty(t *testing.T) {
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	userID := 1
+	placeID := 2
+
+	// Define input
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "",
+	}
+
+	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(userID, params)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationCalledGetPlaceIDByUserIDNegative(t *testing.T) {
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	userID := -1
+
+	// Define input
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
+	}
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(userID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedCalledGetPlaceIDByUserID(t *testing.T) {
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	userID := 1
+
+	// Define input
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
+	}
+
+	// Expectation
+	mockRepo.On("GetPlaceIDByUserID", userID).Return(0, ErrInternalServerError)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(userID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
+}
+
+func TestService_GetListReviewAndRatingWithPaginationFailedCalledPlaceService(t *testing.T) {
+	// Init mock repository and mock service
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	userID := 1
+	placeID := 2
+
+	// Define input
+	var listReview place.ListReview
+	var pagination util.Pagination
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
+	}
+
+	repoParams := place.ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/testing",
+		PlaceID: placeID,
+		Rating: false,
+		Latest: true,
+	}
+
+	// Expectation
+	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
+	mockPlace.On("GetListReviewAndRatingWithPagination", repoParams).Return(&listReview, pagination, ErrInternalServerError)
+
+	// Test
+	listReviewResult, _, err := mockService.GetListReviewAndRatingWithPagination(userID, params)
+	mockRepo.AssertExpectations(t)
+
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+	assert.Nil(t, listReviewResult)
 }

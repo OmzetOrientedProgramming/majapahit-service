@@ -21,6 +21,7 @@ type Service interface {
 	DisbursementCallbackFromXendit(params DisbursementCallback) error
 	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
 	GetPlaceDetail(userID int) (*PlaceDetail, error)
+	GetListReviewAndRatingWithPagination(userID int, params ListReviewRequest) (*place.ListReview, *util.Pagination, error)
 }
 
 type service struct {
@@ -283,4 +284,56 @@ func (s *service) GetPlaceDetail(userID int) (*PlaceDetail, error) {
 	resPlaceDetail.AverageRating = placeDetail.AverageRating
 
 	return &resPlaceDetail, nil
+}
+
+func (s *service) GetListReviewAndRatingWithPagination(userID int, params ListReviewRequest) (*place.ListReview, *util.Pagination, error) {
+	errorList := []string{}
+
+	if userID <= 0 {
+		errorList = append(errorList, "userID must be above 0")
+	}
+
+	if len(errorList) > 0 {
+		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ";"))
+	}
+
+	placeID, err := s.repo.GetPlaceIDByUserID(userID)
+	if err != nil {
+		return nil, nil, errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	if params.Page == 0 {
+		params.Page = util.DefaultPage
+	}
+
+	if params.Limit == 0 {
+		params.Limit = util.DefaultLimit
+	}
+
+	if params.Limit > util.MaxLimit {
+		errorList = append(errorList, "limit should be 1 - 100")
+	}
+
+	if params.Path == "" {
+		errorList = append(errorList, "path is required for pagination")
+	}
+
+	if len(errorList) > 0 {
+		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ";"))
+	}
+
+	var listReviewParam place.ListReviewRequest
+	listReviewParam.Limit = params.Limit
+	listReviewParam.Page = params.Page
+	listReviewParam.Path = params.Path
+	listReviewParam.PlaceID = placeID
+	listReviewParam.Rating = false
+	listReviewParam.Latest = true
+	
+	listReview, pagination, err := s.placeService.GetListReviewAndRatingWithPagination(listReviewParam)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return listReview, pagination, nil
 }
