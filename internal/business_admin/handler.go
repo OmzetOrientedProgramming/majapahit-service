@@ -217,3 +217,50 @@ func (h *Handler) GetPlaceDetail(c echo.Context) error {
 		Data:    placeDetail,
 	})
 }
+
+// GetListReviewAndRatingWithPagination will retrieve information related to a place
+func (h *Handler) GetListReviewAndRatingWithPagination(c echo.Context) error {
+	errorList := []string{}
+	limitString := c.QueryParam("limit")
+	pageString := c.QueryParam("page")
+
+	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
+	errorList = append(errorList, errorsFromValidator...)
+
+	if len(errorList) != 0 {
+		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
+	}
+
+	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
+		}
+	}
+
+	userID := user.ID
+
+	params := ListReviewRequest{}
+	params.Path = "/api/v1/business-admin/business-profile/review"
+	params.Limit = limit
+	params.Page = page
+
+	listReview, pagination, err := h.service.GetListReviewAndRatingWithPagination(userID, params)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		}
+
+		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"reviews":      listReview.Reviews,
+			"pagination":   pagination,
+			"total_review": listReview.TotalCount,
+		},
+	})
+}

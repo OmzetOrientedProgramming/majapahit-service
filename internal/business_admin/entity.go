@@ -118,3 +118,10 @@ type PlaceDetail struct {
 	MaxIntervalBooking int          `json:"max_interval_booking" db:"max_interval_booking"`
 	AverageRating      float64      `json:"average_rating" db:"rating"`
 }
+
+// ListReviewRequest consist of request for pagination and sorting purpose
+type ListReviewRequest struct {
+	Limit   int    `json:"limit"`
+	Page    int    `json:"page"`
+	Path    string `json:"path"`
+}

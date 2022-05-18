@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/user"
 	firebaseauth "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/firebase_auth"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
@@ -58,6 +59,13 @@ func (m *MockService) GetPlaceDetail(userID int) (*PlaceDetail, error) {
 	args := m.Called(userID)
 	ret := args.Get(0).(*PlaceDetail)
 	return ret, args.Error(1)
+}
+
+func (m *MockService) GetListReviewAndRatingWithPagination(userID int, params ListReviewRequest) (*place.ListReview, *util.Pagination, error) {
+	args := m.Called(userID, params)
+	listReview := args.Get(0).(*place.ListReview)
+	pagination := args.Get(1).(util.Pagination)
+	return listReview, &pagination, args.Error(2)
 }
 
 func TestHandler_GetBalanceDetailSuccess(t *testing.T) {
@@ -2134,4 +2142,479 @@ func TestHandler_GetPlaceDetailBadRequestFromService(t *testing.T) {
 	util.ErrorHandler(h.GetPlaceDetail(c), c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationSuccess(t *testing.T) {
+	e := echo.New()
+
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile/review")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/v1/business-admin/business-profile/review",
+	}
+
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	listReview := place.ListReview{
+		Reviews: []place.Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 2,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"reviews":      listReview.Reviews,
+			"pagination":   pagination,
+			"total_review": listReview.TotalCount,
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	mockService.On("GetListReviewAndRatingWithPagination", userModel.ID, params).Return(&listReview, pagination, nil)
+
+	if assert.NoError(t, h.GetListReviewAndRatingWithPagination(ctx)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationParseUserDataError(t *testing.T) {
+	e := echo.New()
+
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile/review")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "phone",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/v1/business-admin/business-profile/review",
+	}
+
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	var listReview place.ListReview
+	var pagination util.Pagination
+	mockService.On("GetListReviewAndRatingWithPagination", userModel.ID, params).Return(&listReview, pagination, nil)
+	
+	// Tes
+	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationLimitError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "101")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile/review")
+
+	params := ListReviewRequest{
+		Limit:   101,
+		Page:    1,
+		Path:    "/api/v1/business-admin/business-profile/review",
+	}
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"limit should be 1 - 100"}, ","))
+	errList, errMessage := util.ErrorUnwrap(errorFromService)
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: errMessage,
+		Errors:  errList,
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	var listReview place.ListReview
+	var pagination util.Pagination
+	mockService.On("GetListReviewAndRatingWithPagination", userModel.ID, params).Return(&listReview, pagination, errorFromService)
+	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationInternalServerError(t *testing.T) {
+	// Setup echo
+	e := echo.New()
+
+	// import "net/url"
+	q := make(url.Values)
+	q.Set("limit", "10")
+	q.Set("page", "1")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile/review")
+
+	params := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/v1/business-admin/business-profile/review",
+	}
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	// Setup Env
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	internalServerError := errors.Wrap(ErrInternalServerError, "test")
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	var listReview place.ListReview
+	var pagination util.Pagination
+	mockService.On("GetListReviewAndRatingWithPagination", userModel.ID, params).Return(&listReview, pagination, internalServerError)
+	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
+
+	// Tes
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_GetListReviewAndRatingWithPaginationQueryParamEmpty(t *testing.T) {
+	e := echo.New()
+
+	q := make(url.Values)
+	q.Set("limit", "")
+	q.Set("page", "")
+	req := httptest.NewRequest(http.MethodGet, "/review?"+q.Encode(), nil)
+	rec := httptest.NewRecorder()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile/review")
+
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	mockService := new(MockService)
+	h := NewHandler(mockService)
+
+	paramsDefault := ListReviewRequest{
+		Limit:   10,
+		Page:    1,
+		Path:    "/api/v1/business-admin/business-profile/review",
+	}
+
+	t.Setenv("BASE_URL", "localhost:8080")
+
+	listReview := place.ListReview{
+		Reviews: []place.Review{
+			{
+				ID:      2,
+				Name:    "test 2",
+				Content: "test 2",
+				Rating:  2,
+				Date:    "test 2",
+			},
+			{
+				ID:      1,
+				Name:    "test 1",
+				Content: "test 1",
+				Rating:  1,
+				Date:    "test 1",
+			},
+		},
+		TotalCount: 2,
+	}
+
+	pagination := util.Pagination{
+		Limit:       10,
+		Page:        1,
+		FirstURL:    fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		LastURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		NextURL:     fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		PreviousURL: fmt.Sprintf("%s/api/v1/place/1/review?limit=10&page=1&latest=true&rating=true", os.Getenv("BASE_URL")),
+		TotalPage:   1,
+	}
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "success",
+		Data: map[string]interface{}{
+			"reviews":      listReview.Reviews,
+			"pagination":   pagination,
+			"total_review": listReview.TotalCount,
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	mockService.On("GetListReviewAndRatingWithPagination", userModel.ID, paramsDefault).Return(&listReview, pagination, nil)
+
+	if assert.NoError(t, h.GetListReviewAndRatingWithPagination(ctx)) {
+		assert.Equal(t, http.StatusOK, rec.Code)
+		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+	}
 }

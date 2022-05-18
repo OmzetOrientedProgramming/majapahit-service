@@ -93,6 +93,7 @@ func (r *Routes) Init() {
 			transactionHistoryRoutes.GET("/:bookingID", r.businessadminHandler.GetTransactionHistoryDetail)
 
 			businessProfileRoutes.GET("/detail", r.businessadminHandler.GetPlaceDetail)
+			businessProfileRoutes.GET("/review", r.businessadminHandler.GetListReviewAndRatingWithPagination)
 		}
 
 		// Auth module
