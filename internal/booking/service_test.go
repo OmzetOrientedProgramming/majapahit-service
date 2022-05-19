@@ -1106,6 +1106,7 @@ func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 10000,
+			ExpiredAt: "",
 		},
 		{
 			ID:         2,
@@ -1117,6 +1118,7 @@ func TestService_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    EndTime,
 			Status:     0,
 			TotalPrice: 20000,
+			ExpiredAt: "",
 		},
 	}
 
@@ -1151,6 +1153,7 @@ func TestService_GetMyBookingsOngoingFailedUpdateStatus(t *testing.T) {
 			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 10000,
+			ExpiredAt: "",
 		},
 		{
 			ID:         2,
@@ -1162,6 +1165,7 @@ func TestService_GetMyBookingsOngoingFailedUpdateStatus(t *testing.T) {
 			EndTime:    EndTime,
 			Status:     0,
 			TotalPrice: 20000,
+			ExpiredAt: "",
 		},
 	}
 
@@ -1226,6 +1230,7 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
+				ExpiredAt: "",
 			},
 			{
 				ID:         2,
@@ -1237,6 +1242,7 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
+				ExpiredAt: "",
 			},
 		},
 		TotalCount: 2,
@@ -1279,6 +1285,7 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccessWithDefaultParam(t *t
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
+				ExpiredAt: "",
 			},
 			{
 				ID:         2,
@@ -1290,6 +1297,7 @@ func TestService_GetMyBookingsPreviousWithPaginationSuccessWithDefaultParam(t *t
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
+				ExpiredAt: "",
 			},
 		},
 		TotalCount: 2,
