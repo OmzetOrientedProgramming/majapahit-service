@@ -991,7 +991,7 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 10000,
-			ExpiredAt: "",
+			ExpiredAt: time.Now(),
 		},
 		{
 			ID:         2,
@@ -1003,7 +1003,7 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 20000,
-			ExpiredAt: "",
+			ExpiredAt: time.Now(),
 		},
 	}
 
@@ -1046,7 +1046,7 @@ func TestRepo_GetMyBookingsOngoingSuccess(t *testing.T) {
 		)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1081,7 +1081,7 @@ func TestRepo_GetMyBookingsOngoingEmpty(t *testing.T) {
 		NewRows([]string{"id", "place_id", "place_name", "place_image", "date", "start_time", "end_time", "status", "total_price", "payment_expired_at"})
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1113,7 +1113,7 @@ func TestRepo_GetMyBookingsOngoingInternalServerError(t *testing.T) {
 	repoMock := NewRepo(sqlxDB)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1142,7 +1142,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
-				ExpiredAt: "",
+				ExpiredAt: time.Now(),
 			},
 			{
 				ID:         2,
@@ -1154,7 +1154,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
-				ExpiredAt: "",
+				ExpiredAt: time.Now(),
 			},
 		},
 		TotalCount: 10,
@@ -1202,7 +1202,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationSuccess(t *testing.T) {
 			myBookingsPreviousExpected.Bookings[1].ExpiredAt,
 		)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1252,7 +1252,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmpty(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1293,7 +1293,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationEmptyWhenCount(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "place_id", "place_name", "place_image", "date", "start_time", "end_time", "status", "total_price", "payment_expired_at"})
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1336,7 +1336,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationError(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -1372,7 +1372,7 @@ func TestRepo_GetMyBookingsPreviousWithPaginationErrorWhenCount(t *testing.T) {
 	rows := mock.
 		NewRows([]string{"id", "place_id", "place_name", "place_image", "date", "start_time", "end_time", "status", "total_price", "payment_expired_at"})
 		mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 

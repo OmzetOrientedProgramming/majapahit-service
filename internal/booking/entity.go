@@ -192,7 +192,7 @@ type Booking struct {
 	Status       int       `json:"status"`
 	TotalPrice   int       `json:"total_price" db:"total_price"`
 	BookingPrice int       `json:"booking_price"`
-	ExpiredAt    string    `json:"expired_at" db:"payment_expired_at"`
+	ExpiredAt    time.Time `json:"expired_at" db:"payment_expired_at"`
 }
 
 // List contains list of customer booking information

@@ -369,7 +369,7 @@ func (r *repo) GetMyBookingsOngoing(localID string) (*[]Booking, error) {
 	bookingList = make([]Booking, 0)
 
 	query := `
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
@@ -393,7 +393,7 @@ func (r repo) GetMyBookingsPreviousWithPagination(localID string, params Booking
 	myBookingsPrevious.Bookings = make([]Booking, 0)
 
 	query := `
-		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, bookings.payment_expired_at
+		SELECT bookings.id, bookings.place_id, places.name as place_name, places.image as place_image, bookings.date, bookings.start_time, bookings.end_time, bookings.status, places.booking_price + bookings.total_price + 3000 as total_price, COALESCE(bookings.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 		FROM users 
 			JOIN bookings ON users.id = bookings.user_id 	
 			JOIN places ON bookings.place_id = places.id 
