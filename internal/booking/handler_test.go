@@ -2736,7 +2736,7 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 10000,
-			ExpiredAt: "",
+			ExpiredAt: time.Now(),
 		},
 		{
 			ID:         2,
@@ -2748,7 +2748,7 @@ func TestHandler_GetMyBookingsOngoingSuccess(t *testing.T) {
 			EndTime:    time.Now(),
 			Status:     0,
 			TotalPrice: 20000,
-			ExpiredAt: "",
+			ExpiredAt: time.Now(),
 		},
 	}
 
@@ -2899,7 +2899,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
-				ExpiredAt: "",
+				ExpiredAt: time.Now(),
 			},
 			{
 				ID:         2,
@@ -2911,7 +2911,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithParams(t *testing.T) {
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
-				ExpiredAt: "",
+				ExpiredAt: time.Now(),
 			},
 		},
 		TotalCount: 2,
@@ -3077,7 +3077,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 10000,
-				ExpiredAt: "",
+				ExpiredAt: time.Now(),
 			},
 			{
 				ID:         2,
@@ -3089,7 +3089,7 @@ func TestHandler_GetMyBookingsPreviousWithPaginationWithoutParams(t *testing.T) 
 				EndTime:    time.Now(),
 				Status:     0,
 				TotalPrice: 20000,
-				ExpiredAt: "",
+				ExpiredAt: time.Now(),
 			},
 		},
 		TotalCount: 2,
