@@ -276,4 +276,5 @@ type DetailBookingSaya struct {
 	InvoicesURL string  `json:"invoices_url" db:"invoices_url"`
 	Image       string  `json:"image"`
 	Items       []Item  `json:"items"`
+	ExpiredAt   time.Time `json:"expired_at" db:"payment_expired_at"`
 }

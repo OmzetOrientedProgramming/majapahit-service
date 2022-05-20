@@ -435,7 +435,7 @@ func (r repo) GetDetailBookingSaya(bookingID int) (*DetailBookingSaya, error) {
 	var placeBookingPrice float64
 
 	query := `
-	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image, COALESCE(b.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 	FROM bookings b, places p
 	WHERE b.id = $1 AND p.id = b.place_id`
 

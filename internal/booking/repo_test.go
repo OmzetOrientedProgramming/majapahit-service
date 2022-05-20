@@ -1707,6 +1707,7 @@ func TestRepo_GetDetailBookingSayaSuccess(t *testing.T) {
 		TotalPrice:  10000,
 		InvoicesURL: "test invoices url",
 		Image:       "test image",
+		ExpiredAt: time.Now(),
 	}
 
 	bookingID := 1
@@ -1723,7 +1724,7 @@ func TestRepo_GetDetailBookingSayaSuccess(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	rows := mock.
-		NewRows([]string{"id", "status", "name", "date", "start_time", "end_time", "total_price", "invoices_url", "image"}).
+		NewRows([]string{"id", "status", "name", "date", "start_time", "end_time", "total_price", "invoices_url", "image", "payment_expired_at"}).
 		AddRow(detailBookingSayaExpected.ID,
 			detailBookingSayaExpected.Status,
 			detailBookingSayaExpected.PlaceName,
@@ -1732,10 +1733,11 @@ func TestRepo_GetDetailBookingSayaSuccess(t *testing.T) {
 			detailBookingSayaExpected.EndTime,
 			detailBookingSayaExpected.TotalPrice,
 			detailBookingSayaExpected.InvoicesURL,
-			detailBookingSayaExpected.Image)
+			detailBookingSayaExpected.Image,
+			detailBookingSayaExpected.ExpiredAt)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
-	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image, COALESCE(b.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 	FROM bookings b, places p
 	WHERE b.id = $1 AND p.id = b.place_id`)).
 		WithArgs(bookingID).
@@ -1767,7 +1769,7 @@ func TestRepo_GetDetailBookingSayaError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image
+	SELECT b.id, b.status, p.name, b.date, b.start_time, b.end_time, b.total_price, COALESCE(b.invoices_url, '') as invoices_url, p.image, COALESCE(b.payment_expired_at, CURRENT_TIMESTAMP) AS payment_expired_at
 	FROM bookings b, places p
 	WHERE b.id = $1 AND p.id = b.place_id`)).
 		WithArgs(bookingID).
