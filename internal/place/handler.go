@@ -105,7 +105,7 @@ func (h *Handler) GetListReviewAndRatingWithPagination(c echo.Context) error {
 	latest, err := strconv.ParseBool(latestString)
 	if err != nil {
 		if latestString == "" {
-			latest = false
+			latest = true
 		} else {
 			errorList = append(errorList, "latest parameter should be boolean type")
 		}

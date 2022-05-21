@@ -782,7 +782,7 @@ func TestHandler_GetListReviewAndRatingWithPaginationQueryParamEmpty(t *testing.
 		Page:    1,
 		Path:    "/api/v1/place/1/review",
 		PlaceID: 1,
-		Latest:  false,
+		Latest:  true,
 		Rating:  false,
 	}
 

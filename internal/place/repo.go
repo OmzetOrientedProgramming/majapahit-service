@@ -123,6 +123,9 @@ func (r repo) GetPlaceRatingAndReviewCountByPlaceID(placeID int) (*PlacesRatingA
 
 func (r repo) GetListReviewAndRatingWithPagination(params ListReviewRequest) (*ListReview, error) {
 	var listReview ListReview
+	listReview.Reviews = make([]Review, 0)
+	listReview.TotalCount = 0
+	
 	mainQuery := `
 	SELECT r.id, u.name, r.content, r.rating, r.created_at
 	FROM reviews r, users u
