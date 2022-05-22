@@ -8,4 +8,7 @@ var (
 
 	// ErrInputValidationError is used if there is input validation error of client given data
 	ErrInputValidationError = errors.New("input validation error")
+
+	// ErrInternalServer is returned when the server encounters an internal error
+	ErrInternalServer = errors.New("internal server error")
 )

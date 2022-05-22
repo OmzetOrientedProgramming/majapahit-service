@@ -21,6 +21,7 @@ type Repo interface {
 	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
 	GetItemsWrapper(int) (*ItemsWrapper, error)
 	GetCustomerForTransactionHistoryDetail(int) (*CustomerForTrasactionHistoryDetail, error)
+	UpdateProfile(EditProfileRequest) error
 }
 
 type repo struct {
@@ -225,4 +226,20 @@ func (r *repo) GetCustomerForTransactionHistoryDetail(bookingID int) (*CustomerF
 	}
 
 	return &customer, nil
+}
+
+func (r *repo) UpdateProfile(businessAdminProfile EditProfileRequest) error {
+	query := `
+		UPDATE places
+		SET name = $1,
+			description = $2
+		WHERE user_id = $3
+  	`
+
+	_, err := r.db.Exec(query, businessAdminProfile.Name, businessAdminProfile.Description, businessAdminProfile.UserID)
+	if err != nil {
+		return errors.Wrap(ErrInternalServerError, err.Error())
+	}
+
+	return nil
 }

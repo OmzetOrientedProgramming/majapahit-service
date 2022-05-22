@@ -55,6 +55,11 @@ func (m *MockService) GetTransactionHistoryDetail(bookingID int) (*TransactionHi
 	return ret, args.Error(1)
 }
 
+func (m *MockService) PutEditProfile(bodyRequest EditProfileRequest) error {
+	args := m.Called(bodyRequest)
+	return args.Error(0)
+}
+
 func (m *MockService) GetPlaceDetail(userID int) (*PlaceDetail, error) {
 	args := m.Called(userID)
 	ret := args.Get(0).(*PlaceDetail)
@@ -1851,6 +1856,265 @@ func TestHandler_GetTransactionHistoryDetailInternalServerError(t *testing.T) {
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
+func TestHandler_PutEditProfileSuccess(t *testing.T) {
+	// Setup User Model
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+	// Setup Body
+	name := "abcdefgh"
+	description := "ini contoh description 1"
+
+	body := EditProfileRequest{
+		Name:        name,
+		Description: description,
+	}
+
+	payload, _ := json.Marshal(body)
+
+	// Setup echo
+	req := httptest.NewRequest(http.MethodPut, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	rec := httptest.NewRecorder()
+
+	e := echo.New()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	// Setup Mock
+	mockService := new(MockService)
+	mockHandler := NewHandler(mockService)
+
+	putEditProfileParams := body
+	putEditProfileParams.UserID = 1
+
+	mockService.On("PutEditProfile", putEditProfileParams).Return(nil)
+
+	// Expectation
+
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "Successfully Edited Profile!",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+
+	assert.NoError(t, mockHandler.PutEditProfile(ctx))
+	mockService.AssertExpectations(t)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_PutEditProfileBindingError(t *testing.T) {
+	// Setup User Model
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// Setup Body
+	name := 123
+	description := 123
+
+	type MismatchRequest struct {
+		Name        int `json:"name"`
+		Description int `json:"description"`
+	}
+
+	bodyFailed := MismatchRequest{
+		Name:        name,
+		Description: description,
+	}
+
+	payload, _ := json.Marshal(bodyFailed)
+
+	// Setup echo
+	req := httptest.NewRequest(http.MethodPut, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	rec := httptest.NewRecorder()
+
+	e := echo.New()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	// Setup Mock
+	mockService := new(MockService)
+	mockHandler := NewHandler(mockService)
+
+	// Expectation
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusInternalServerError,
+		Message: "internal server error",
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	util.ErrorHandler(mockHandler.PutEditProfile(ctx), ctx)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+}
+
+func TestHandler_PutEditProfileInputValidationError(t *testing.T) {
+	// Setup User Model
+	userData := firebaseauth.UserDataFromToken{
+		Kind: "",
+		Users: []firebaseauth.User{
+			{
+				LocalID: "1",
+				ProviderUserInfo: []firebaseauth.ProviderUserInfo{
+					{
+						ProviderID:  "password",
+						RawID:       "",
+						PhoneNumber: "",
+						FederatedID: "",
+						Email:       "",
+					},
+				},
+				LastLoginAt:       "",
+				CreatedAt:         "",
+				PhoneNumber:       "",
+				LastRefreshAt:     time.Time{},
+				Email:             "",
+				EmailVerified:     false,
+				PasswordHash:      "",
+				PasswordUpdatedAt: 0,
+				ValidSince:        "",
+				Disabled:          false,
+			},
+		},
+	}
+
+	userModel := user.Model{
+		ID:              1,
+		PhoneNumber:     "",
+		Name:            "",
+		Status:          0,
+		FirebaseLocalID: "",
+		Email:           "",
+		CreatedAt:       time.Time{},
+		UpdatedAt:       time.Time{},
+	}
+
+	// Setup Body
+	name := "a"
+	description := "ini contoh description 1"
+
+	body := EditProfileRequest{
+		Name:        name,
+		Description: description,
+	}
+
+	payload, _ := json.Marshal(body)
+
+	// Setup echo
+	req := httptest.NewRequest(http.MethodPut, "/", bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	rec := httptest.NewRecorder()
+
+	e := echo.New()
+	ctx := e.NewContext(req, rec)
+	ctx.SetPath("/api/v1/business-admin/business-profile")
+	ctx.Set("userFromDatabase", &userModel)
+	ctx.Set("userFromFirebase", &userData)
+
+	// Setup Mock
+	mockService := new(MockService)
+	mockHandler := NewHandler(mockService)
+
+	putEditProfileParams := body
+	putEditProfileParams.UserID = 1
+
+	mockService.On("PutEditProfile", putEditProfileParams).Return(errors.Wrap(ErrInputValidationError, "Name diperlukan;Panjang karakter Name harus diatas 3"))
+
+	// Expectation
+	expectedResponse := util.APIResponse{
+		Status:  http.StatusBadRequest,
+		Message: "input validation error",
+		Errors: []string{
+			"Name diperlukan",
+			"Panjang karakter Name harus diatas 3",
+		},
+	}
+
+	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+	util.ErrorHandler(mockHandler.PutEditProfile(ctx), ctx)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+
+}
+
 func TestHandler_GetPlaceDetailSuccess(t *testing.T) {
 	// Setup echo
 	e := echo.New()
@@ -2197,14 +2461,13 @@ func TestHandler_GetListReviewAndRatingWithPaginationSuccess(t *testing.T) {
 	ctx.Set("userFromDatabase", &userModel)
 	ctx.Set("userFromFirebase", &userData)
 
-
 	mockService := new(MockService)
 	h := NewHandler(mockService)
 
 	params := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/v1/business-admin/business-profile/review",
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/v1/business-admin/business-profile/review",
 	}
 
 	t.Setenv("BASE_URL", "localhost:8080")
@@ -2312,14 +2575,13 @@ func TestHandler_GetListReviewAndRatingWithPaginationParseUserDataError(t *testi
 	ctx.Set("userFromDatabase", &userModel)
 	ctx.Set("userFromFirebase", &userData)
 
-
 	mockService := new(MockService)
 	h := NewHandler(mockService)
 
 	params := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/v1/business-admin/business-profile/review",
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/v1/business-admin/business-profile/review",
 	}
 
 	t.Setenv("BASE_URL", "localhost:8080")
@@ -2327,7 +2589,7 @@ func TestHandler_GetListReviewAndRatingWithPaginationParseUserDataError(t *testi
 	var listReview place.ListReview
 	var pagination util.Pagination
 	mockService.On("GetListReviewAndRatingWithPagination", userModel.ID, params).Return(&listReview, pagination, nil)
-	
+
 	// Tes
 	util.ErrorHandler(h.GetListReviewAndRatingWithPagination(ctx), ctx)
 	assert.Equal(t, http.StatusForbidden, rec.Code)
@@ -2347,9 +2609,9 @@ func TestHandler_GetListReviewAndRatingWithPaginationLimitError(t *testing.T) {
 	ctx.SetPath("/api/v1/business-admin/business-profile/review")
 
 	params := ListReviewRequest{
-		Limit:   101,
-		Page:    1,
-		Path:    "/api/v1/business-admin/business-profile/review",
+		Limit: 101,
+		Page:  1,
+		Path:  "/api/v1/business-admin/business-profile/review",
 	}
 
 	userData := firebaseauth.UserDataFromToken{
@@ -2434,9 +2696,9 @@ func TestHandler_GetListReviewAndRatingWithPaginationInternalServerError(t *test
 	ctx.SetPath("/api/v1/business-admin/business-profile/review")
 
 	params := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/v1/business-admin/business-profile/review",
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/v1/business-admin/business-profile/review",
 	}
 
 	userData := firebaseauth.UserDataFromToken{
@@ -2477,7 +2739,6 @@ func TestHandler_GetListReviewAndRatingWithPaginationInternalServerError(t *test
 		CreatedAt:       time.Time{},
 		UpdatedAt:       time.Time{},
 	}
-
 	ctx.Set("userFromDatabase", &userModel)
 	ctx.Set("userFromFirebase", &userData)
 
@@ -2562,9 +2823,9 @@ func TestHandler_GetListReviewAndRatingWithPaginationQueryParamEmpty(t *testing.
 	h := NewHandler(mockService)
 
 	paramsDefault := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/v1/business-admin/business-profile/review",
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/v1/business-admin/business-profile/review",
 	}
 
 	t.Setenv("BASE_URL", "localhost:8080")

@@ -191,6 +191,38 @@ func (h *Handler) GetTransactionHistoryDetail(c echo.Context) error {
 	})
 }
 
+// PutEditProfile is a handler for API request to Update Business Profile
+func (h *Handler) PutEditProfile(ctx echo.Context) error {
+	_, userModel, err := middleware.ParseUserData(ctx, util.StatusBusinessAdmin)
+	if err != nil {
+		if errors.Cause(err) == middleware.ErrForbidden {
+			return util.ErrorWrapWithContext(ctx, http.StatusForbidden, err)
+		}
+	}
+
+	userID := userModel.ID
+
+	var req EditProfileRequest
+	err = ctx.Bind(&req)
+	if err != nil {
+		return util.ErrorWrapWithContext(ctx, http.StatusInternalServerError, errors.Wrap(ErrInternalServer, err.Error()))
+	}
+	req.UserID = userID
+
+	err = h.service.PutEditProfile(req)
+	if err != nil {
+		if errors.Cause(err) == ErrInputValidationError {
+			return util.ErrorWrapWithContext(ctx, http.StatusBadRequest, err)
+		}
+		return util.ErrorWrapWithContext(ctx, http.StatusInternalServerError, err)
+	}
+
+	return ctx.JSON(http.StatusOK, util.APIResponse{
+		Status:  http.StatusOK,
+		Message: "Successfully Edited Profile!",
+	})
+}
+
 // GetPlaceDetail will retrieve information related to a place
 func (h *Handler) GetPlaceDetail(c echo.Context) error {
 	_, user, err := middleware.ParseUserData(c, util.StatusBusinessAdmin)
