@@ -190,7 +190,7 @@ type Booking struct {
 	StartTime    time.Time `json:"start_time" db:"start_time"`
 	EndTime      time.Time `json:"end_time" db:"end_time"`
 	Status       int       `json:"status"`
-	TotalPrice   int       `json:"total_price" db:"total_price"`
+	TotalPrice   float64   `json:"total_price" db:"total_price"`
 	BookingPrice int       `json:"booking_price"`
 	ExpiredAt    time.Time `json:"expired_at" db:"payment_expired_at"`
 }
