@@ -15,6 +15,7 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/upload"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/review"
 
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
@@ -78,6 +79,10 @@ var (
 	cloudinaryRepo cloudinary.Repo
 	uploadService  upload.Service
 	uploadHandler  *upload.Handler
+
+	reviewRepo 		review.Repo
+	reviewService  	review.Service
+	reviewHandler  	*review.Handler
 )
 
 // Init all dependency
@@ -144,8 +149,13 @@ func (s Server) Init() {
 	uploadService = upload.NewService(cloudinaryRepo)
 	uploadHandler = upload.NewHandler(uploadService)
 
+	// Review module
+	reviewRepo = review.NewRepo(db)
+	reviewService = review.NewService(reviewRepo)
+	reviewHandler = review.NewHandler(reviewService)
+
 	// Start routing
-	r := NewRoutes(s.Router, checkupHandler, itemHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler, customerHandler, uploadHandler)
+	r := NewRoutes(s.Router, checkupHandler, itemHandler, placeHandler, authHandler, businessadminauthHandler, authMiddleware, bookingHandler, businessadminHandler, customerHandler, uploadHandler, reviewHandler)
 	r.Init()
 }
 
