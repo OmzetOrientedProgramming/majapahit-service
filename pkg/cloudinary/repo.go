@@ -31,9 +31,10 @@ func NewRepo(cloudName, apiKey, apiSecret string) Repo {
 
 func (r repo) UploadFile(fileContent, folderName, fileName string) (string, error) {
 	resp, err := r.cloudinary.Upload.Upload(context.Background(), fileContent, uploader.UploadParams{
-		Folder:       folderName,
-		PublicID:     fileName,
-		ResourceType: "auto",
+		Folder:         folderName,
+		PublicID:       fileName,
+		ResourceType:   "auto",
+		UniqueFilename: true,
 	})
 	if err != nil {
 		return "", errors.Wrap(ErrInternalServer, err.Error())
