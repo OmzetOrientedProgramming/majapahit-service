@@ -20,6 +20,7 @@ type Service interface {
 	CreateDisbursement(int, float64) (*CreateDisbursementResponse, error)
 	DisbursementCallbackFromXendit(params DisbursementCallback) error
 	GetTransactionHistoryDetail(int) (*TransactionHistoryDetail, error)
+	PutEditProfile(EditProfileRequest) error
 	GetPlaceDetail(userID int) (*PlaceDetail, error)
 	GetListReviewAndRatingWithPagination(userID int, params ListReviewRequest) (*place.ListReview, *util.Pagination, error)
 }
@@ -27,7 +28,7 @@ type Service interface {
 type service struct {
 	repo          Repo
 	xenditService xendit.Service
-	placeService 	place.Service
+	placeService  place.Service
 }
 
 // NewService create new service
@@ -35,7 +36,7 @@ func NewService(repo Repo, xenditService xendit.Service, placeService place.Serv
 	return &service{
 		repo:          repo,
 		xenditService: xenditService,
-		placeService: placeService,
+		placeService:  placeService,
 	}
 }
 
@@ -246,6 +247,40 @@ func (s *service) GetTransactionHistoryDetail(bookingID int) (*TransactionHistor
 	return transactionHistoryDetail, nil
 }
 
+func (s *service) PutEditProfile(body EditProfileRequest) error {
+	var errorList []string
+
+	if body.Name == "" {
+		errorList = append(errorList, "Name diperlukan")
+	}
+
+	if len(body.Name) <= 3 {
+		errorList = append(errorList, "Panjang karakter Name harus diatas 3")
+	}
+
+	if body.Description == "" {
+		errorList = append(errorList, "Description diperlukan")
+	}
+
+	if len(body.Description) < 10 {
+		errorList = append(errorList, "Panjang karakter minimal Description adalah 10")
+	}
+
+	if len(body.Description) > 500 {
+		errorList = append(errorList, "Panjang karakter minimal Description adalah 500")
+	}
+
+	if len(errorList) > 0 {
+		return errors.Wrap(ErrInputValidationError, strings.Join(errorList, ";"))
+	}
+
+	err := s.repo.UpdateProfile(body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 func (s *service) GetPlaceDetail(userID int) (*PlaceDetail, error) {
 	errorList := []string{}
 
@@ -329,7 +364,7 @@ func (s *service) GetListReviewAndRatingWithPagination(userID int, params ListRe
 	listReviewParam.PlaceID = placeID
 	listReviewParam.Rating = false
 	listReviewParam.Latest = true
-	
+
 	listReview, pagination, err := s.placeService.GetListReviewAndRatingWithPagination(listReviewParam)
 	if err != nil {
 		return nil, nil, err

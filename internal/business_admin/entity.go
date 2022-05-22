@@ -101,27 +101,34 @@ type ItemDetail struct {
 	Price float64 `json:"price"`
 }
 
+// EditProfileRequest consist newest profile information about places
+type EditProfileRequest struct {
+	UserID      int
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // PlaceDetail contain important information in Place
 type PlaceDetail struct {
-	ID                 int          `json:"id"`
-	Name               string       `json:"name"`
-	Image              string       `json:"image"`
-	Address            string       `json:"address"`
-	Description        string       `json:"description"`
-	OpenHour           string       `json:"open_hour" db:"open_hour"`
-	CloseHour          string       `json:"close_hour" db:"close_hour"`
-	BookingPrice       int          `json:"booking_price" db:"booking_price"`
-	MinSlot            int          `json:"min_slot" db:"min_slot_booking"`
-	MaxSlot            int          `json:"max_slot" db:"max_slot_booking"`
-	Capacity           int          `json:"capacity" db:"capacity"`
-	MinIntervalBooking int          `json:"min_interval_booking" db:"min_interval_booking"`
-	MaxIntervalBooking int          `json:"max_interval_booking" db:"max_interval_booking"`
-	AverageRating      float64      `json:"average_rating" db:"rating"`
+	ID                 int     `json:"id"`
+	Name               string  `json:"name"`
+	Image              string  `json:"image"`
+	Address            string  `json:"address"`
+	Description        string  `json:"description"`
+	OpenHour           string  `json:"open_hour" db:"open_hour"`
+	CloseHour          string  `json:"close_hour" db:"close_hour"`
+	BookingPrice       int     `json:"booking_price" db:"booking_price"`
+	MinSlot            int     `json:"min_slot" db:"min_slot_booking"`
+	MaxSlot            int     `json:"max_slot" db:"max_slot_booking"`
+	Capacity           int     `json:"capacity" db:"capacity"`
+	MinIntervalBooking int     `json:"min_interval_booking" db:"min_interval_booking"`
+	MaxIntervalBooking int     `json:"max_interval_booking" db:"max_interval_booking"`
+	AverageRating      float64 `json:"average_rating" db:"rating"`
 }
 
 // ListReviewRequest consist of request for pagination and sorting purpose
 type ListReviewRequest struct {
-	Limit   int    `json:"limit"`
-	Page    int    `json:"page"`
-	Path    string `json:"path"`
+	Limit int    `json:"limit"`
+	Page  int    `json:"page"`
+	Path  string `json:"path"`
 }

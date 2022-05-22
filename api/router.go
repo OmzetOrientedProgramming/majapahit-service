@@ -85,6 +85,8 @@ func (r *Routes) Init() {
 
 			// List Items Module
 			businessProfileRoutes := businessAdminRoutes.Group("/business-profile")
+			businessProfileRoutes.PUT("", r.businessadminHandler.PutEditProfile)
+
 			listItemsRoutes := businessProfileRoutes.Group("/list-items")
 			listItemsRoutes.GET("", r.itemHandler.GetListItemAdminWithPagination)
 			listItemsRoutes.POST("", r.itemHandler.CreateItem)

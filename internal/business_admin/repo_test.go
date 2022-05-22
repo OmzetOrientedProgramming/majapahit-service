@@ -880,3 +880,71 @@ func TestRepo_GetCustomerForTransactionHistoryDetailInternalServerError(t *testi
 	assert.Nil(t, customerRetrieved)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
 }
+
+func TestRepo_UpdateProfileSuccess(t *testing.T) {
+	userID := 2
+	name := "ini_update_name"
+	description := "ini_update_description_try_to_make_it_long"
+	editProfileRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	query := `
+		UPDATE places
+		SET name = $1,
+			description = $2
+		WHERE user_id = $3
+  	`
+	mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(editProfileRequest.Name, editProfileRequest.Description, editProfileRequest.UserID).WillReturnResult(driver.ResultNoRows)
+
+	// Test
+	err = repoMock.UpdateProfile(editProfileRequest)
+	assert.NoError(t, err)
+}
+
+func TestRepo_UpdateProfileError(t *testing.T) {
+	userID := 2
+	name := "ini_update_name"
+	description := "ini_update_description_try_to_make_it_long"
+	editProfileRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	// mockDB
+	mockDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mockDB.Close()
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+
+	// Expectation
+	repoMock := NewRepo(sqlxDB)
+
+	query := `
+		UPDATE places
+		SET name = $1,
+			description = $2
+		WHERE user_id = $3
+  	`
+	mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(editProfileRequest.Name, editProfileRequest.Description, editProfileRequest.UserID).WillReturnError(sql.ErrTxDone)
+
+	// Test
+	err = repoMock.UpdateProfile(editProfileRequest)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}

@@ -2,20 +2,18 @@ package businessadmin
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	"os"
-
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/tkuchiki/faketime"
 	xendit2 "github.com/xendit/xendit-go"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/pkg/xendit"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
-
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 type MockRepository struct {
@@ -81,6 +79,11 @@ func (m *MockRepository) UpdateBalance(newBalance float64, userID int) error {
 
 func (m *MockRepository) UpdateDisbursementStatusByXenditID(newStatus int, xenditID string) error {
 	args := m.Called(newStatus, xenditID)
+	return args.Error(0)
+}
+
+func (m *MockRepository) UpdateProfile(editProfileRequest EditProfileRequest) error {
+	args := m.Called(editProfileRequest)
 	return args.Error(0)
 }
 
@@ -979,6 +982,163 @@ func TestService_GetTransactionHistoryDetailFailedCalledGetTransactionHistoryDet
 	assert.Nil(t, transactionHistoryDetailResult)
 }
 
+func TestService_PutEditProfileSuccess(t *testing.T) {
+	userID := 1
+	name := "ini contoh name"
+	description := "ini contoh description"
+
+	bodyRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	mockRepo.On("UpdateProfile", bodyRequest).Return(nil)
+
+	err := mockService.PutEditProfile(bodyRequest)
+
+	mockRepo.AssertExpectations(t)
+	assert.NoError(t, err)
+}
+
+func TestService_PutEditProfileFailedCalledUpdateProfile(t *testing.T) {
+	userID := 1
+	name := "ini contoh name"
+	description := "ini contoh description"
+
+	bodyRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	mockRepo.On("UpdateProfile", bodyRequest).Return(ErrInternalServerError)
+
+	err := mockService.PutEditProfile(bodyRequest)
+
+	mockRepo.AssertExpectations(t)
+	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
+func TestService_PutEditProfileNoNameValidationError(t *testing.T) {
+	userID := 1
+	name := ""
+	description := "ini contoh description"
+
+	bodyRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	err := mockService.PutEditProfile(bodyRequest)
+
+	mockRepo.AssertExpectations(t)
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
+
+func TestService_PutEditProfileLengthNameValidationError(t *testing.T) {
+	userID := 1
+	name := "ab"
+	description := "ini contoh description"
+
+	bodyRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	err := mockService.PutEditProfile(bodyRequest)
+
+	mockRepo.AssertExpectations(t)
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
+
+func TestService_PutEditProfileNoDescValidationError(t *testing.T) {
+	userID := 1
+	name := "abcdef"
+	description := ""
+
+	bodyRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	err := mockService.PutEditProfile(bodyRequest)
+
+	mockRepo.AssertExpectations(t)
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
+
+func TestService_PutEditProfileMinLengthDescValidationError(t *testing.T) {
+	userID := 1
+	name := "abcdef"
+	description := "halo halo"
+
+	bodyRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	err := mockService.PutEditProfile(bodyRequest)
+
+	mockRepo.AssertExpectations(t)
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
+
+func TestService_PutEditProfileMaxLengthDescValidationError(t *testing.T) {
+	userID := 1
+	name := "abcdef"
+	description := `
+		Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas eget dolor sit amet nisi sagittis vestibulum. 
+		Pellentesque tempor leo luctus, fringilla arcu vitae, congue dui. Maecenas aliquam nisi non ex feugiat, eget pulvinar 
+		purus lacinia. Mauris porta in nibh sit amet efficitur. Quisque sit amet lectus neque. 
+		Sed maximus, nisi quis finibus eleifend, massa tellus semper purus, ut vulputate urna ex eget risus. 
+		Pellentesque ultrices finibus posuere. Morbi a pharetra ante. Nullam ac dolor at arcu congue tincidunt at eget magna.
+		Praesent non ultrices ligula. Nam placerat nisl sed metus blandit, nec sagittis ex ultrices. Nunc accumsan erat nisi, sed.`
+
+	bodyRequest := EditProfileRequest{
+		UserID:      userID,
+		Name:        name,
+		Description: description,
+	}
+
+	mockRepo := new(MockRepository)
+	mockPlace := new(MockPlaceService)
+	mockService := NewService(mockRepo, nil, mockPlace)
+
+	err := mockService.PutEditProfile(bodyRequest)
+
+	mockRepo.AssertExpectations(t)
+	assert.Equal(t, ErrInputValidationError, errors.Cause(err))
+}
+
 func TestService_GetPlaceDetail(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
@@ -1029,7 +1189,7 @@ func TestService_GetPlaceDetail(t *testing.T) {
 
 		resp, err := mockService.GetPlaceDetail(userID)
 		mockRepo.AssertExpectations(t)
-		
+
 		assert.Nil(t, err)
 		assert.NotNil(t, resp)
 		assert.Equal(t, &expectedOutput, resp)
@@ -1127,9 +1287,9 @@ func TestService_GetListReviewAndRatingWithPaginationSuccess(t *testing.T) {
 	}
 
 	params := ListReviewRequest{
-		Limit:   5,
-		Page:    1,
-		Path:    "/api/testing",
+		Limit: 5,
+		Page:  1,
+		Path:  "/api/testing",
 	}
 
 	repoParams := place.ListReviewRequest{
@@ -1137,8 +1297,8 @@ func TestService_GetListReviewAndRatingWithPaginationSuccess(t *testing.T) {
 		Page:    1,
 		Path:    "/api/testing",
 		PlaceID: placeID,
-		Rating: false,
-		Latest: true,
+		Rating:  false,
+		Latest:  true,
 	}
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
@@ -1196,9 +1356,9 @@ func TestService_GetListReviewAndRatingWithPaginationSuccessWithDefaultParam(t *
 	}
 
 	params := ListReviewRequest{
-		Limit:   0,
-		Page:    0,
-		Path:    "/api/testing",
+		Limit: 0,
+		Page:  0,
+		Path:  "/api/testing",
 	}
 
 	repoParams := place.ListReviewRequest{
@@ -1206,8 +1366,8 @@ func TestService_GetListReviewAndRatingWithPaginationSuccessWithDefaultParam(t *
 		Page:    1,
 		Path:    "/api/testing",
 		PlaceID: placeID,
-		Rating: false,
-		Latest: true,
+		Rating:  false,
+		Latest:  true,
 	}
 
 	// Expectation
@@ -1234,9 +1394,9 @@ func TestService_GetListReviewAndRatingWithPaginationFailedLimitExceedMaxLimit(t
 
 	// Define input
 	params := ListReviewRequest{
-		Limit:   101,
-		Page:    1,
-		Path:    "/api/testing",
+		Limit: 101,
+		Page:  1,
+		Path:  "/api/testing",
 	}
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
@@ -1259,9 +1419,9 @@ func TestService_GetListReviewAndRatingWithPaginationFailedPathEmpty(t *testing.
 
 	// Define input
 	params := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "",
+		Limit: 10,
+		Page:  1,
+		Path:  "",
 	}
 
 	mockRepo.On("GetPlaceIDByUserID", userID).Return(placeID, nil)
@@ -1283,9 +1443,9 @@ func TestService_GetListReviewAndRatingWithPaginationCalledGetPlaceIDByUserIDNeg
 
 	// Define input
 	params := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/testing",
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/testing",
 	}
 
 	// Test
@@ -1306,9 +1466,9 @@ func TestService_GetListReviewAndRatingWithPaginationFailedCalledGetPlaceIDByUse
 
 	// Define input
 	params := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/testing",
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/testing",
 	}
 
 	// Expectation
@@ -1336,9 +1496,9 @@ func TestService_GetListReviewAndRatingWithPaginationFailedCalledPlaceService(t 
 	var pagination util.Pagination
 
 	params := ListReviewRequest{
-		Limit:   10,
-		Page:    1,
-		Path:    "/api/testing",
+		Limit: 10,
+		Page:  1,
+		Path:  "/api/testing",
 	}
 
 	repoParams := place.ListReviewRequest{
@@ -1346,8 +1506,8 @@ func TestService_GetListReviewAndRatingWithPaginationFailedCalledPlaceService(t 
 		Page:    1,
 		Path:    "/api/testing",
 		PlaceID: placeID,
-		Rating: false,
-		Latest: true,
+		Rating:  false,
+		Latest:  true,
 	}
 
 	// Expectation
