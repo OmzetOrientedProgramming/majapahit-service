@@ -68,7 +68,6 @@ func (h *Handler) RetrieveCustomerProfile(c echo.Context) error {
 			return util.ErrorWrapWithContext(c, http.StatusForbidden, err)
 		}
 	}
-
 	userID := user.ID
 
 	customerProfile, err := h.service.RetrieveCustomerProfile(userID)

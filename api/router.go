@@ -11,6 +11,7 @@ import (
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/item"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/place"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/upload"
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/internal/review"
 	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/middleware"
 )
 
@@ -27,10 +28,11 @@ type Routes struct {
 	businessadminHandler     *businessadmin.Handler
 	customerHandler          *customer.Handler
 	uploadHandler            *upload.Handler
+	reviewHandler			 *review.Handler
 }
 
 // NewRoutes for creating Routes instance
-func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, itemHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler, businessadminHandler *businessadmin.Handler, customerHandler *customer.Handler, uploadHandler *upload.Handler) *Routes {
+func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, itemHandler *item.Handler, placeHandler *place.Handler, authHandler *auth.Handler, businessadminauthHandler *businessadminauth.Handler, authMiddleware middleware.AuthMiddleware, bookingHandler *booking.Handler, businessadminHandler *businessadmin.Handler, customerHandler *customer.Handler, uploadHandler *upload.Handler, reviewHandler *review.Handler) *Routes {
 	return &Routes{
 		Router:                   router,
 		checkUPHandler:           checkUpHandler,
@@ -43,6 +45,7 @@ func NewRoutes(router *echo.Echo, checkUpHandler *checkup.Handler, itemHandler *
 		businessadminHandler:     businessadminHandler,
 		customerHandler:          customerHandler,
 		uploadHandler:            uploadHandler,
+		reviewHandler:            reviewHandler,
 	}
 }
 
@@ -116,6 +119,14 @@ func (r *Routes) Init() {
 			bookingRoutes.GET("/ongoing", r.bookingHandler.GetMyBookingsOngoing)
 			bookingRoutes.GET("/previous", r.bookingHandler.GetMyBookingsPreviousWithPagination)
 			bookingRoutes.GET("/detail/:bookingID", r.bookingHandler.GetDetailBookingSaya)
+			bookingRoutes.POST("/review/:bookingID", r.reviewHandler.InsertBookingReview)
+		}
+
+		// User group module
+		userRoutes := v1.Group("/user", r.authMiddleware.AuthMiddleware())
+		{
+			// Customer module
+			userRoutes.GET("", r.customerHandler.RetrieveCustomerProfile)
 		}
 
 		// callback

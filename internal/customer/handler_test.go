@@ -585,7 +585,6 @@ func TestHandler_RetrieveCustomerProfile(t *testing.T) {
 				},
 			},
 		}
-
 		userFromDatabase := user.Model{
 			ID:              1,
 			PhoneNumber:     "0812",
@@ -664,7 +663,6 @@ func TestHandler_RetrieveCustomerProfile(t *testing.T) {
 				},
 			},
 		}
-
 		userFromDatabase := user.Model{
 			ID:              1,
 			PhoneNumber:     "0812",
@@ -736,7 +734,6 @@ func TestHandler_RetrieveCustomerProfile(t *testing.T) {
 				},
 			},
 		}
-
 		userFromDatabase := user.Model{
 			ID:              1,
 			PhoneNumber:     "0812",

@@ -80,6 +80,13 @@ const (
 	XenditDisbursementCompletedString = "COMPLETED"
 	// XenditDisbursementFailedString for xendit disbursement callback failed
 	XenditDisbursementFailedString = "FAILED"
+
+	// MaximumReviewLength for review content validation
+	MaximumReviewLength = 500
+	// MinimumRatingValue for rating valie validation
+	MinimumRatingValue = 1
+	// MaximumRatingValue for rating valie validation
+	MaximumRatingValue = 5
 )
 
 var (
