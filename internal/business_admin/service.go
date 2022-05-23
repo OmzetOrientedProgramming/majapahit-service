@@ -53,7 +53,7 @@ func (s *service) DisbursementCallbackFromXendit(params DisbursementCallback) er
 			return err
 		}
 
-		newBalance := currentBalance.Balance - params.Amount
+		newBalance := currentBalance.Balance - (params.Amount + util.XenditDisbursementFee + (util.XenditDisbursementFee * util.XenditVATPercentage))
 
 		err = s.repo.UpdateBalance(newBalance, userID)
 		if err != nil {

@@ -687,7 +687,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 		params := DisbursementCallback{
 			ID:                      "test",
 			ExternalID:              "1",
-			Amount:                  10000,
+			Amount:                  4450,
 			BankCode:                "BCA",
 			AccountHolderName:       "TEST",
 			DisbursementDescription: "test",
@@ -733,7 +733,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 		params := DisbursementCallback{
 			ID:                      "test",
 			ExternalID:              "1",
-			Amount:                  10000,
+			Amount:                  4450,
 			BankCode:                "BCA",
 			AccountHolderName:       "TEST",
 			DisbursementDescription: "test",
@@ -782,7 +782,7 @@ func TestService_DisbursementCallbackFromXendit(t *testing.T) {
 		params := DisbursementCallback{
 			ID:                      "test",
 			ExternalID:              "1",
-			Amount:                  10000,
+			Amount:                  4450,
 			BankCode:                "BCA",
 			AccountHolderName:       "TEST",
 			DisbursementDescription: "test",
