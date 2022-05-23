@@ -211,6 +211,7 @@ type BookingsListRequest struct {
 // Detail contain required information about booking
 type Detail struct {
 	ID                  int          `json:"id"`
+	Image               string       `json:"customer_image" db:"image"`
 	CustomerName        string       `json:"customer_name" db:"name"`
 	CustomerPhoneNumber string       `json:"-" db:"phone_number"`
 	PlaceID             int          `json:"-" db:"place_id"`
@@ -266,15 +267,15 @@ type XenditInvoicesCallback struct {
 
 // DetailBookingSaya used as a container for detail booking customer
 type DetailBookingSaya struct {
-	ID          int     `json:"id"`
-	Status      int     `json:"status"`
-	PlaceName   string  `json:"place_name" db:"name"`
-	Date        string  `json:"date"`
-	StartTime   string  `json:"start_time" db:"start_time"`
-	EndTime     string  `json:"end_time" db:"end_time"`
-	TotalPrice  float64 `json:"total_price" db:"total_price"`
-	InvoicesURL string  `json:"invoices_url" db:"invoices_url"`
-	Image       string  `json:"image"`
-	Items       []Item  `json:"items"`
+	ID          int       `json:"id"`
+	Status      int       `json:"status"`
+	PlaceName   string    `json:"place_name" db:"name"`
+	Date        string    `json:"date"`
+	StartTime   string    `json:"start_time" db:"start_time"`
+	EndTime     string    `json:"end_time" db:"end_time"`
+	TotalPrice  float64   `json:"total_price" db:"total_price"`
+	InvoicesURL string    `json:"invoices_url" db:"invoices_url"`
+	Image       string    `json:"image"`
+	Items       []Item    `json:"items"`
 	ExpiredAt   time.Time `json:"expired_at" db:"payment_expired_at"`
 }

@@ -304,7 +304,7 @@ func (r repo) GetPlaceBookingPrice(placeID int) (float64, error) {
 func (r *repo) GetDetail(bookingID int) (*Detail, error) {
 	var bookingDetail Detail
 
-	query := `SELECT b.id, u.name, u.phone_number, b.place_id, b.date, b.start_time, b.end_time, b.capacity, b.status, b.total_price, b.created_at
+	query := `SELECT b.id, u.name, u.phone_number, u.image, b.place_id, b.date, b.start_time, b.end_time, b.capacity, b.status, b.total_price, b.created_at
 			  FROM bookings b, users u
 			  WHERE b.id = $1 AND b.user_id = u.id`
 	err := r.db.Get(&bookingDetail, query, bookingID)
