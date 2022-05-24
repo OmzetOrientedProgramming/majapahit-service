@@ -760,7 +760,7 @@ func TestRepo_UpdateItem(t *testing.T) {
 			item := Item{}
 			query := `
 				UPDATE items
-				SET name=$1, image=$2, description=$3, price=$4
+				SET name=$1, image=$2, description=$3, price=$4, updated_at=now()
 				WHERE id=$5
 			`
 

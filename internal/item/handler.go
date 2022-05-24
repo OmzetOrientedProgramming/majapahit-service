@@ -208,6 +208,8 @@ func (h *Handler) UpdateItem(c echo.Context) error {
 			return util.ErrorWrapWithContext(c, http.StatusNotFound, fmt.Errorf("Item tidak ditemukan"))
 		case errors.Is(err, ErrInputValidationError):
 			return util.ErrorWrapWithContext(c, http.StatusBadRequest, fmt.Errorf("Request tidak valid"))
+		default:
+			return util.ErrorWrapWithContext(c, http.StatusInternalServerError, fmt.Errorf("Terdapat kesalahan pada server"))
 		}
 	}
 

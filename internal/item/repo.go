@@ -162,7 +162,7 @@ func (r repo) DeleteItemAdminByID(itemID int) error {
 func (r repo) UpdateItem(ID int, item Item) error {
 	query := `
 		UPDATE items
-		SET name=$1, image=$2, description=$3, price=$4
+		SET name=$1, image=$2, description=$3, price=$4, updated_at=now()
 		WHERE id=$5
 	`
 
@@ -175,7 +175,6 @@ func (r repo) UpdateItem(ID int, item Item) error {
 		return fmt.Errorf("failed to execute query: %w", ErrInternalServerError)
 	}
 	return nil
-
 }
 
 func (r repo) CreateItem(userID int, item Item) error {
