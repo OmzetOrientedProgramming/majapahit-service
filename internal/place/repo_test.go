@@ -57,7 +57,7 @@ func TestRepo_GetDetailSuccess(t *testing.T) {
 			placeDetailExpected.Capacity,
 		)
 
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking, min_interval_booking, max_interval_booking, capacity 
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking, min_interval_booking, max_interval_booking, capacity
 									   FROM places
 									   WHERE id = $1`)).
 		WithArgs(placeID).
@@ -261,12 +261,14 @@ func TestRepo_GetPlacesListWithPaginationSuccess(t *testing.T) {
 				Image:       "test/image.png",
 			},
 		},
-		TotalCount: 10,
+		TotalCount: 2,
 	}
 
 	params := PlacesListRequest{
-		Limit: 10,
-		Page:  1,
+		Limit:     10,
+		Page:      1,
+		Latitude:  41.403380,
+		Longitude: 2.174030,
 	}
 
 	// Mock DB
@@ -291,12 +293,19 @@ func TestRepo_GetPlacesListWithPaginationSuccess(t *testing.T) {
 			placeListExpected.Places[1].Description,
 			placeListExpected.Places[1].Address,
 			placeListExpected.Places[1].Image)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT p.id, p.name, p.description, p.address, p.image,
+		(SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating,
+		(SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count,
+		CAST(6371 * ACOS(SIN(RADIANS(41.403380)) * SIN(RADIANS(p.lat)) + COS(RADIANS(41.403380)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(2.174030))) AS integer) AS distance
+		FROM places p LIMIT $1 OFFSET $2
+		`)).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
-	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM places")).
+	rows = mock.NewRows([]string{"count"}).AddRow(2)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT COUNT(*) FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p ) AS temp`)).
 		WillReturnRows(rows)
 
 	// Test
@@ -327,7 +336,7 @@ func TestRepo_GetPlacesListWithPaginationEmpty(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p LIMIT $1 OFFSET $2")).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
@@ -359,13 +368,8 @@ func TestRepo_GetPlacesListWithPaginationEmptyWhenCount(t *testing.T) {
 
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
-	rows := mock.
-		NewRows([]string{"id", "name", "description", "address"}).
-		AddRow("1", "test name", "description", "address")
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p LIMIT $1 OFFSET $2")).
 		WithArgs(params.Limit, (params.Page-1)*params.Limit).
-		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(id) FROM places")).
 		WillReturnError(sql.ErrNoRows)
 
 	// Test
@@ -430,6 +434,269 @@ func TestRepo_GetPlacesListWithPaginationErrorWhenCount(t *testing.T) {
 	placeListRetrieve, err := repoMock.GetPlacesListWithPagination(params)
 	assert.Nil(t, placeListRetrieve)
 	assert.Equal(t, ErrInternalServerError, errors.Cause(err))
+}
+
+func TestRepo_GetPlaceListWithFilterAndSort(t *testing.T) {
+	t.Run("sort by distance", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit:     10,
+			Page:      1,
+			Latitude:  41.403380,
+			Longitude: 2.174030,
+			Sort:      "distance",
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(41.403380)) * SIN(RADIANS(p.lat)) + COS(RADIANS(41.403380)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(2.174030))) AS integer) AS distance FROM places p ORDER BY distance LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p ) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("sort by popularity", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit: 10,
+			Page:  1,
+			Sort:  "popularity",
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p LEFT JOIN bookings b on p.id = b.place_id GROUP BY p.id ORDER BY COUNT(p.id) DESC LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p LEFT JOIN bookings b on p.id = b.place_id GROUP BY p.id) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("filter by price", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit: 10,
+			Page:  1,
+			Price: []string{"16000", "16000-40000", "40000-100000", "100000"},
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p WHERE ((booking_price < 16000) OR (booking_price >= 16000 AND booking_price < 40000) OR (booking_price >= 40000 AND booking_price < 100000) OR (booking_price >= 100000)) LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p WHERE ((booking_price < 16000) OR (booking_price >= 16000 AND booking_price < 40000) OR (booking_price >= 40000 AND booking_price < 100000) OR (booking_price >= 100000)) ) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("filter by capacity", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit:  10,
+			Page:   1,
+			People: []string{"1", "2-4", "5-10", "10"},
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p WHERE ((capacity < 2) OR (capacity >= 2 AND capacity < 5) OR (capacity >= 5 AND capacity < 10) OR (capacity >= 10)) LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p WHERE ((capacity < 2) OR (capacity >= 2 AND capacity < 5) OR (capacity >= 5 AND capacity < 10) OR (capacity >= 10)) ) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("filter by rating", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit:  10,
+			Page:   1,
+			Rating: []int{1, 2, 3, 4, 5},
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT * FROM (SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p ) AS temp WHERE (rating >= 1 AND rating < 2) OR (rating >= 2 AND rating < 3) OR (rating >= 3 AND rating < 4) OR (rating >= 4 AND rating < 5) OR (rating >= 5 AND rating < 6) LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT * FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p ) AS temp WHERE (rating >= 1 AND rating < 2) OR (rating >= 2 AND rating < 3) OR (rating >= 3 AND rating < 4) OR (rating >= 4 AND rating < 5) OR (rating >= 5 AND rating < 6)) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("multiple filter", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit:  10,
+			Page:   1,
+			Price:  []string{"16000", "16000-40000", "40000-100000", "100000"},
+			People: []string{"1", "2-4", "5-10", "10"},
+			Rating: []int{1, 2, 3, 4, 5},
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT * FROM (SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p WHERE ((booking_price < 16000) OR (booking_price >= 16000 AND booking_price < 40000) OR (booking_price >= 40000 AND booking_price < 100000) OR (booking_price >= 100000)) AND ((capacity < 2) OR (capacity >= 2 AND capacity < 5) OR (capacity >= 5 AND capacity < 10) OR (capacity >= 10)) ) AS temp WHERE (rating >= 1 AND rating < 2) OR (rating >= 2 AND rating < 3) OR (rating >= 3 AND rating < 4) OR (rating >= 4 AND rating < 5) OR (rating >= 5 AND rating < 6) LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT * FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p WHERE ((booking_price < 16000) OR (booking_price >= 16000 AND booking_price < 40000) OR (booking_price >= 40000 AND booking_price < 100000) OR (booking_price >= 100000)) AND ((capacity < 2) OR (capacity >= 2 AND capacity < 5) OR (capacity >= 5 AND capacity < 10) OR (capacity >= 10)) ) AS temp WHERE (rating >= 1 AND rating < 2) OR (rating >= 2 AND rating < 3) OR (rating >= 3 AND rating < 4) OR (rating >= 4 AND rating < 5) OR (rating >= 5 AND rating < 6)) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("filter and sort", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit:  10,
+			Page:   1,
+			Rating: []int{1, 2, 3, 4, 5},
+			Sort:   "popularity",
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT * FROM (SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p LEFT JOIN bookings b on p.id = b.place_id GROUP BY p.id ORDER BY COUNT(p.id) DESC ) AS temp WHERE (rating >= 1 AND rating < 2) OR (rating >= 2 AND rating < 3) OR (rating >= 3 AND rating < 4) OR (rating >= 4 AND rating < 5) OR (rating >= 5 AND rating < 6) LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT * FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p LEFT JOIN bookings b on p.id = b.place_id GROUP BY p.id) AS temp WHERE (rating >= 1 AND rating < 2) OR (rating >= 2 AND rating < 3) OR (rating >= 3 AND rating < 4) OR (rating >= 4 AND rating < 5) OR (rating >= 5 AND rating < 6)) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("category", func(t *testing.T) {
+		mockDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer mockDB.Close()
+
+		params := PlacesListRequest{
+			Limit:    10,
+			Page:     1,
+			Category: "Indoor",
+		}
+
+		sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+		repoMock := NewRepo(sqlxDB)
+		rows := mock.
+			NewRows([]string{"id", "name", "description", "address"}).
+			AddRow("1", "test name", "description", "address")
+
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT p.id, p.name, p.description, p.address, p.image, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating, (SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id) as review_count, CAST(6371 * ACOS(SIN(RADIANS(0.000000)) * SIN(RADIANS(p.lat)) + COS(RADIANS(0.000000)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(0.000000))) AS integer) AS distance FROM places p WHERE p.id IN (SELECT place_id FROM place_category pc JOIN categories c ON pc.category_id = c.id WHERE c.content='Indoor') LIMIT $1 OFFSET $2`)).
+			WithArgs(params.Limit, (params.Page-1)*params.Limit).WillReturnRows(rows)
+
+		rows = mock.NewRows([]string{"count"}).AddRow(2)
+		mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT COUNT(*) FROM (SELECT p.*, (SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id) as rating FROM places p WHERE p.id IN (SELECT place_id FROM place_category pc JOIN categories c ON pc.category_id = c.id WHERE c.content='Indoor') ) AS temp`)).
+			WillReturnRows(rows)
+
+		_, err = repoMock.GetPlacesListWithPagination(params)
+		assert.NoError(t, err)
+	})
 }
 
 func TestRepo_GetPlaceReviewSuccess(t *testing.T) {

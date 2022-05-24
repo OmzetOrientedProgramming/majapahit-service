@@ -1,7 +1,9 @@
 package place
 
 import (
+	"fmt"
 	"math"
+	"strings"
 
 	"database/sql"
 
@@ -32,7 +34,7 @@ func NewRepo(db *sqlx.DB) Repo {
 func (r *repo) GetDetail(placeID int) (*Detail, error) {
 	var result Detail
 
-	query := `SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking, min_interval_booking, max_interval_booking, capacity 
+	query := `SELECT id, name, image, address, description, open_hour, close_hour, COALESCE (booking_price,0) as booking_price, min_slot_booking, max_slot_booking, min_interval_booking, max_interval_booking, capacity
 			  FROM places
 			  WHERE id = $1`
 	err := r.db.Get(&result, query, placeID)
@@ -83,7 +85,98 @@ func (r repo) GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList
 	placeList.Places = make([]Place, 0)
 	placeList.TotalCount = 0
 
-	query := "SELECT id, name, description, address, image FROM places LIMIT $1 OFFSET $2"
+	var whereQuery []string
+
+	if params.Category != "" {
+		placeIDQuery := fmt.Sprintf(
+			`SELECT place_id
+			FROM place_category pc JOIN categories c ON pc.category_id = c.id
+			WHERE c.content='%s'`,
+			params.Category)
+		whereQuery = append(whereQuery, fmt.Sprintf("p.id IN (%s)", placeIDQuery))
+	}
+
+	if len(params.Price) != 0 {
+		var priceQuery []string
+		for _, price := range params.Price {
+			switch price {
+			case "16000":
+				priceQuery = append(priceQuery, "(booking_price < 16000)")
+			case "16000-40000":
+				priceQuery = append(priceQuery, "(booking_price >= 16000 AND booking_price < 40000)")
+			case "40000-100000":
+				priceQuery = append(priceQuery, "(booking_price >= 40000 AND booking_price < 100000)")
+			case "100000":
+				priceQuery = append(priceQuery, "(booking_price >= 100000)")
+			}
+		}
+		whereQuery = append(whereQuery, "("+strings.Join(priceQuery, " OR ")+")")
+	}
+	if len(params.People) != 0 {
+		var peopleQuery []string
+		for _, people := range params.People {
+			switch people {
+			case "1":
+				peopleQuery = append(peopleQuery, "(capacity < 2)")
+			case "2-4":
+				peopleQuery = append(peopleQuery, "(capacity >= 2 AND capacity < 5)")
+			case "5-10":
+				peopleQuery = append(peopleQuery, "(capacity >= 5 AND capacity < 10)")
+			case "10":
+				peopleQuery = append(peopleQuery, "(capacity >= 10)")
+			}
+		}
+		whereQuery = append(whereQuery, "("+strings.Join(peopleQuery, " OR ")+")")
+	}
+
+	distanceQuery := fmt.Sprintf(
+		`6371 * ACOS(SIN(RADIANS(%f)) * SIN(RADIANS(p.lat)) + COS(RADIANS(%f)) * COS(RADIANS(p.lat)) * COS(RADIANS(p.long) - RADIANS(%f)))`,
+		params.Latitude,
+		params.Latitude,
+		params.Longitude)
+
+	reviewCountQuery := fmt.Sprintf("SELECT COUNT(r.rating) FROM reviews r WHERE p.id = r.place_id")
+
+	ratingQuery := fmt.Sprintf("SELECT COALESCE(AVG(r.rating), 0.0) FROM reviews r WHERE r.place_id = p.id")
+
+	query := "SELECT p.id, p.name, p.description, p.address, p.image, "
+	query += fmt.Sprintf("(%s) as rating, ", ratingQuery)
+	query += fmt.Sprintf("(%s) as review_count, ", reviewCountQuery)
+	query += fmt.Sprintf("CAST(%s AS integer) AS distance ", distanceQuery)
+	query += "FROM places p "
+	countQuery := fmt.Sprintf("SELECT p.*, (%s) as rating FROM places p ", ratingQuery)
+	if params.Sort == "popularity" {
+		query += "LEFT JOIN bookings b on p.id = b.place_id "
+		countQuery += "LEFT JOIN bookings b on p.id = b.place_id "
+	}
+	if len(whereQuery) != 0 {
+		query += fmt.Sprintf("WHERE %s ", strings.Join(whereQuery, " AND "))
+		countQuery += fmt.Sprintf("WHERE %s ", strings.Join(whereQuery, " AND "))
+	}
+
+	switch params.Sort {
+	case "distance":
+		query += "ORDER BY distance "
+	case "popularity":
+		query += "GROUP BY p.id ORDER BY COUNT(p.id) DESC "
+		countQuery += "GROUP BY p.id"
+	}
+
+	if len(params.Rating) != 0 {
+		query = fmt.Sprintf("SELECT * FROM (%s) AS temp WHERE ", query)
+		countQuery = fmt.Sprintf("SELECT * FROM (%s) AS temp WHERE ", countQuery)
+		for i, r := range params.Rating {
+			query += fmt.Sprintf("(rating >= %d AND rating < %d)", r, r+1)
+			countQuery += fmt.Sprintf("(rating >= %d AND rating < %d)", r, r+1)
+			if i != len(params.Rating)-1 {
+				query += " OR "
+				countQuery += " OR "
+			}
+		}
+		query += " LIMIT $1 OFFSET $2"
+	} else {
+		query += " LIMIT $1 OFFSET $2"
+	}
 	err := r.db.Select(&placeList.Places, query, params.Limit, (params.Page-1)*params.Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -94,8 +187,7 @@ func (r repo) GetPlacesListWithPagination(params PlacesListRequest) (*PlacesList
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	query = "SELECT COUNT(id) FROM places"
-	err = r.db.Get(&placeList.TotalCount, query)
+	err = r.db.Get(&placeList.TotalCount, fmt.Sprintf("SELECT COUNT(*) FROM (%s) AS temp", countQuery))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			placeList.Places = make([]Place, 0)

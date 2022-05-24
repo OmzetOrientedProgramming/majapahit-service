@@ -4,8 +4,9 @@
 package main
 
 import (
-	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 	"os"
+
+	"gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
 
 	"github.com/labstack/echo/v4/middleware"
 

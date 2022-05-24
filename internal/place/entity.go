@@ -1,5 +1,7 @@
 package place
 
+import "gitlab.cs.ui.ac.id/ppl-fasilkom-ui/2022/Kelas-B/OOP/majapahit-service/util"
+
 // Detail contain important information in Place
 type Detail struct {
 	ID                 int          `json:"id"`
@@ -37,7 +39,7 @@ type UserReview struct {
 // PlacesList will wrap the Places with total count for pagination purposes
 type PlacesList struct {
 	Places     []Place `json:"places"`
-	TotalCount int     `json:"total_count"`
+	TotalCount int     `json:"total_count" db:"total_count"`
 }
 
 // Place will contain the data that needed for list of place
@@ -46,17 +48,38 @@ type Place struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Address     string  `json:"address"`
-	Distance    float64 `json:"distance"`
+	Distance    int     `json:"distance"`
 	Rating      float64 `json:"rating"`
-	ReviewCount int     `json:"review_count"`
+	ReviewCount int     `json:"review_count" db:"review_count"`
 	Image       string  `json:"image"`
 }
 
 // PlacesListRequest will wrap request data from client
 type PlacesListRequest struct {
-	Limit int    `json:"limit"`
-	Page  int    `json:"page"`
+	Limit int    `query:"limit"`
+	Page  int    `query:"page"`
 	Path  string `json:"path"`
+
+	// Distance param
+	Latitude  float64 `query:"lat"`
+	Longitude float64 `query:"lng"`
+
+	// Filter params
+	Price  []string `query:"price"`
+	People []string `query:"people"`
+	Rating []int    `query:"rating"`
+
+	// Sort params
+	Sort string `query:"sort"`
+
+	// Category params
+	Category string `query:"category"`
+}
+
+// PlacesListResponse will wrap response data to client
+type PlacesListResponse struct {
+	Places     *PlacesList      `json:"places"`
+	Pagination *util.Pagination `json:"pagination"`
 }
 
 // PlacesRatingAndReviewCount will wrap data of rating and review count

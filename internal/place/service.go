@@ -75,6 +75,32 @@ func (s service) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesLi
 		errorList = append(errorList, "path is required for pagination")
 	}
 
+	switch params.Sort {
+	case "", "recommended":
+		params.Sort = "recommended"
+	case "distance", "popularity":
+	default:
+		errorList = append(errorList, "invalid sort value")
+	}
+
+	for _, people := range params.People {
+		if people != "1" && people != "2-4" && people != "5-10" && people != "10" {
+			errorList = append(errorList, "invalid people filter value")
+		}
+	}
+
+	for _, price := range params.Price {
+		if price != "16000" && price != "16000-40000" && price != "40000-100000" && price != "100000" {
+			errorList = append(errorList, "invalid price filter value")
+		}
+	}
+
+	for _, rating := range params.Rating {
+		if rating < 1 || rating > 5 {
+			errorList = append(errorList, "invalid rating filter value")
+		}
+	}
+
 	if len(errorList) > 0 {
 		return nil, nil, errors.Wrap(ErrInputValidationError, strings.Join(errorList, ";"))
 	}
@@ -84,15 +110,15 @@ func (s service) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesLi
 		return nil, nil, err
 	}
 
-	for i := range placeList.Places {
-		ratingAndReviewCountRetrieved, errRating := s.repo.GetPlaceRatingAndReviewCountByPlaceID(placeList.Places[i].ID)
-		if errRating != nil {
-			return nil, nil, errRating
-		}
-
-		placeList.Places[i].Rating = ratingAndReviewCountRetrieved.Rating
-		placeList.Places[i].ReviewCount = ratingAndReviewCountRetrieved.ReviewCount
-	}
+	//for i := range placeList.Places {
+	//	ratingAndReviewCountRetrieved, errRating := s.repo.GetPlaceRatingAndReviewCountByPlaceID(placeList.Places[i].ID)
+	//	if errRating != nil {
+	//		return nil, nil, errRating
+	//	}
+	//
+	//	placeList.Places[i].Rating = ratingAndReviewCountRetrieved.Rating
+	//	placeList.Places[i].ReviewCount = ratingAndReviewCountRetrieved.ReviewCount
+	//}
 
 	pagination := util.GeneratePagination(placeList.TotalCount, params.Limit, params.Page, params.Path)
 
