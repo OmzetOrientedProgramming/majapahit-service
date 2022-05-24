@@ -24,9 +24,7 @@ type MockService struct {
 
 func (m *MockService) GetPlaceListWithPagination(params PlacesListRequest) (*PlacesList, *util.Pagination, error) {
 	args := m.Called(params)
-	placeList := args.Get(0).(*PlacesList)
-	pagination := args.Get(1).(util.Pagination)
-	return placeList, &pagination, args.Error(2)
+	return args.Get(0).(*PlacesList), args.Get(1).(*util.Pagination), args.Error(2)
 }
 
 func (m *MockService) GetDetail(placeID int) (*Detail, error) {
@@ -210,290 +208,219 @@ func TestService_GetPlaceListWithInternalServerError(t *testing.T) {
 	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
 }
 
-func TestHandler_GetPlacesListWithPaginationWithParams(t *testing.T) {
-	// Setup echo
-	e := echo.New()
-
-	// import "net/url"
-	q := make(url.Values)
-	q.Set("limit", "10")
-	q.Set("page", "1")
-	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Setup service
-	mockService := new(MockService)
-	h := NewHandler(mockService)
-
-	// Setup Env
-	t.Setenv("BASE_URL", "localhost:8080")
-
-	// Define input and output
-	params := PlacesListRequest{
-		Limit: 10,
-		Page:  1,
-		Path:  "/api/v1/place",
+func TestHandler_GetPlacesListWithPagination(t *testing.T) {
+	type args struct {
+		q       url.Values
+		request PlacesListRequest
+		error   error
 	}
-
-	placeList := PlacesList{
-		Places: []Place{
-			{
-				ID:          1,
-				Name:        "test name",
-				Description: "test description",
-				Address:     "test address",
-				Distance:    10,
-				Rating:      4.5,
-				ReviewCount: 20,
+	tests := []struct {
+		name           string
+		args           args
+		wantStatusCode int
+		wantResponse   util.APIResponse
+	}{
+		{
+			name: "success with params",
+			args: args{
+				q: url.Values{
+					"limit":    []string{"10"},
+					"page":     []string{"1"},
+					"price":    []string{"1"},
+					"people":   []string{"1"},
+					"rating":   []string{"1"},
+					"sort":     []string{"popularity"},
+					"category": []string{"indoor"},
+				},
+				request: PlacesListRequest{
+					Limit:    10,
+					Page:     1,
+					Path:     "/api/v1/place",
+					Price:    []string{"10000"},
+					People:   []string{"1"},
+					Rating:   []int{1, 2},
+					Sort:     "popularity",
+					Category: "indoor",
+				},
+				error: nil,
 			},
-			{
-				ID:          2,
-				Name:        "test name 2",
-				Description: "test description 2",
-				Address:     "test address 2",
-				Distance:    11,
-				Rating:      2.0,
-				ReviewCount: 100,
-			},
-		},
-		TotalCount: 2,
-	}
-
-	pagination := util.Pagination{
-		Limit:       10,
-		Page:        1,
-		FirstURL:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		LastURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		NextURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousURL: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		TotalPage:   1,
-	}
-
-	expectedResponse := util.APIResponse{
-		Status:  http.StatusOK,
-		Message: "success",
-		Data: map[string]interface{}{
-			"places":     placeList.Places,
-			"pagination": pagination,
-		},
-	}
-
-	expectedResponseJSON, _ := json.Marshal(expectedResponse)
-
-	// Excpectation
-	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, nil)
-
-	// Tes
-	if assert.NoError(t, h.GetPlacesListWithPagination(c)) {
-		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
-	}
-}
-
-func TestHandler_GetPlacesListWithPaginationWithParamsError(t *testing.T) {
-	// Setup echo
-	e := echo.New()
-	q := make(url.Values)
-	q.Set("limit", "1001")
-	q.Set("page", "1")
-	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Setup service
-	mockService := new(MockService)
-	h := NewHandler(mockService)
-
-	// Setup Env
-	t.Setenv("BASE_URL", "localhost:8080")
-
-	// Define input and output
-	params := PlacesListRequest{
-		Limit: 1001,
-		Page:  1,
-		Path:  "/api/v1/place",
-	}
-
-	errorFromService := errors.Wrap(ErrInputValidationError, strings.Join([]string{"limit should be 1 - 100"}, ","))
-	errList, errMessage := util.ErrorUnwrap(errorFromService)
-	expectedResponse := util.APIResponse{
-		Status:  http.StatusBadRequest,
-		Message: errMessage,
-		Errors:  errList,
-	}
-
-	expectedResponseJSON, _ := json.Marshal(expectedResponse)
-
-	// Excpectation
-	var placeList PlacesList
-	var pagination util.Pagination
-	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, errorFromService)
-
-	response := h.GetPlacesListWithPagination(c)
-	util.ErrorHandler(response, c)
-
-	// Tes
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
-}
-
-func TestHandler_GetPlacesListWithPaginationWithInternalServerError(t *testing.T) {
-	// Setup echo
-	e := echo.New()
-	q := make(url.Values)
-	q.Set("limit", "1001")
-	q.Set("page", "1")
-	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Setup service
-	mockService := new(MockService)
-	h := NewHandler(mockService)
-
-	// Setup Env
-	t.Setenv("BASE_URL", "localhost:8080")
-
-	// Define input and output
-	params := PlacesListRequest{
-		Limit: 1001,
-		Page:  1,
-		Path:  "/api/v1/place",
-	}
-
-	errorFromService := errors.Wrap(ErrInternalServerError, "test error")
-	expectedResponse := util.APIResponse{
-		Status:  http.StatusInternalServerError,
-		Message: "internal server error",
-	}
-
-	expectedResponseJSON, _ := json.Marshal(expectedResponse)
-
-	// Excpectation
-	var placeList PlacesList
-	var pagination util.Pagination
-	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, errorFromService)
-
-	response := h.GetPlacesListWithPagination(c)
-	util.ErrorHandler(response, c)
-
-	// Tes
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
-}
-
-func TestHandler_GetPlacesListWithPaginationWithValidationErrorLimitPageNotInt(t *testing.T) {
-	// Setup echo
-	e := echo.New()
-	q := make(url.Values)
-	q.Set("limit", "testerror")
-	q.Set("page", "testerror")
-	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Setup service
-	mockService := new(MockService)
-	h := NewHandler(mockService)
-
-	// Setup Env
-	t.Setenv("BASE_URL", "localhost:8080")
-
-	expectedResponse := util.APIResponse{
-		Status:  http.StatusBadRequest,
-		Message: "input validation error",
-		Errors: []string{
-			"limit should be positive integer",
-			"page should be positive integer",
-		},
-	}
-
-	expectedResponseJSON, _ := json.Marshal(expectedResponse)
-	response := h.GetPlacesListWithPagination(c)
-	util.ErrorHandler(response, c)
-
-	// Tes
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
-}
-
-func TestHandler_GetPlacesListWithPaginationWithoutParams(t *testing.T) {
-	// Setup echo
-	e := echo.New()
-
-	// import "net/url"
-	q := make(url.Values)
-	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Setup service
-	mockService := new(MockService)
-	h := NewHandler(mockService)
-
-	// Setup Env
-	t.Setenv("BASE_URL", "localhost:8080")
-
-	// Define input and output
-	params := PlacesListRequest{
-		Limit: 10,
-		Page:  1,
-		Path:  "/api/v1/place",
-	}
-
-	placeList := PlacesList{
-		Places: []Place{
-			{
-				ID:          1,
-				Name:        "test name",
-				Description: "test description",
-				Address:     "test address",
-				Distance:    10,
-				Rating:      4.5,
-				ReviewCount: 20,
-			},
-			{
-				ID:          2,
-				Name:        "test name 2",
-				Description: "test description 2",
-				Address:     "test address 2",
-				Distance:    11,
-				Rating:      2.0,
-				ReviewCount: 100,
+			wantResponse: util.APIResponse{
+				Status:  http.StatusOK,
+				Message: "success",
+				Data: PlacesListResponse{
+					Places: &PlacesList{
+						Places: []Place{
+							{
+								ID:          1,
+								Name:        "test name",
+								Description: "test description",
+								Address:     "test address",
+								Distance:    10,
+								Rating:      4.5,
+								ReviewCount: 20,
+							},
+							{
+								ID:          2,
+								Name:        "test name 2",
+								Description: "test description 2",
+								Address:     "test address 2",
+								Distance:    11,
+								Rating:      2.0,
+								ReviewCount: 100,
+							},
+						},
+						TotalCount: 2,
+					},
+					Pagination: &util.Pagination{
+						Limit:       10,
+						Page:        1,
+						FirstURL:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						LastURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						NextURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						PreviousURL: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						TotalPage:   1,
+					},
+				},
 			},
 		},
-		TotalCount: 2,
-	}
-
-	pagination := util.Pagination{
-		Limit:       10,
-		Page:        1,
-		FirstURL:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		LastURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		NextURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		PreviousURL: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
-		TotalPage:   1,
-	}
-
-	expectedResponse := util.APIResponse{
-		Status:  http.StatusOK,
-		Message: "success",
-		Data: map[string]interface{}{
-			"places":     placeList.Places,
-			"pagination": pagination,
+		{
+			name: "params error",
+			args: args{
+				q: url.Values{
+					"limit": []string{"1001"},
+					"page":  []string{"1"},
+				},
+				request: PlacesListRequest{
+					Limit: 1001,
+					Page:  1,
+					Path:  "/api/v1/place",
+				},
+				error: fmt.Errorf("limit should be 1 - 100: %w", ErrInputValidationError),
+			},
+			wantResponse: util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: ErrInputValidationError.Error(),
+				Errors: []string{
+					"limit should be 1 - 100",
+				},
+			},
+		},
+		{
+			name: "internal server error",
+			args: args{
+				q: url.Values{
+					"limit": []string{"1001"},
+					"page":  []string{"1"},
+				},
+				request: PlacesListRequest{
+					Limit: 1001,
+					Page:  1,
+					Path:  "/api/v1/place",
+				},
+				error: fmt.Errorf("test error: %w", ErrInternalServerError),
+			},
+			wantResponse: util.APIResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "internal server error",
+			},
+		},
+		{
+			name: "query param wrong format error",
+			args: args{
+				q: url.Values{
+					"limit": []string{"testerror"},
+					"page":  []string{"testerror"},
+				},
+				request: PlacesListRequest{
+					Limit: 1001,
+					Page:  1,
+					Path:  "/api/v1/place",
+				},
+				error: fmt.Errorf("test error: %w", ErrInternalServerError),
+			},
+			wantResponse: util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: "input validation error",
+				Errors: []string{
+					"limit should be positive integer",
+					"page should be positive integer",
+				},
+			},
+		},
+		{
+			name: "success without params",
+			args: args{
+				q: url.Values{},
+				request: PlacesListRequest{
+					Limit: 0,
+					Page:  0,
+					Path:  "/api/v1/place",
+				},
+				error: nil,
+			},
+			wantResponse: util.APIResponse{
+				Status:  http.StatusOK,
+				Message: "success",
+				Data: PlacesListResponse{
+					Places: &PlacesList{
+						Places: []Place{
+							{
+								ID:          1,
+								Name:        "test name",
+								Description: "test description",
+								Address:     "test address",
+								Distance:    10,
+								Rating:      4.5,
+								ReviewCount: 20,
+							},
+							{
+								ID:          2,
+								Name:        "test name 2",
+								Description: "test description 2",
+								Address:     "test address 2",
+								Distance:    11,
+								Rating:      2.0,
+								ReviewCount: 100,
+							},
+						},
+						TotalCount: 2,
+					},
+					Pagination: &util.Pagination{
+						Limit:       10,
+						Page:        1,
+						FirstURL:    fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						LastURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						NextURL:     fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						PreviousURL: fmt.Sprintf("%s/api/v1/place?limit=10&page=1", os.Getenv("BASE_URL")),
+						TotalPage:   1,
+					},
+				},
+			},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockService)
+			h := NewHandler(mockService)
 
-	expectedResponseJSON, _ := json.Marshal(expectedResponse)
+			req := httptest.NewRequest(http.MethodGet, "/?"+tt.args.q.Encode(), nil)
+			rec := httptest.NewRecorder()
+			c := echo.New().NewContext(req, rec)
 
-	// Excpectation
-	mockService.On("GetPlaceListWithPagination", params).Return(&placeList, pagination, nil)
+			var responsePlaces PlacesList
+			var responsePagination util.Pagination
+			if tt.wantResponse.Data != nil {
+				responseData := tt.wantResponse.Data.(PlacesListResponse)
+				responsePlaces = *responseData.Places
+				responsePagination = *responseData.Pagination
+			}
+			mockService.
+				On("GetPlaceListWithPagination", mock.Anything).
+				Return(&responsePlaces, &responsePagination, tt.args.error)
 
-	// Tes
-	if assert.NoError(t, h.GetPlacesListWithPagination(c)) {
-		assert.Equal(t, http.StatusOK, rec.Code)
-		assert.Equal(t, string(expectedResponseJSON), strings.TrimSuffix(rec.Body.String(), "\n"))
+			assert.NoError(t, h.GetPlacesListWithPagination(c))
+			assert.Equal(t, tt.wantResponse.Status, rec.Code)
+		})
 	}
 }
 

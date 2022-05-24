@@ -1,6 +1,7 @@
 package place
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -53,37 +54,61 @@ func (h *Handler) GetDetail(c echo.Context) error {
 
 // GetPlacesListWithPagination will be used to handling the API request for get places
 func (h *Handler) GetPlacesListWithPagination(c echo.Context) error {
-	errorList := []string{}
-	limitString := c.QueryParam("limit")
-	pageString := c.QueryParam("page")
-
-	page, limit, errorsFromValidator := util.ValidateParams(pageString, limitString)
-	errorList = append(errorList, errorsFromValidator...)
-
-	if len(errorList) != 0 {
-		return util.ErrorWrapWithContext(c, http.StatusBadRequest, ErrInputValidationError, errorList...)
+	var errorList []string
+	params := PlacesListRequest{
+		Path: "/api/v1/place",
 	}
 
-	params := PlacesListRequest{}
-	params.Path = "/api/v1/place"
-	params.Limit = limit
-	params.Page = page
+	errs := echo.QueryParamsBinder(c).FailFast(false).
+		Int("limit", &params.Limit).
+		Int("page", &params.Page).
+		Strings("price", &params.Price).
+		Strings("people", &params.People).
+		Ints("rating", &params.Rating).
+		String("sort", &params.Sort).
+		String("category", &params.Category).
+		Float64("lat", &params.Latitude).
+		Float64("lng", &params.Longitude).
+		BindErrors()
+	if errs != nil {
+		for _, err := range errs {
+			var bindingError *echo.BindingError
+			if errors.As(err, &bindingError) {
+				errorList = append(errorList, fmt.Sprintf("%s should be positive integer", bindingError.Field))
+			}
+		}
+
+		return c.JSON(http.StatusBadRequest, util.APIResponse{
+			Status:  http.StatusBadRequest,
+			Message: "input validation error",
+			Errors:  errorList,
+		})
+	}
 
 	placesList, pagination, err := h.service.GetPlaceListWithPagination(params)
 	if err != nil {
-		if errors.Cause(err) == ErrInputValidationError {
-			return util.ErrorWrapWithContext(c, http.StatusBadRequest, err)
+		if errors.Is(err, ErrInputValidationError) {
+			errList, errMessage := util.ErrorUnwrap(err)
+			return c.JSON(http.StatusBadRequest, util.APIResponse{
+				Status:  http.StatusBadRequest,
+				Message: errMessage,
+				Errors:  errList,
+			})
 		}
 
-		return util.ErrorWrapWithContext(c, http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, util.APIResponse{
+			Status:  http.StatusInternalServerError,
+			Message: "internal server error",
+		})
 	}
 
 	return c.JSON(http.StatusOK, util.APIResponse{
-		Status:  200,
+		Status:  http.StatusOK,
 		Message: "success",
 		Data: map[string]interface{}{
-			"places":     placesList.Places,
-			"pagination": pagination,
+			"places":      placesList.Places,
+			"total_count": placesList.TotalCount,
+			"pagination":  pagination,
 		},
 	})
 }
