@@ -96,7 +96,7 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBoo
 	listCustomerBooking.CustomerBookings = make([]CustomerBooking, 0)
 	listCustomerBooking.TotalCount = 0
 
-	query := `SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
+	query := `SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time, b.status
 			FROM bookings b, users u, places p 
 			WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
 			ORDER BY b.date DESC LIMIT $3 OFFSET $4`
@@ -111,7 +111,7 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBoo
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	query = "SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = $2"
+	query = "SELECT COUNT(b.id) FROM bookings b, users u, places p WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2"
 	err = r.db.Get(&listCustomerBooking.TotalCount, query, params.UserID, params.State)
 
 	if err != nil {
@@ -122,7 +122,7 @@ func (r repo) GetListCustomerBookingWithPagination(params ListRequest) (*ListBoo
 		}
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
-
+	fmt.Println("list customer booking:",listCustomerBooking)
 	return &listCustomerBooking, nil
 }
 
