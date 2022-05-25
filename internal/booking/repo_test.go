@@ -68,15 +68,15 @@ func TestRepo_GetListCustomerBookingWwithPaginationSuccess(t *testing.T) {
 			listCustomerBookingExpected.CustomerBookings[1].StartTime,
 			listCustomerBookingExpected.CustomerBookings[1].EndTime)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
-		FROM bookings b, users u, places p 
-		WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
-		ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
+	SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time, b.status
+	FROM bookings b, users u, places p 
+	WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
+	ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
 		WithArgs(params.UserID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, users u, places p WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2")).
 		WithArgs(params.UserID, params.State).
 		WillReturnRows(rows)
 
@@ -106,10 +106,10 @@ func TestRepo_GetListCustomerBookingWithPaginationError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
-		FROM bookings b, users u, places p 
-		WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
-		ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
+	SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time, b.status
+	FROM bookings b, users u, places p 
+	WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
+	ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
 		WithArgs(params.UserID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
 
@@ -142,13 +142,13 @@ func TestRepo_GetListCustomerBookingWithPaginationCountError(t *testing.T) {
 		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
 		AddRow("1", "test name", 1, "test date", "test start time", "test end time")
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
-		FROM bookings b, users u, places p 
-		WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
-		ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
+	SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time, b.status
+	FROM bookings b, users u, places p 
+	WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
+	ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
 		WithArgs(params.UserID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, users u, places p WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2")).
 		WithArgs(params.UserID, params.State).
 		WillReturnError(sql.ErrConnDone)
 
@@ -182,10 +182,10 @@ func TestRepo_GetListCustomerBookingWithPaginationEmpty(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
-		FROM bookings b, users u, places p 
-		WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
-		ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
+	SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time, b.status
+	FROM bookings b, users u, places p 
+	WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
+	ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
 		WithArgs(params.UserID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
@@ -197,7 +197,7 @@ func TestRepo_GetListCustomerBookingWithPaginationEmpty(t *testing.T) {
 
 }
 
-func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
+func TestRepo_GetListCustomerBookingWithPaginationCountEmpty(t *testing.T) {
 	listCustomerBookingExpected := &ListBooking{
 		CustomerBookings: make([]CustomerBooking, 0),
 		TotalCount:       0,
@@ -224,13 +224,13 @@ func TestRepo_GetListItemWithPaginationCountEmpty(t *testing.T) {
 		NewRows([]string{"id", "name", "capacity", "date", "start_time", "end_time"}).
 		AddRow("1", "test name", 1, time.Now(), time.Now(), time.Now())
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time 
-		FROM bookings b, users u, places p 
-		WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
-		ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
+	SELECT b.id, u.name, b.capacity, b.date, b.start_time, b.end_time, b.status
+	FROM bookings b, users u, places p 
+	WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2 
+	ORDER BY b.date DESC LIMIT $3 OFFSET $4`)).
 		WithArgs(params.UserID, params.State, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = $2")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, users u, places p WHERE p.user_id = $1 AND p.id = b.place_id AND u.id = b.user_id AND b.status = $2")).
 		WithArgs(params.UserID, params.State).
 		WillReturnError(sql.ErrNoRows)
 
