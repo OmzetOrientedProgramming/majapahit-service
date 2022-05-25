@@ -140,9 +140,9 @@ func (r *repo) GetListTransactionsHistoryWithPagination(params ListTransactionRe
 	listTransaction.TotalCount = 0
 
 	query := `
-	SELECT b.id, u.name, u.image, b.total_price, b.date
+	SELECT b.id, u.name, u.image, b.total_price + p.booking_price as total_price, b.date
 	FROM bookings b, users u, places p
-	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND b.status = 3 
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND (b.status = 2 OR b.status = 3 OR b.status = 5)
 	ORDER BY b.date DESC LIMIT $2 OFFSET $3
 	`
 
@@ -157,7 +157,7 @@ func (r *repo) GetListTransactionsHistoryWithPagination(params ListTransactionRe
 		return nil, errors.Wrap(ErrInternalServerError, err.Error())
 	}
 
-	query = "SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = 3"
+	query = "SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND (b.status = 2 OR b.status = 3 OR b.status = 5)"
 
 	err = r.db.Get(&listTransaction.TotalCount, query, params.UserID)
 	if err != nil {
