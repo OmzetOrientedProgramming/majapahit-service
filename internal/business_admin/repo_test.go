@@ -264,15 +264,15 @@ func TestRepo_GetListTransactionsHistoryWithPaginationSuccess(t *testing.T) {
 			listTransactionExpected.Transactions[1].Price,
 			listTransactionExpected.Transactions[1].Date)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, u.image, b.total_price, b.date
-		FROM bookings b, users u, places p
-		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND b.status = 3 
-		ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
+	SELECT b.id, u.name, u.image, b.total_price + p.booking_price as total_price, b.date
+	FROM bookings b, users u, places p
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND (b.status = 2 OR b.status = 3 OR b.status = 5)
+	ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
 
 	rows = mock.NewRows([]string{"count"}).AddRow(10)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = 3")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND (b.status = 2 OR b.status = 3 OR b.status = 5)")).
 		WithArgs(params.UserID).
 		WillReturnRows(rows)
 
@@ -301,10 +301,10 @@ func TestRepo_GetListTransactionsHistoryWithPaginationError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, u.image, b.total_price, b.date
-		FROM bookings b, users u, places p
-		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND b.status = 3 
-		ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
+	SELECT b.id, u.name, u.image, b.total_price + p.booking_price as total_price, b.date
+	FROM bookings b, users u, places p
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND (b.status = 2 OR b.status = 3 OR b.status = 5)
+	ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrTxDone)
 
@@ -336,13 +336,13 @@ func TestRepo_GetListTransactionsHistoryWithPaginationCountError(t *testing.T) {
 		NewRows([]string{"id", "name", "image", "total_price", "date"}).
 		AddRow("1", "test name", "image", 10, "date")
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, u.image, b.total_price, b.date
-		FROM bookings b, users u, places p
-		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND b.status = 3 
-		ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
+	SELECT b.id, u.name, u.image, b.total_price + p.booking_price as total_price, b.date
+	FROM bookings b, users u, places p
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND (b.status = 2 OR b.status = 3 OR b.status = 5)
+	ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = 3")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND (b.status = 2 OR b.status = 3 OR b.status = 5)")).
 		WithArgs(params.UserID).
 		WillReturnError(sql.ErrConnDone)
 
@@ -375,10 +375,10 @@ func TestRepo_GetListTransactionsHistoryWithPaginationEmpty(t *testing.T) {
 	// Expectation
 	repoMock := NewRepo(sqlxDB)
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, u.image, b.total_price, b.date
-		FROM bookings b, users u, places p
-		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND b.status = 3 
-		ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
+	SELECT b.id, u.name, u.image, b.total_price + p.booking_price as total_price, b.date
+	FROM bookings b, users u, places p
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND (b.status = 2 OR b.status = 3 OR b.status = 5)
+	ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnError(sql.ErrNoRows)
 
@@ -416,13 +416,13 @@ func TestRepo_GetListTransactionsHistoryWithPaginationCountEmpty(t *testing.T) {
 		NewRows([]string{"id", "name", "image", "total_price", "date"}).
 		AddRow("1", "name", "image", 10, "date")
 	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT b.id, u.name, u.image, b.total_price, b.date
-		FROM bookings b, users u, places p
-		WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND b.status = 3 
-		ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
+	SELECT b.id, u.name, u.image, b.total_price + p.booking_price as total_price, b.date
+	FROM bookings b, users u, places p
+	WHERE b.place_id = p.id AND p.user_id = $1 AND b.user_id = u.id AND (b.status = 2 OR b.status = 3 OR b.status = 5)
+	ORDER BY b.date DESC LIMIT $2 OFFSET $3`)).
 		WithArgs(params.UserID, params.Limit, (params.Page-1)*params.Limit).
 		WillReturnRows(rows)
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND b.status = 3")).
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(b.id) FROM bookings b, places p WHERE b.place_id = p.id AND p.user_id = $1 AND (b.status = 2 OR b.status = 3 OR b.status = 5)")).
 		WithArgs(params.UserID).
 		WillReturnError(sql.ErrNoRows)
 
