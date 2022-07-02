@@ -16,6 +16,7 @@ type repo struct {
 	db *sqlx.DB
 }
 
+// Repo will contain all the function that can be used by repo
 type Repo interface {
 	GetApplicationCheckUp() (bool, error)
 }
