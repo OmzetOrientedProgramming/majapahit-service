@@ -64,3 +64,56 @@ If you are using docker I have set up the pgAdmin as database client GUI, you ca
     5. Username : `postgres`
     6. Password : `root`
 4. Save
+
+## Development
+
+1. Before development create new branch from master or staging.
+   ```
+   git checkout master && git pull origin master
+   ```
+   or
+   ```
+   git checkout staging && git pull origin staging
+   ```
+2. Create new branch using naming convention `PBI-<pbi_number>-OOP-<jira_ticket_id>-<name_of_your_feature>`. Example
+    ```
+   git checkout -b PBI-1-OOP-1-registration
+   ```
+3. Start developing you feature with TDD
+    1. Red phase use `[RED]` tag as prefix of your commit
+       ```
+       git commit -m "[RED] create success test case for registration"
+       ```
+    2. Green phase use `[GREEN]` tag as prefix of your commit
+       ```
+       git commit -m "[GREEN] create implementation for success registration"
+       ```
+    3. Refactor phase use `[REFACTOR]` tag as prefix of your commit
+       ```
+       git commit -m "[REFACTOR] improve clean code for registration"
+       ```
+    4. Non related TDD phase will use `[CHORES]` tag as prefix of your commit
+       ```
+       git commit -m "[CHORES] update readme"
+       ```
+4. Run all the pre-deployment step
+    1. Format
+       ```
+        make fmt
+       ```
+    2. Lint
+       ```
+        make lint
+       ```
+    3. Test
+       ```
+        make fmt
+       ```
+    4. Coverage
+       ```
+        make fmt
+       ```
+5. If all the step is passed, you can push your commit to remote
+   ```
+   git push
+   ```
