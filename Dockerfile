@@ -1,6 +1,5 @@
 #first stage - builder
 FROM golang:1.17.13-alpine3.16 as builder
-RUN apk --no-cache add tzdata
 WORKDIR /build
 COPY go.mod ./
 COPY go.sum ./
@@ -13,5 +12,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o majapahit-service
 FROM alpine:3.17.0
 WORKDIR /root/
 COPY --from=builder /build .
-ENV TZ Asia/Bangkok
+RUN apk --no-cache add tzdata
 CMD ["./majapahit-service"]
