@@ -596,7 +596,7 @@ func (s *service) UpdateBookingStatus(bookingID int, newStatus int) error {
 				return err
 			}
 
-			loc, _ := time.LoadLocation("Asia/Jakarta")
+			loc, _ := time.LoadLocation("Asia/Bangkok")
 
 			xenditExpiredDateInLocalTime := invoice.ExpiryDate.In(loc)
 			err = s.repo.AddExpiredPayment(bookingID, xenditExpiredDateInLocalTime)
@@ -719,7 +719,7 @@ func (s service) GetMyBookingsPreviousWithPagination(localID string, params Book
 
 func (s service) updateStatusWhenChecking(ID int, date, startTime string, status int) (bool, error) {
 	if status == util.BookingMenungguKonfirmasi {
-		loc, _ := time.LoadLocation("Asia/Jakarta")
+		loc, _ := time.LoadLocation("Asia/Bangkok")
 
 		dateBooking, err := time.ParseInLocation(util.DateLayout, date, loc)
 		if err != nil {

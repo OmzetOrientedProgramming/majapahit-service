@@ -740,7 +740,7 @@ func TestService_ChangeStatusToBookingBelumMembayarSuccess(t *testing.T) {
 		BookingFee:          20000,
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now().In(loc)
 	xenditInvoiceReturned := xendit2.Invoice{
 		ID:         "test id",
@@ -833,7 +833,7 @@ func TestService_ChangeStatusToBookingBelumMembayarFailedAddExpiredPayment(t *te
 		BookingFee:          20000,
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now().In(loc)
 	xenditInvoiceReturned := xendit2.Invoice{
 		ID:         "test id",
@@ -925,7 +925,7 @@ func TestService_ChangeStatusToBookingBelumMembayarFailedInsertXenditInfo(t *tes
 		BookingFee:          20000,
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now().In(loc)
 	xenditInvoiceReturned := xendit2.Invoice{
 		ID:         "test id",
@@ -1016,7 +1016,7 @@ func TestService_ChangeStatusToBookingBelumMembayarCreateInvoices(t *testing.T) 
 		BookingFee:          20000,
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
+	loc, _ := time.LoadLocation("Asia/Bangkok")
 	now := time.Now().In(loc)
 	xenditInvoiceReturned := xendit2.Invoice{
 		ID:         "test id",
