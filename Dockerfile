@@ -1,5 +1,5 @@
 #first stage - builder
-FROM golang:1.19.4-alpine3.17 as builder
+FROM golang:1.17.13-alpine3.16 as builder
 WORKDIR /build
 COPY go.mod ./
 COPY go.sum ./
