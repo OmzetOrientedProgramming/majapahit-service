@@ -1,1 +1,1 @@
-web: majapahit-service
+web: bin/majapahit-service
